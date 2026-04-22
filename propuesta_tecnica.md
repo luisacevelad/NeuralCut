@@ -663,33 +663,111 @@ Agente: watch_video("where does the person mess up?")
 
 ## 9. Plan de desarrollo (Scrum)
 
-### Equipo y roles
+### 9.1. Infraestructura habilitadora inicial (antes de la primera feature)
+
+Antes de implementar la primera feature de producto visible (`transcribe_video`), el equipo necesita montar una **infraestructura mínima habilitadora**. Esta capa no entrega todavía el valor completo al usuario, pero crea el canal por el cual el agente puede operar dentro del editor. Sin esto, cualquier tool real quedaría acoplada, improvisada o desconectada de la UI.
+
+#### Objetivo
+
+Tener un **vertical slice técnico mínimo** donde:
+
+- el usuario puede escribir en un panel de chat,
+- el frontend puede enviar ese mensaje al backend,
+- existe un orquestador básico que recibe la intención,
+- existe un registro de tools desacoplado,
+- el agente conoce cuál es el video activo del editor,
+- y una tool mock o real puede devolver un resultado visible en la interfaz.
+
+#### Componentes de esta infraestructura
+
+**1. Superficie de interacción (UI mínima de chat)**
+- `ChatPanel`
+- `MessageList`
+- `InputArea`
+- estado de loading, error y mensajes
+
+**2. Canal cliente-servidor**
+- `app/api/agent/chat/route.ts`
+- contrato claro de request/response
+- streaming opcional al inicio, respuesta simple como mínimo
+
+**3. Orquestador básico del agente**
+- `agent/orchestrator.ts`
+- recibe mensajes + contexto actual
+- decide entre respuesta directa o ejecución de una tool
+- puede arrancar con lógica simple antes del tool calling completo por LLM
+
+**4. Registro y contrato de tools**
+- `agent/tools/index.ts`
+- interfaz común para tools
+- schema de input/output
+- executor desacoplado por tool
+
+**5. Capa de providers**
+- interfaces abstractas (`TranscriptionProvider`, `VisionProvider`, `LLMProvider`)
+- factories por ambiente
+- posibilidad de usar mock/local/cloud sin cambiar el resto del código
+
+**6. Estado agéntico y conversacional**
+- `chatStore`
+- `agentStore`
+- mensajes, estado de ejecución, resultados y errores
+
+**7. Integración con el editor actual**
+- lectura del video seleccionado o activo
+- validación de que exista media cargada
+- paso de `video_id` o referencia equivalente a las tools
+
+**8. Tipos y contratos compartidos**
+- mensajes de chat
+- tool calls
+- tool results
+- transcript segments
+- estado de ejecución del agente
+
+#### Entregable esperado de esta fase
+
+Al final de esta fase, el equipo debe poder demostrar:
+
+> “Escribo en el panel de chat, el mensaje viaja al endpoint del agente, el orquestador procesa la intención y devuelve una respuesta visible en la UI usando una tool mock o una tool real simple.”
+
+Esto no reemplaza la primera feature de producto; la **habilita**.
+
+### 9.2. Equipo y roles
 
 - **Scrum Master:** coordina reuniones, remueve bloqueos
 - **Product Owner:** prioriza backlog, dueño de la visión
 - **Dev Frontend (2):** UI, NeuralCut, panel de chat
 - **Dev Backend/IA (1-2):** agente (TS), tools, capa de proveedores
 
-### Sprints propuestos (asumiendo ~14 semanas)
+### 9.3. Sprints propuestos (asumiendo ~14 semanas)
 
 | Sprint | Duración | Objetivo | Entregable |
 |---|---|---|---|
 | **0** | 1 semana | Setup + aprendizaje | NeuralCut corriendo local. Ollama + Qwen funcionando. Cada dev hizo "hola mundo" con APIs. |
 | **1** | 1 semana | Empatizar | 8-10 entrevistas a creadores de contenido. Mapa de empatía. Declaración del problema validada. |
 | **2** | 1 semana | Ideación + diseño | Wireframes del panel de chat. Diseño de la capa de abstracción. Decisión de scope de tools. |
-| **3** | 1 semana | Infraestructura | Capa de abstracción implementada. Panel de chat UI (sin lógica). 1 tool conectada end-to-end (transcribe). |
-| **4** | 1 semana | Tier 1 tools | transcribe, detect_silences, detect_scenes, cut_segment, concat_segments. |
-| **5** | 1 semana | Video understanding | watch_video + take_screenshot + describe_scene. Primera demo "wow". |
-| **6** | 1 semana | Creative tools | generate_subtitles, apply_lut, detect_faces. |
-| **7** | 1 semana | Reframe + beats | auto_reframe (MediaPipe), detect_beats (Essentia). |
-| **8** | 1 semana | Pipeline inteligente | suggest_highlights + remove_filler_words. |
-| **9** | 1 semana | Refinamiento UX | Streaming de respuestas, aprobaciones inline, undo/redo agéntico. |
-| **10** | 1 semana | Testing con usuarios | 5-10 sesiones de usability testing. Ajustes. |
-| **11** | 1 semana | Performance + deploy | Optimización, caching, deploy a Vercel. |
-| **12** | 1 semana | Preparación feria | Videos de ejemplo pre-procesados, afiche, guión de demo. |
-| **13** | 1 semana | Buffer + Post Mortem | Buffer para imprevistos. Reunión Post Mortem. |
+| **3** | 1 semana | Infraestructura habilitadora | ChatPanel mínimo funcional, `chatStore`/`agentStore`, endpoint `/api/agent/chat`, orquestador básico, registro de tools, tipos compartidos, integración con video activo. |
+| **4** | 1 semana | Primer vertical slice real | `transcribe_video` conectada end-to-end con provider real o local, respuesta visible en chat y timestamps persistidos en estado. |
+| **5** | 1 semana | Tier 1 tools | detect_silences, detect_scenes, cut_segment, concat_segments sobre la base ya creada. |
+| **6** | 1 semana | Video understanding | watch_video + take_screenshot + describe_scene. Primera demo "wow". |
+| **7** | 1 semana | Creative tools | generate_subtitles, apply_lut, detect_faces. |
+| **8** | 1 semana | Reframe + beats | auto_reframe (MediaPipe), detect_beats (Essentia). |
+| **9** | 1 semana | Pipeline inteligente | suggest_highlights + remove_filler_words. |
+| **10** | 1 semana | Refinamiento UX | Streaming de respuestas, aprobaciones inline, undo/redo agéntico. |
+| **11** | 1 semana | Testing con usuarios | 5-10 sesiones de usability testing. Ajustes. |
+| **12** | 1 semana | Performance + deploy | Optimización, caching, deploy a Vercel. |
+| **13** | 1 semana | Preparación feria | Videos de ejemplo pre-procesados, afiche, guión de demo. |
+| **14** | 1 semana | Buffer + Post Mortem | Buffer para imprevistos. Reunión Post Mortem. |
 
-### Backlog priorizado (primeras historias)
+### 9.4. Backlog priorizado (primeras historias)
+
+**Infraestructura habilitadora (antes de Sprint 4):**
+- Como usuario, veo un panel de chat integrado dentro del editor
+- Como usuario, puedo enviar un mensaje y recibir una respuesta visible del agente
+- Como sistema, el agente conoce cuál es el video activo del proyecto
+- Como sistema, las tools comparten un contrato estable de entrada y salida
+- Como equipo, podemos alternar entre providers mock, locales y cloud sin cambiar la lógica de negocio
 
 **Must-have (Sprint 3-5):**
 - Como usuario, subo un video y el agente me lo transcribe

@@ -1,0 +1,58 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Rust (core logic, WASM) + TypeScript/Next.js 16 (web UI) + GPUI (desktop UI)
+  Architecture: Migrating to Rust core — apps/ are UI shells only, rust/ owns all logic
+  Monorepo: Bun workspaces + Turborepo + Cargo workspace
+  Testing: bun test (web), cargo test (rust)
+  Style: Biome (linter+formatter), tab indent, double quotes, strict TS, no console/debugger
+
+strict_tdd: true
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Identify affected modules/packages
+  specs:
+    - Use Given/When/Then format for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group tasks by phase (infrastructure, implementation, testing)
+    - Use hierarchical numbering (1.1, 1.2, etc.)
+    - Keep tasks small enough to complete in one session
+  apply:
+    - Follow existing code patterns and conventions
+    - Load relevant coding skills for the project stack
+    - Logic goes in rust/, UI only in apps/
+  verify:
+    - Run tests if test infrastructure exists
+    - Compare implementation against every spec scenario
+  archive:
+    - Warn before merging destructive deltas (large removals)
+
+testing:
+  strict_tdd: true
+  detected: "2026-04-22"
+  test_runner:
+    web:
+      command: "bun test"
+      framework: "bun test (built-in)"
+    rust:
+      command: "cargo test"
+      framework: "cargo test (built-in)"
+  test_layers:
+    unit: { available: true, tool: "bun test / cargo test" }
+    integration: { available: false, tool: null }
+    e2e: { available: false, tool: null }
+  coverage:
+    available: false
+    command: null
+  quality_tools:
+    linter: { available: true, command: "biome check" }
+    type_checker: { available: true, command: "tsc --noEmit" }
+    formatter: { available: true, command: "biome format" }
+    rust_linter: { available: false, command: null }
+    rust_formatter: { available: true, command: "rustfmt" }

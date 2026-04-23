@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/resizable";
 import { AssetsPanel } from "@/components/editor/panels/assets";
 import { PropertiesPanel } from "@/components/editor/panels/properties";
+import { ChatPanel } from "@/components/editor/panels/chat";
 import { Timeline } from "@/components/editor/panels/timeline";
 import { PreviewPanel } from "@/components/editor/panels/preview";
 import { EditorHeader } from "@/components/editor/editor-header";
@@ -15,6 +16,7 @@ import { EditorProvider } from "@/components/providers/editor-provider";
 import { Onboarding } from "@/components/editor/onboarding";
 import { MigrationDialog } from "@/components/editor/dialogs/migration-dialog";
 import { usePanelStore } from "@/stores/panel-store";
+import { useRightPanelStore } from "@/stores/right-panel-store";
 import { usePasteMedia } from "@/hooks/use-paste-media";
 import { MobileGate } from "@/components/editor/mobile-gate";
 import { useState } from "react";
@@ -63,6 +65,39 @@ function DegradedRendererBanner() {
 			>
 				<HugeiconsIcon icon={Cancel01Icon} />
 			</Button>
+		</div>
+	);
+}
+
+function RightPanel() {
+	const activeTab = useRightPanelStore((s) => s.activeTab);
+	const setActiveTab = useRightPanelStore((s) => s.setActiveTab);
+
+	return (
+		<div className="panel bg-background flex h-full flex-col overflow-hidden rounded-sm border">
+			<div className="border-b px-2 pt-2">
+				<div className="flex gap-1">
+					<Button
+						variant={activeTab === "properties" ? "secondary" : "ghost"}
+						size="sm"
+						onClick={() => setActiveTab("properties")}
+						className="text-xs"
+					>
+						Properties
+					</Button>
+					<Button
+						variant={activeTab === "chat" ? "secondary" : "ghost"}
+						size="sm"
+						onClick={() => setActiveTab("chat")}
+						className="text-xs"
+					>
+						Chat
+					</Button>
+				</div>
+			</div>
+			<div className="flex-1 min-h-0 overflow-hidden">
+				{activeTab === "properties" ? <PropertiesPanel /> : <ChatPanel />}
+			</div>
 		</div>
 	);
 }
@@ -122,7 +157,7 @@ function EditorLayout() {
 						maxSize={40}
 						className="min-w-0"
 					>
-						<PropertiesPanel />
+						<RightPanel />
 					</ResizablePanel>
 				</ResizablePanelGroup>
 			</ResizablePanel>

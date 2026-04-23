@@ -64,4 +64,55 @@ describe("POST /api/agent/chat", () => {
 		const res = await POST(req);
 		expect(res.status).toBe(400);
 	});
+
+	test("returns transcribe_video tool call when message contains 'transcribe'", async () => {
+		const req = makeRequest({
+			messages: [{ role: "user", content: "Please transcribe this video" }],
+		});
+
+		const res = await POST(req);
+		expect(res.status).toBe(200);
+
+		const data = await res.json();
+		expect(data.content).toBe("I'll transcribe your video now.");
+		expect(data.toolCalls).toHaveLength(1);
+		expect(data.toolCalls[0].name).toBe("transcribe_video");
+		expect(data.toolCalls[0].id).toBe("tc_transcribe_1");
+	});
+
+	test("returns transcribe_video tool call for case-insensitive 'TRANSCRIBE'", async () => {
+		const req = makeRequest({
+			messages: [{ role: "user", content: "CAN YOU TRANSCRIBE THE AUDIO?" }],
+		});
+
+		const res = await POST(req);
+		expect(res.status).toBe(200);
+
+		const data = await res.json();
+		expect(data.toolCalls[0].name).toBe("transcribe_video");
+	});
+
+	test("returns transcribe_video when 'transcription' keyword is present", async () => {
+		const req = makeRequest({
+			messages: [{ role: "user", content: "I need a transcription of this clip" }],
+		});
+
+		const res = await POST(req);
+		expect(res.status).toBe(200);
+
+		const data = await res.json();
+		expect(data.toolCalls[0].name).toBe("transcribe_video");
+	});
+
+	test("falls back to echo_context when message has no transcription intent", async () => {
+		const req = makeRequest({
+			messages: [{ role: "user", content: "What's the weather like?" }],
+		});
+
+		const res = await POST(req);
+		expect(res.status).toBe(200);
+
+		const data = await res.json();
+		expect(data.toolCalls[0].name).toBe("echo_context");
+	});
 });

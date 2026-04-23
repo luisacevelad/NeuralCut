@@ -6,6 +6,7 @@ import type {
 } from "@/agent/types";
 import { toolRegistry } from "@/agent/tools/registry";
 import "@/agent/tools/mock.tool";
+import "@/agent/tools/transcribe-video.tool";
 import { useChatStore } from "@/stores/chat-store";
 import { useAgentStore } from "@/stores/agent-store";
 

@@ -22,8 +22,28 @@ export async function POST(request: NextRequest) {
 		);
 	}
 
-	// Phase 1: canned mock response with a tool call to validate the full pipeline
-	const mockResponse = {
+	// Mock intent detection: keyword match on last user message
+	const lastUserMessage = [...result.data.messages]
+		.reverse()
+		.find((m) => m.role === "user");
+	const isTranscriptionRequest =
+		lastUserMessage?.content.toLowerCase().includes("transcri") ?? false;
+
+	if (isTranscriptionRequest) {
+		return NextResponse.json({
+			content: "I'll transcribe your video now.",
+			toolCalls: [
+				{
+					id: "tc_transcribe_1",
+					name: "transcribe_video",
+					args: {},
+				},
+			],
+		});
+	}
+
+	// Default: echo_context fallback
+	return NextResponse.json({
 		content: "Let me check your editor context.",
 		toolCalls: [
 			{
@@ -32,7 +52,5 @@ export async function POST(request: NextRequest) {
 				args: {},
 			},
 		],
-	};
-
-	return NextResponse.json(mockResponse);
+	});
 }

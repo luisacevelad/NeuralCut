@@ -2,7 +2,18 @@ import { describe, expect, test } from "bun:test";
 import { buildSystemPrompt } from "@/agent/system-prompt";
 import type { AgentContext } from "@/agent/types";
 
+const BASE_CONTEXT: AgentContext = {
+	projectId: "proj-1",
+	activeSceneId: "scene-A",
+	mediaAssets: [],
+	playbackTimeMs: 0,
+};
+
 describe("buildSystemPrompt", () => {
+	// -----------------------------------------------------------------------
+	// Media context
+	// -----------------------------------------------------------------------
+
 	test("includes media assets when present", () => {
 		const context: AgentContext = {
 			projectId: "proj-1",
@@ -55,5 +66,56 @@ describe("buildSystemPrompt", () => {
 		expect(prompt).toContain("No project loaded");
 		expect(prompt).toContain("No active scene");
 		expect(prompt).toContain("No media assets loaded.");
+	});
+
+	// -----------------------------------------------------------------------
+	// Tool guidance
+	// -----------------------------------------------------------------------
+
+	test("includes tool guidance section when tools are provided", () => {
+		const tools = [
+			{ name: "transcribe_video", description: "Transcribes video audio" },
+		];
+
+		const prompt = buildSystemPrompt(BASE_CONTEXT, tools);
+
+		expect(prompt).toContain("Available tools:");
+		expect(prompt).toContain("transcribe_video");
+		expect(prompt).toContain("Transcribes video audio");
+	});
+
+	test("includes plain-text fallback instruction when tools are provided", () => {
+		const tools = [
+			{ name: "transcribe_video", description: "Transcribes video audio" },
+		];
+
+		const prompt = buildSystemPrompt(BASE_CONTEXT, tools);
+
+		expect(prompt).toContain("plain text");
+	});
+
+	test("lists multiple tools when provided", () => {
+		const tools = [
+			{ name: "transcribe_video", description: "Transcribes audio" },
+			{ name: "analyze_scene", description: "Analyzes scene content" },
+		];
+
+		const prompt = buildSystemPrompt(BASE_CONTEXT, tools);
+
+		expect(prompt).toContain("transcribe_video");
+		expect(prompt).toContain("analyze_scene");
+	});
+
+	test("omits tool guidance when no tools are provided", () => {
+		const prompt = buildSystemPrompt(BASE_CONTEXT);
+
+		expect(prompt).not.toContain("Available tools:");
+		expect(prompt).not.toContain("plain text");
+	});
+
+	test("omits tool guidance when tools array is empty", () => {
+		const prompt = buildSystemPrompt(BASE_CONTEXT, []);
+
+		expect(prompt).not.toContain("Available tools:");
 	});
 });

@@ -16,6 +16,7 @@ const ROLE_LABELS: Record<ChatMessage["role"], string> = {
 	user: "You",
 	assistant: "Assistant",
 	tool_result: "Tool",
+	system: "System",
 };
 
 function TranscriptCard({ data }: { data: TranscriptData }) {

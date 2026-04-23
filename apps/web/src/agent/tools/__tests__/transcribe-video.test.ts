@@ -31,7 +31,9 @@ mock.module("@/agent/context", () => ({
 		resolveAssetFile: mockResolveAssetFile,
 		getAssetHasAudio: mockGetAssetHasAudio,
 	},
-	buildSystemPrompt: () => "",
+	// Do NOT override buildSystemPrompt — it is not needed by this test
+	// and the mock persists globally across test files in Bun, breaking
+	// route tests that depend on the real implementation.
 }));
 
 mock.module("@/lib/media/audio", () => ({

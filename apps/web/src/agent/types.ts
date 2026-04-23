@@ -7,9 +7,11 @@ export type ExecutionState =
 
 export interface ChatMessage {
 	id: string;
-	role: "user" | "assistant" | "tool_result";
+	role: "system" | "user" | "assistant" | "tool_result";
 	content: string;
 	toolCalls?: ToolCall[];
+	/** Associates a tool_result message with the ToolCall it answers. */
+	toolCallId?: string;
 	timestamp: number;
 }
 
@@ -46,4 +48,15 @@ export interface ToolDefinition {
 		args: Record<string, unknown>,
 		context: AgentContext,
 	) => Promise<unknown>;
+}
+
+/**
+ * Provider-agnostic tool schema — a pure data DTO without `execute`.
+ * Adapters convert this to their wire format; the route never passes
+ * executable definitions across the provider boundary.
+ */
+export interface ToolSchema {
+	name: string;
+	description: string;
+	parameters: Array<{ key: string; type: string; required: boolean }>;
 }

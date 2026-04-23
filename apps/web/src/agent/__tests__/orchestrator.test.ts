@@ -3,12 +3,86 @@ import {
 	beforeEach,
 	describe,
 	expect,
+	jest,
 	test,
 } from "bun:test";
-import { run } from "@/agent/orchestrator";
 import { useChatStore } from "@/stores/chat-store";
 import { useAgentStore } from "@/stores/agent-store";
-import type { AgentContext, ChatMessage } from "@/agent/types";
+import { toolRegistry } from "@/agent/tools/registry";
+import type { AgentContext, ToolDefinition } from "@/agent/types";
+
+// ---------------------------------------------------------------------------
+// Mock the transitive WASM dependency chain before loading the orchestrator.
+//
+// The orchestrator imports transcribe-video.tool which imports @/agent/context
+// which imports @/core → opencut-wasm (WASM binary that can't load in test env).
+//
+// We mock @/agent/context to cut the entire WASM chain.
+// We also mock @/lib/media/audio and @/services/transcription/service to prevent
+// their side effects from loading.
+// ---------------------------------------------------------------------------
+
+jest.mock("@/agent/context", () => ({
+	EditorContextAdapter: {
+		getContext: () => ({
+			projectId: null,
+			activeSceneId: null,
+			mediaAssets: [],
+			playbackTimeMs: 0,
+		}),
+		resolveAssetFile: () => null,
+		getAssetHasAudio: () => undefined,
+	},
+}));
+
+jest.mock("@/lib/media/audio", () => ({
+	decodeAudioToFloat32: jest.fn(),
+}));
+
+jest.mock("@/services/transcription/service", () => ({
+	transcriptionService: {
+		transcribe: jest.fn(),
+	},
+}));
+
+// Dynamic import so mocks take effect before the module graph is resolved
+const { run } = await import("@/agent/orchestrator");
+
+// ---------------------------------------------------------------------------
+// Test tools
+// ---------------------------------------------------------------------------
+
+const testTool: ToolDefinition = {
+	name: "_test_tool",
+	description: "A test tool with required params",
+	parameters: [
+		{ key: "input", type: "string", required: true },
+		{ key: "count", type: "number", required: false },
+		{ key: "flag", type: "boolean", required: true },
+	],
+	execute: async (args) => ({ echoed: args.input, flag: args.flag }),
+};
+
+/** Tool that intentionally throws during execution — used to prove the
+ *  orchestrator's resolveToolCalls catch block works at runtime. */
+const throwingTool: ToolDefinition = {
+	name: "_test_throwing_tool",
+	description: "A tool that always throws",
+	parameters: [
+		{ key: "payload", type: "string", required: true },
+	],
+	execute: async () => {
+		throw new Error("Transcription service unavailable");
+	},
+};
+
+// Register once (registry is a singleton — re-registering overwrites)
+toolRegistry.register("_test_tool", testTool);
+toolRegistry.register("_test_throwing_tool", throwingTool);
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 const MOCK_CONTEXT: AgentContext = {
 	projectId: "proj-1",
@@ -28,9 +102,15 @@ function mockFetchResponse(data: unknown, status = 200) {
 	);
 }
 
-function setMockFetch(fn: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>) {
+function setMockFetch(
+	fn: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>,
+) {
 	globalThis.fetch = fn as typeof fetch;
 }
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 describe("orchestrator", () => {
 	beforeEach(() => {
@@ -42,116 +122,292 @@ describe("orchestrator", () => {
 		globalThis.fetch = originalFetch;
 	});
 
-	test("happy path — no tool calls", async () => {
+	// -----------------------------------------------------------------------
+	// Happy path — no tool calls
+	// -----------------------------------------------------------------------
+
+	test("appends assistant message when response has no tool calls", async () => {
 		setMockFetch(() =>
-			mockFetchResponse({
-				content: "Hello! How can I help?",
-			}));
+			mockFetchResponse({ content: "Hello! How can I help?" }),
+		);
 
-		const messages: ChatMessage[] = [
-			{ id: "1", role: "user", content: "Hi", timestamp: Date.now() },
-		];
+		await run(
+			[{ id: "1", role: "user", content: "Hi", timestamp: Date.now() }],
+			MOCK_CONTEXT,
+		);
 
-		await run(messages, MOCK_CONTEXT);
+		const chat = useChatStore.getState();
+		const agent = useAgentStore.getState();
 
-		const chatState = useChatStore.getState();
-		const agentState = useAgentStore.getState();
-
-		// Assistant message appended
-		expect(chatState.messages).toHaveLength(1);
-		expect(chatState.messages[0].role).toBe("assistant");
-		expect(chatState.messages[0].content).toBe("Hello! How can I help?");
-
-		// Loading cleared
-		expect(chatState.loading).toBe(false);
-		expect(chatState.error).toBeNull();
-
-		// Agent state reset
-		expect(agentState.status).toBe("idle");
-		expect(agentState.activeTool).toBeNull();
-		expect(agentState.context).toEqual(MOCK_CONTEXT);
+		expect(chat.messages).toHaveLength(1);
+		expect(chat.messages[0].role).toBe("assistant");
+		expect(chat.messages[0].content).toBe("Hello! How can I help?");
+		expect(chat.loading).toBe(false);
+		expect(chat.error).toBeNull();
+		expect(agent.status).toBe("idle");
+		expect(agent.context).toEqual(MOCK_CONTEXT);
 	});
 
-	test("tool call resolution — echo_context executes", async () => {
+	// -----------------------------------------------------------------------
+	// Tool call → resolve → loop → final answer
+	// -----------------------------------------------------------------------
+
+	test("resolves tool call and loops for final answer", async () => {
+		let callCount = 0;
+		setMockFetch(() => {
+			callCount++;
+			if (callCount === 1) {
+				return mockFetchResponse({
+					content: "Let me run the tool.",
+					toolCalls: [
+						{
+							id: "tc_1",
+							name: "_test_tool",
+							args: { input: "hello", flag: true },
+						},
+					],
+				});
+			}
+			return mockFetchResponse({
+				content: "Here is the final answer.",
+			});
+		});
+
+		await run(
+			[{ id: "1", role: "user", content: "Go", timestamp: Date.now() }],
+			MOCK_CONTEXT,
+		);
+
+		const chat = useChatStore.getState();
+		const agent = useAgentStore.getState();
+
+		// assistant (with toolCalls) + tool_result + assistant (final)
+		expect(chat.messages).toHaveLength(3);
+		expect(chat.messages[0].role).toBe("assistant");
+		expect(chat.messages[0].toolCalls).toHaveLength(1);
+		expect(chat.messages[1].role).toBe("tool_result");
+		expect(chat.messages[1].content).toContain("echoed");
+		expect(chat.messages[2].role).toBe("assistant");
+		expect(chat.messages[2].content).toBe("Here is the final answer.");
+
+		expect(agent.status).toBe("idle");
+		expect(chat.loading).toBe(false);
+	});
+
+	// -----------------------------------------------------------------------
+	// Max-iteration guard
+	// -----------------------------------------------------------------------
+
+	test("stops at MAX_ITERATIONS and appends limit message", async () => {
+		// Every fetch response returns a tool call → loop hits the cap
 		setMockFetch(() =>
 			mockFetchResponse({
-				content: "Let me check your editor context.",
+				content: "Thinking...",
 				toolCalls: [
-					{ id: "tc_1", name: "echo_context", args: {} },
+					{
+						id: "tc_loop",
+						name: "_test_tool",
+						args: { input: "loop", flag: true },
+					},
 				],
-			}));
+			}),
+		);
 
-		const messages: ChatMessage[] = [
-			{ id: "1", role: "user", content: "Show me context", timestamp: Date.now() },
-		];
+		await run(
+			[{ id: "1", role: "user", content: "Loop", timestamp: Date.now() }],
+			MOCK_CONTEXT,
+		);
 
-		await run(messages, MOCK_CONTEXT);
+		const chat = useChatStore.getState();
+		const agent = useAgentStore.getState();
 
-		const chatState = useChatStore.getState();
-		const agentState = useAgentStore.getState();
+		// 8 iterations × (1 assistant + 1 tool_result) + 1 cap message = 17
+		expect(chat.messages).toHaveLength(17);
 
-		// Assistant message + tool result
-		expect(chatState.messages).toHaveLength(2);
-		expect(chatState.messages[0].role).toBe("assistant");
-		expect(chatState.messages[1].role).toBe("tool_result");
+		// Last message is the cap message
+		const lastMsg = chat.messages[chat.messages.length - 1];
+		expect(lastMsg.role).toBe("assistant");
+		expect(lastMsg.content).toContain("maximum number of reasoning steps");
 
-		// Tool result should contain echo_context output
-		const toolResult = JSON.parse(chatState.messages[1].content);
-		expect(toolResult.projectId).toBe("proj-1");
-
-		// States cleaned up
-		expect(chatState.loading).toBe(false);
-		expect(agentState.status).toBe("idle");
-		expect(agentState.context).toEqual(MOCK_CONTEXT);
+		expect(agent.status).toBe("idle");
+		expect(chat.loading).toBe(false);
 	});
 
-	test("error path — API failure sets error and loading cleared", async () => {
-		setMockFetch(() =>
-			mockFetchResponse({ error: "fail" }, 500));
+	// -----------------------------------------------------------------------
+	// Arg validation — missing required arg
+	// -----------------------------------------------------------------------
 
-		const messages: ChatMessage[] = [
-			{ id: "1", role: "user", content: "Hi", timestamp: Date.now() },
-		];
+	test("returns error result when required arg is missing", async () => {
+		let callCount = 0;
+		setMockFetch(() => {
+			callCount++;
+			if (callCount === 1) {
+				// Missing "input" (required) and "flag" (required)
+				return mockFetchResponse({
+					content: "Running tool",
+					toolCalls: [
+						{
+							id: "tc_val",
+							name: "_test_tool",
+							args: { count: 5 },
+						},
+					],
+				});
+			}
+			return mockFetchResponse({ content: "Done" });
+		});
 
-		await run(messages, MOCK_CONTEXT);
+		await run(
+			[{ id: "1", role: "user", content: "Test", timestamp: Date.now() }],
+			MOCK_CONTEXT,
+		);
 
-		const chatState = useChatStore.getState();
-		const agentState = useAgentStore.getState();
+		const chat = useChatStore.getState();
 
-		// Error set
-		expect(chatState.error).toBeTruthy();
-		expect(chatState.loading).toBe(false);
+		// assistant (toolCalls) + tool_result (error) + assistant (final)
+		expect(chat.messages).toHaveLength(3);
 
-		// Agent in error state
-		expect(agentState.status).toBe("error");
-
-		// No assistant message added
-		expect(chatState.messages).toHaveLength(0);
+		const toolResult = chat.messages[1];
+		expect(toolResult.role).toBe("tool_result");
+		expect(toolResult.content).toContain("Missing required argument");
+		expect(toolResult.content).toContain("input");
 	});
 
-	test("error path — network failure sets error", async () => {
+	// -----------------------------------------------------------------------
+	// Tool execution throws inside resolveToolCalls — runtime behavioral proof
+	// -----------------------------------------------------------------------
+
+	test("recovers when tool.execute() throws, continues loop to final answer", async () => {
+		let callCount = 0;
+		setMockFetch(() => {
+			callCount++;
+			if (callCount === 1) {
+				return mockFetchResponse({
+					content: "Running throwing tool.",
+					toolCalls: [
+						{
+							id: "tc_throw",
+							name: "_test_throwing_tool",
+							args: { payload: "boom" },
+						},
+					],
+				});
+			}
+			return mockFetchResponse({ content: "Recovered successfully." });
+		});
+
+		await run(
+			[{ id: "1", role: "user", content: "Throw test", timestamp: Date.now() }],
+			MOCK_CONTEXT,
+		);
+
+		const chat = useChatStore.getState();
+		const agent = useAgentStore.getState();
+
+		// assistant (with toolCalls) + tool_result (error) + assistant (final)
+		expect(chat.messages).toHaveLength(3);
+
+		// The tool_result should contain the thrown error message, NOT crash the orchestrator
+		const toolResult = chat.messages[1];
+		expect(toolResult.role).toBe("tool_result");
+		expect(toolResult.content).toContain("Error in _test_throwing_tool");
+		expect(toolResult.content).toContain("Transcription service unavailable");
+
+		// Loop continues — final answer arrives
+		const finalMsg = chat.messages[2];
+		expect(finalMsg.role).toBe("assistant");
+		expect(finalMsg.content).toBe("Recovered successfully.");
+
+		// Orchestrator ends cleanly — no global error state
+		expect(agent.status).toBe("idle");
+		expect(chat.loading).toBe(false);
+		expect(chat.error).toBeNull();
+	});
+
+	// -----------------------------------------------------------------------
+	// Arg validation — wrong type
+	// -----------------------------------------------------------------------
+
+	test("returns error result when arg has wrong type", async () => {
+		let callCount = 0;
+		setMockFetch(() => {
+			callCount++;
+			if (callCount === 1) {
+				// flag is boolean required, but we pass a string
+				return mockFetchResponse({
+					content: "Running tool",
+					toolCalls: [
+						{
+							id: "tc_type",
+							name: "_test_tool",
+							args: { input: "hello", flag: "not-a-bool" },
+						},
+					],
+				});
+			}
+			return mockFetchResponse({ content: "Done" });
+		});
+
+		await run(
+			[{ id: "1", role: "user", content: "Test", timestamp: Date.now() }],
+			MOCK_CONTEXT,
+		);
+
+		const chat = useChatStore.getState();
+		const toolResult = chat.messages[1];
+		expect(toolResult.role).toBe("tool_result");
+		expect(toolResult.content).toContain("flag");
+		expect(toolResult.content).toContain("must be a boolean");
+	});
+
+	// -----------------------------------------------------------------------
+	// Error paths
+	// -----------------------------------------------------------------------
+
+	test("sets error state on API failure", async () => {
+		setMockFetch(() => mockFetchResponse({ error: "fail" }, 500));
+
+		await run(
+			[{ id: "1", role: "user", content: "Hi", timestamp: Date.now() }],
+			MOCK_CONTEXT,
+		);
+
+		const chat = useChatStore.getState();
+		const agent = useAgentStore.getState();
+
+		expect(chat.error).toBeTruthy();
+		expect(chat.loading).toBe(false);
+		expect(agent.status).toBe("error");
+		expect(chat.messages).toHaveLength(0);
+	});
+
+	test("sets error state on network failure", async () => {
 		setMockFetch(() => Promise.reject(new Error("Network error")));
 
-		const messages: ChatMessage[] = [
-			{ id: "1", role: "user", content: "Hi", timestamp: Date.now() },
-		];
+		await run(
+			[{ id: "1", role: "user", content: "Hi", timestamp: Date.now() }],
+			MOCK_CONTEXT,
+		);
 
-		await run(messages, MOCK_CONTEXT);
-
-		const chatState = useChatStore.getState();
-		expect(chatState.error).toBe("Network error");
-		expect(chatState.loading).toBe(false);
+		const chat = useChatStore.getState();
+		expect(chat.error).toBe("Network error");
+		expect(chat.loading).toBe(false);
 		expect(useAgentStore.getState().status).toBe("error");
 	});
 
-	test("context is stored in agentStore", async () => {
-		setMockFetch(() =>
-			mockFetchResponse({ content: "ok" }));
+	// -----------------------------------------------------------------------
+	// Context storage
+	// -----------------------------------------------------------------------
+
+	test("stores context in agentStore", async () => {
+		setMockFetch(() => mockFetchResponse({ content: "ok" }));
 
 		const context: AgentContext = {
 			projectId: "special-proj",
 			activeSceneId: "scene-X",
-			mediaAssets: [{ id: "m1", name: "a.mp4", type: "video", duration: 10 }],
+			mediaAssets: [
+				{ id: "m1", name: "a.mp4", type: "video", duration: 10 },
+			],
 			playbackTimeMs: 1234,
 		};
 

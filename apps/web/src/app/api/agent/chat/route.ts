@@ -1,16 +1,67 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import type { AgentContext, ToolDefinition, ToolSchema } from "@/agent/types";
+import { buildSystemPrompt } from "@/agent/system-prompt";
+import { createProvider } from "@/agent/providers";
+import type { ProviderConfig } from "@/agent/providers";
+import { toToolSchemas } from "@/agent/tools/registry";
+
+// ---------------------------------------------------------------------------
+// Provider-facing tool schemas (execution is client-side)
+// echo_context is intentionally excluded — only transcribe_video is exposed.
+// ---------------------------------------------------------------------------
+const providerToolDefs: ToolDefinition[] = [
+	{
+		name: "transcribe_video",
+		description:
+			"Transcribes the audio of a video or audio asset using Whisper. Returns structured transcript with segments and timestamps.",
+		parameters: [
+			{ key: "assetId", type: "string", required: false },
+			{ key: "language", type: "string", required: false },
+			{ key: "modelId", type: "string", required: false },
+		],
+		execute: async () => ({}), // stub — never called server-side
+	},
+];
+
+// ---------------------------------------------------------------------------
+// Zod validation schemas
+// ---------------------------------------------------------------------------
+const toolCallSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	args: z.record(z.string(), z.unknown()),
+});
 
 const chatRequestSchema = z.object({
 	messages: z.array(
 		z.object({
+			id: z.string(),
 			role: z.enum(["user", "assistant", "tool_result"]),
 			content: z.string(),
+			toolCalls: z.array(toolCallSchema).optional(),
+			toolCallId: z.string().optional(),
+			timestamp: z.number(),
 		}),
 	),
-	context: z.record(z.string(), z.unknown()).optional(),
+	context: z.object({
+		projectId: z.string().nullable(),
+		activeSceneId: z.string().nullable(),
+		mediaAssets: z.array(
+			z.object({
+				id: z.string(),
+				name: z.string(),
+				type: z.string(),
+				duration: z.number(),
+			}),
+		),
+		playbackTimeMs: z.number(),
+	}) satisfies z.ZodType<AgentContext>,
 });
 
+// ---------------------------------------------------------------------------
+// Route handler
+// ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
 	const body = await request.json();
 	const result = chatRequestSchema.safeParse(body);
@@ -22,35 +73,48 @@ export async function POST(request: NextRequest) {
 		);
 	}
 
-	// Mock intent detection: keyword match on last user message
-	const lastUserMessage = [...result.data.messages]
-		.reverse()
-		.find((m) => m.role === "user");
-	const isTranscriptionRequest =
-		lastUserMessage?.content.toLowerCase().includes("transcri") ?? false;
+	const { messages, context } = result.data;
 
-	if (isTranscriptionRequest) {
-		return NextResponse.json({
-			content: "I'll transcribe your video now.",
-			toolCalls: [
-				{
-					id: "tc_transcribe_1",
-					name: "transcribe_video",
-					args: {},
-				},
-			],
-		});
+	// Resolve provider config from LLM_* env vars
+	const provider = process.env.LLM_PROVIDER;
+	const apiKey = process.env.LLM_API_KEY;
+	const model = process.env.LLM_MODEL;
+	const baseUrl = process.env.LLM_BASE_URL;
+
+	if (!provider || !apiKey || !model) {
+		return NextResponse.json(
+			{
+				error:
+					"Server configuration error: missing LLM_PROVIDER, LLM_API_KEY, or LLM_MODEL",
+			},
+			{ status: 502 },
+		);
 	}
 
-	// Default: echo_context fallback
-	return NextResponse.json({
-		content: "Let me check your editor context.",
-		toolCalls: [
-			{
-				id: "mock_tc_1",
-				name: "echo_context",
-				args: {},
-			},
-		],
-	});
+	const config: ProviderConfig = { provider, apiKey, model, baseUrl };
+
+	// Build system prompt with tool guidance
+	const toolSchemas: ToolSchema[] = toToolSchemas(providerToolDefs);
+	const systemPrompt = buildSystemPrompt(context, providerToolDefs);
+
+	// Delegate to provider adapter
+	try {
+		const adapter = createProvider(config);
+		const response = await adapter.chat({
+			messages,
+			systemPrompt,
+			tools: toolSchemas,
+		});
+
+		return NextResponse.json({
+			content: response.content,
+			...(response.toolCalls && { toolCalls: response.toolCalls }),
+		});
+	} catch (error) {
+		console.error("[agent/chat] Provider error:", error);
+		return NextResponse.json(
+			{ error: "LLM provider error" },
+			{ status: 502 },
+		);
+	}
 }

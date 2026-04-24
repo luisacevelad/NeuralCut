@@ -19,6 +19,7 @@ export interface ToolCall {
 	id: string;
 	name: string;
 	args: Record<string, unknown>;
+	thoughtSignature?: string;
 }
 
 export interface ToolResult {
@@ -45,11 +46,18 @@ export interface AgentContext {
 export type AgentTimelineTrack = {
 	trackId: string;
 	type: "main" | "overlay" | "audio" | "text" | "effect";
+	/** Timeline row position, top-to-bottom. 0 is the top visible row. */
+	position: number;
+	/** Visual stacking layer. Higher numbers render above lower numbers. Audio is null. */
+	visualLayer: number | null;
+	isVisualLayer: boolean;
+	stacking: "top" | "above_main" | "main" | "audio";
 	elements: Array<{
 		elementId: string;
 		type: string;
 		assetId?: string;
 		name?: string;
+		content?: string;
 		start: number;
 		end: number;
 	}>;

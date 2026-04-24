@@ -6,13 +6,12 @@ import type {
 	ToolResult,
 } from "@/agent/types";
 import { toolRegistry } from "@/agent/tools/registry";
+import "@/agent/tools/load-context.tool";
 import "@/agent/tools/list-project-assets.tool";
 import "@/agent/tools/list-timeline.tool";
-import "@/agent/tools/transcribe-video.tool";
 import { useChatStore } from "@/stores/chat-store";
 import { useAgentStore } from "@/stores/agent-store";
 
-/** Hard cap on multi-turn iterations (user-specified). */
 const MAX_ITERATIONS = 8;
 
 interface APIResponse {
@@ -20,17 +19,6 @@ interface APIResponse {
 	toolCalls?: ToolCall[];
 }
 
-/**
- * Client-side orchestrator — multi-turn loop (v2).
- *
- * 1. Sets agent status → sending
- * 2. Loop (max MAX_ITERATIONS):
- *    a. POST current message history to /api/agent/chat
- *    b. If toolCalls → validate args, resolve via registry, append results → loop
- *    c. If no toolCalls → append final assistant message → break
- * 3. On max-iteration cap → append limit message, idle
- * 4. Error → chatStore.error + error status
- */
 export async function run(
 	messages: ChatMessage[],
 	context: AgentContext,
@@ -41,7 +29,6 @@ export async function run(
 	agentStore.setContext(context);
 	agentStore.setStatus("sending");
 
-	// Working copy of messages that grows with each turn
 	const workingMessages = [...messages];
 
 	try {
@@ -58,13 +45,24 @@ export async function run(
 			});
 
 			if (!response.ok) {
-				throw new Error(`API error: ${response.status}`);
+				let detail = "";
+				try {
+					const errBody = await response.json();
+					detail = errBody?.error ?? JSON.stringify(errBody);
+				} catch {
+					detail = response.statusText;
+				}
+				throw new Error(
+					`API error ${response.status}: ${detail}`,
+				);
 			}
 
 			const data: APIResponse = await response.json();
 
-			// No tool calls → final answer, done
 			if (!data.toolCalls || data.toolCalls.length === 0) {
+				if (!data.content || data.content.trim().length === 0) {
+					throw new Error("Empty response from provider");
+				}
 				chatStore.addMessage({
 					role: "assistant",
 					content: data.content,
@@ -72,10 +70,8 @@ export async function run(
 				break;
 			}
 
-			// Tool calls present → validate, resolve, append, continue
 			agentStore.setStatus("processing");
 
-			// Append assistant message (with toolCalls) to chat + working history
 			chatStore.addMessage({
 				role: "assistant",
 				content: data.content,
@@ -89,10 +85,8 @@ export async function run(
 				timestamp: Date.now(),
 			});
 
-			// Resolve each tool call (validates args before execution)
 			const toolResults = await resolveToolCalls(data.toolCalls, context);
 
-			// Append tool results to chat + working history
 			for (const tr of toolResults) {
 				const content = tr.error
 					? `Error in ${tr.name}: ${tr.error}`
@@ -112,7 +106,6 @@ export async function run(
 				});
 			}
 
-			// If this was the last allowed iteration, mark cap hit
 			if (iterations >= MAX_ITERATIONS) {
 				hitCap = true;
 			}
@@ -131,6 +124,7 @@ export async function run(
 	} catch (error) {
 		const message =
 			error instanceof Error ? error.message : "Unknown orchestrator error";
+		console.error("[orchestrator] Error:", message);
 		chatStore.setError(message);
 		agentStore.setStatus("error");
 	}

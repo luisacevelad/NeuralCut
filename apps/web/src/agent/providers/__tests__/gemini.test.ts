@@ -55,7 +55,11 @@ const SAMPLE_TOOLS: ToolSchema[] = [
 
 function makeGeminiResponse(overrides: {
 	text?: string;
-	functionCalls?: Array<{ name: string; args: Record<string, unknown> }>;
+	functionCalls?: Array<{
+		name: string;
+		args: Record<string, unknown>;
+		thoughtSignature?: string;
+	}>;
 }): GenerateContentResult {
 	const parts: Array<Record<string, unknown>> = [];
 
@@ -65,7 +69,12 @@ function makeGeminiResponse(overrides: {
 
 	if (overrides.functionCalls) {
 		for (const fc of overrides.functionCalls) {
-			parts.push({ functionCall: { name: fc.name, args: fc.args } });
+			parts.push({
+				functionCall: { name: fc.name, args: fc.args },
+				...(fc.thoughtSignature
+					? { thoughtSignature: fc.thoughtSignature }
+					: {}),
+			});
 		}
 	}
 
@@ -133,13 +142,40 @@ describe("toGeminiContents", () => {
 
 		expect(contents).toHaveLength(1);
 		expect(contents[0].role).toBe("model");
-		expect(contents[0].parts).toEqual([
+		expect(contents[0].parts as unknown).toEqual([
 			{ text: "Let me check." },
 			{
 				functionCall: {
 					name: "transcribe_video",
 					args: { assetId: "vid-123" },
 				},
+			},
+		]);
+	});
+
+	test("preserves Gemini thought signatures on assistant tool calls", () => {
+		const messages = [
+			makeChatMessage("assistant", "", {
+				toolCalls: [
+					{
+						id: "tc_1",
+						name: "load_context",
+						args: { targetType: "asset", assetId: "asset-1" },
+						thoughtSignature: "sig-abc",
+					},
+				],
+			}),
+		];
+
+		const contents = toGeminiContents(messages);
+
+		expect(contents[0].parts as unknown).toEqual([
+			{
+				functionCall: {
+					name: "load_context",
+					args: { targetType: "asset", assetId: "asset-1" },
+				},
+				thoughtSignature: "sig-abc",
 			},
 		]);
 	});
@@ -189,9 +225,7 @@ describe("toGeminiContents", () => {
 	test("handles tool_result with non-JSON content by wrapping in object", () => {
 		const messages = [
 			makeChatMessage("assistant", "", {
-				toolCalls: [
-					{ id: "tc_1", name: "some_tool", args: {} },
-				],
+				toolCalls: [{ id: "tc_1", name: "some_tool", args: {} }],
 			}),
 			makeChatMessage("tool_result", "plain text result", {
 				toolCallId: "tc_1",
@@ -207,6 +241,46 @@ describe("toGeminiContents", () => {
 				},
 			},
 		]);
+	});
+
+	test("adds fileData part for loaded media context tool results", () => {
+		const messages = [
+			makeChatMessage("assistant", "", {
+				toolCalls: [{ id: "tc_1", name: "load_context", args: {} }],
+			}),
+			makeChatMessage(
+				"tool_result",
+				JSON.stringify({
+					context: {
+						kind: "media",
+						assetName: "intro.mp4",
+						fileUri: "gemini://files/abc",
+						mimeType: "video/mp4",
+					},
+				}),
+				{ toolCallId: "tc_1" },
+			),
+		];
+
+		const contents = toGeminiContents(messages);
+
+		expect(contents[1].role).toBe("function");
+		expect(contents[2]).toEqual({
+			role: "user",
+			parts: [
+				{
+					text: expect.stringContaining(
+						"The attached fileData is the actual media file",
+					),
+				},
+				{
+					fileData: {
+						fileUri: "gemini://files/abc",
+						mimeType: "video/mp4",
+					},
+				},
+			],
+		});
 	});
 });
 
@@ -274,7 +348,11 @@ describe("fromGeminiResponse", () => {
 		const response = makeGeminiResponse({
 			text: undefined,
 			functionCalls: [
-				{ name: "transcribe_video", args: { assetId: "vid-1" } },
+				{
+					name: "transcribe_video",
+					args: { assetId: "vid-1" },
+					thoughtSignature: "sig-123",
+				},
 			],
 		});
 		const result = fromGeminiResponse(response);
@@ -283,6 +361,7 @@ describe("fromGeminiResponse", () => {
 		expect(result.toolCalls).toHaveLength(1);
 		expect(result.toolCalls?.[0].name).toBe("transcribe_video");
 		expect(result.toolCalls?.[0].args).toEqual({ assetId: "vid-1" });
+		expect(result.toolCalls?.[0].thoughtSignature).toBe("sig-123");
 		// Non-empty synthesized ID
 		expect(result.toolCalls?.[0].id).toBeTruthy();
 		expect(typeof result.toolCalls?.[0].id).toBe("string");
@@ -299,9 +378,7 @@ describe("fromGeminiResponse", () => {
 		const result1 = fromGeminiResponse(response1);
 		const result2 = fromGeminiResponse(response2);
 
-		expect(result1.toolCalls?.[0].id).not.toBe(
-			result2.toolCalls?.[0].id,
-		);
+		expect(result1.toolCalls?.[0].id).not.toBe(result2.toolCalls?.[0].id);
 	});
 
 	test("handles mixed text and function-call parts", () => {
@@ -342,9 +419,7 @@ describe("error paths", () => {
 	});
 
 	test("SDK error propagates from chat()", async () => {
-		mockGenerateContent.mockRejectedValueOnce(
-			new Error("API key not valid"),
-		);
+		mockGenerateContent.mockRejectedValueOnce(new Error("API key not valid"));
 
 		const adapter = new GeminiAdapter(TEST_CONFIG);
 
@@ -498,5 +573,43 @@ describe("GeminiAdapter.chat()", () => {
 		const callArgs = mockGenerateContent.mock.calls[0][0];
 		expect(callArgs.tools).toBeDefined();
 		expect(callArgs.tools[0].functionDeclarations).toHaveLength(1);
+	});
+
+	test("retries transient provider failures before returning content", async () => {
+		const providerError = Object.assign(new Error("Service Unavailable"), {
+			status: 503,
+		});
+		mockGenerateContent
+			.mockRejectedValueOnce(providerError)
+			.mockRejectedValueOnce(providerError)
+			.mockResolvedValueOnce(makeGeminiResponse({ text: "Recovered" }));
+
+		const adapter = new GeminiAdapter(TEST_CONFIG);
+		const result = await adapter.chat({
+			messages: [makeChatMessage("user", "Hi")],
+			systemPrompt: "",
+			tools: [],
+		});
+
+		expect(result.content).toBe("Recovered");
+		expect(mockGenerateContent).toHaveBeenCalledTimes(3);
+	});
+
+	test("does not retry non-transient provider failures", async () => {
+		const providerError = Object.assign(new Error("Bad request"), {
+			status: 400,
+		});
+		mockGenerateContent.mockRejectedValueOnce(providerError);
+
+		const adapter = new GeminiAdapter(TEST_CONFIG);
+		await expect(
+			adapter.chat({
+				messages: [makeChatMessage("user", "Hi")],
+				systemPrompt: "",
+				tools: [],
+			}),
+		).rejects.toThrow("Bad request");
+
+		expect(mockGenerateContent).toHaveBeenCalledTimes(1);
 	});
 });

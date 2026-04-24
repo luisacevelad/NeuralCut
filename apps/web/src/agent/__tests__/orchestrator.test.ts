@@ -14,8 +14,8 @@ import type { AgentContext, ToolDefinition } from "@/agent/types";
 // ---------------------------------------------------------------------------
 // Mock the transitive WASM dependency chain before loading the orchestrator.
 //
-// The orchestrator imports transcribe-video.tool which imports @/agent/context
-// which imports @/core → opencut-wasm (WASM binary that can't load in test env).
+// The orchestrator imports tools that depend on @/agent/context, which imports
+// @/core → opencut-wasm (WASM binary that can't load in test env).
 //
 // We mock @/agent/context to cut the entire WASM chain.
 // We also mock @/lib/media/audio and @/services/transcription/service to prevent

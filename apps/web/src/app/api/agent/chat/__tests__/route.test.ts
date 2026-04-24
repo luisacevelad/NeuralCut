@@ -40,11 +40,16 @@ const VALID_CONTEXT = {
 		| Array<{
 				trackId: string;
 				type: "main" | "overlay" | "audio" | "text" | "effect";
+				position: number;
+				visualLayer: number | null;
+				isVisualLayer: boolean;
+				stacking: "top" | "above_main" | "main" | "audio";
 				elements: Array<{
 					elementId: string;
 					type: string;
 					assetId?: string;
 					name?: string;
+					content?: string;
 					start: number;
 					end: number;
 				}>;
@@ -150,7 +155,11 @@ describe("POST /api/agent/chat", () => {
 		expect(callArgs.tools).toHaveLength(3);
 		expect(
 			callArgs.tools.map((tool) => (tool as { name: string }).name),
-		).toEqual(["list_project_assets", "list_timeline", "transcribe_video"]);
+		).toEqual([
+			"load_context",
+			"list_project_assets",
+			"list_timeline",
+		]);
 	});
 
 	// -----------------------------------------------------------------------

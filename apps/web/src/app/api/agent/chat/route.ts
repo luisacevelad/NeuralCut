@@ -1,16 +1,27 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import type { AgentContext, ToolDefinition, ToolSchema } from "@/agent/types";
+import type { AgentContext, ToolSchema } from "@/agent/types";
 import { buildSystemPrompt } from "@/agent/system-prompt";
 import { createProvider } from "@/agent/providers";
 import type { ProviderConfig } from "@/agent/providers";
-import { toToolSchemas } from "@/agent/tools/registry";
 
 // ---------------------------------------------------------------------------
-// Provider-facing tool schemas (execution is client-side)
-// echo_context is intentionally excluded — only user-facing tools are exposed.
+// Provider-facing tool schemas. Execution is client-side.
+// echo_context is intentionally excluded; only user-facing tools are exposed.
 // ---------------------------------------------------------------------------
-const providerToolDefs: ToolDefinition[] = [
+const providerToolSchemas: ToolSchema[] = [
+	{
+		name: "load_context",
+		description:
+			"Loads the actual Gemini multimodal context for a project asset or timeline element. Use this before answering questions about visible objects, colors, scenes, speech, silence, or timestamps in media. Use targetType='asset' with assetId/id for media, or targetType='timeline_element' with trackId and elementId/id for captions, text, or timeline media elements.",
+		parameters: [
+			{ key: "targetType", type: "string", required: true },
+			{ key: "id", type: "string", required: false },
+			{ key: "assetId", type: "string", required: false },
+			{ key: "trackId", type: "string", required: false },
+			{ key: "elementId", type: "string", required: false },
+		],
+	},
 	{
 		name: "list_project_assets",
 		description:
@@ -19,25 +30,12 @@ const providerToolDefs: ToolDefinition[] = [
 			{ key: "filter", type: "string", required: false },
 			{ key: "type", type: "string", required: false },
 		],
-		execute: async () => ({}), // stub — never called server-side
 	},
 	{
 		name: "list_timeline",
 		description:
-			"Lists the active timeline as structured tracks and editable elements with trackId, elementId, type, assetId, name, start, and end times.",
+			"Lists the active timeline as structured tracks and editable elements with layer metadata. Tracks include position (top-to-bottom timeline row), visualLayer (higher renders above lower, null for audio), isVisualLayer, and stacking. Use this to understand which clips visually cover others and to discover ids before load_context.",
 		parameters: [],
-		execute: async () => ({}), // stub — never called server-side
-	},
-	{
-		name: "transcribe_video",
-		description:
-			"Transcribes the audio of a video or audio asset using Whisper. Returns structured transcript with segments and timestamps.",
-		parameters: [
-			{ key: "assetId", type: "string", required: false },
-			{ key: "language", type: "string", required: false },
-			{ key: "modelId", type: "string", required: false },
-		],
-		execute: async () => ({}), // stub — never called server-side
 	},
 ];
 
@@ -48,6 +46,7 @@ const toolCallSchema = z.object({
 	id: z.string(),
 	name: z.string(),
 	args: z.record(z.string(), z.unknown()),
+	thoughtSignature: z.string().optional(),
 });
 
 const chatRequestSchema = z.object({
@@ -78,12 +77,17 @@ const chatRequestSchema = z.object({
 				z.object({
 					trackId: z.string(),
 					type: z.enum(["main", "overlay", "audio", "text", "effect"]),
+					position: z.number(),
+					visualLayer: z.number().nullable(),
+					isVisualLayer: z.boolean(),
+					stacking: z.enum(["top", "above_main", "main", "audio"]),
 					elements: z.array(
 						z.object({
 							elementId: z.string(),
 							type: z.string(),
 							assetId: z.string().optional(),
 							name: z.string().optional(),
+							content: z.string().optional(),
 							start: z.number(),
 							end: z.number(),
 						}),
@@ -103,8 +107,15 @@ export async function POST(request: NextRequest) {
 	const result = chatRequestSchema.safeParse(body);
 
 	if (!result.success) {
+		const fieldErrors = result.error.flatten().fieldErrors;
+		if (process.env.NODE_ENV === "development") {
+			console.error(
+				"[agent/chat] Validation failed:",
+				JSON.stringify({ fieldErrors }, null, 2),
+			);
+		}
 		return NextResponse.json(
-			{ error: "Invalid input", details: result.error.flatten().fieldErrors },
+			{ error: "Invalid input", details: fieldErrors },
 			{ status: 400 },
 		);
 	}
@@ -130,8 +141,7 @@ export async function POST(request: NextRequest) {
 	const config: ProviderConfig = { provider, apiKey, model, baseUrl };
 
 	// Build system prompt with tool guidance
-	const toolSchemas: ToolSchema[] = toToolSchemas(providerToolDefs);
-	const systemPrompt = buildSystemPrompt(context, providerToolDefs);
+	const systemPrompt = buildSystemPrompt(context, providerToolSchemas);
 
 	// Delegate to provider adapter
 	try {
@@ -139,7 +149,7 @@ export async function POST(request: NextRequest) {
 		const response = await adapter.chat({
 			messages,
 			systemPrompt,
-			tools: toolSchemas,
+			tools: providerToolSchemas,
 		});
 
 		return NextResponse.json({
@@ -147,7 +157,19 @@ export async function POST(request: NextRequest) {
 			...(response.toolCalls && { toolCalls: response.toolCalls }),
 		});
 	} catch (error) {
+		const status = (error as { status?: number }).status;
+		const message =
+			error instanceof Error ? error.message : "Unknown provider error";
 		console.error("[agent/chat] Provider error:", error);
-		return NextResponse.json({ error: "LLM provider error" }, { status: 502 });
+		return NextResponse.json(
+			{
+				error: "LLM provider error",
+				...(status ? { providerStatus: status } : {}),
+				...(process.env.NODE_ENV === "development"
+					? { detail: message }
+					: {}),
+			},
+			{ status: 502 },
+		);
 	}
 }

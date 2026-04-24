@@ -40,6 +40,8 @@ export function buildSystemPrompt(
 			.join("\n");
 		parts.push(
 			`Available tools:\n${toolList}`,
+			'For questions about what is visible or audible in a media asset, never answer that you cannot see or hear the media if load_context is available. First infer the asset from the active assets or timeline; if needed call list_project_assets or list_timeline, then call load_context with the discovered internal id or timeline element ids.',
+			'If load_context has loaded media and the conversation contains an attached fileData part, treat it as the actual video/audio/image content. You may answer visual and audio questions directly from that loaded media without calling extraction tools unless the user asks for a separate extraction workflow.',
 			"When you need to perform an action matching one of these tools, call the appropriate tool. For all other requests, respond directly in plain text.",
 		);
 	}

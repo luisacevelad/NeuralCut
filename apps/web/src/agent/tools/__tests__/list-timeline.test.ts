@@ -13,6 +13,10 @@ function makeContext(overrides: Partial<AgentContext> = {}): AgentContext {
 			{
 				trackId: "main-track",
 				type: "main",
+				position: 0,
+				visualLayer: 0,
+				isVisualLayer: true,
+				stacking: "main",
 				elements: [
 					{
 						elementId: "clip-1",
@@ -44,6 +48,10 @@ describe("list_timeline tool", () => {
 				{
 					trackId: "main-track",
 					type: "main",
+					position: 0,
+					visualLayer: 0,
+					isVisualLayer: true,
+					stacking: "main",
 					elements: [
 						{
 							elementId: "clip-1",

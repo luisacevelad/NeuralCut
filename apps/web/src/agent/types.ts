@@ -36,6 +36,7 @@ export interface AgentContext {
 		name: string;
 		type: string;
 		duration: number;
+		usedInTimeline?: boolean;
 	}>;
 	playbackTimeMs: number;
 }

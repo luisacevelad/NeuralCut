@@ -8,9 +8,19 @@ import { toToolSchemas } from "@/agent/tools/registry";
 
 // ---------------------------------------------------------------------------
 // Provider-facing tool schemas (execution is client-side)
-// echo_context is intentionally excluded — only transcribe_video is exposed.
+// echo_context is intentionally excluded — only user-facing tools are exposed.
 // ---------------------------------------------------------------------------
 const providerToolDefs: ToolDefinition[] = [
+	{
+		name: "list_project_assets",
+		description:
+			"Lists project media assets with stable ids, type, duration, and whether each asset is used in the active timeline.",
+		parameters: [
+			{ key: "filter", type: "string", required: false },
+			{ key: "type", type: "string", required: false },
+		],
+		execute: async () => ({}), // stub — never called server-side
+	},
 	{
 		name: "transcribe_video",
 		description:
@@ -53,6 +63,7 @@ const chatRequestSchema = z.object({
 				name: z.string(),
 				type: z.string(),
 				duration: z.number(),
+				usedInTimeline: z.boolean().optional(),
 			}),
 		),
 		playbackTimeMs: z.number(),
@@ -112,9 +123,6 @@ export async function POST(request: NextRequest) {
 		});
 	} catch (error) {
 		console.error("[agent/chat] Provider error:", error);
-		return NextResponse.json(
-			{ error: "LLM provider error" },
-			{ status: 502 },
-		);
+		return NextResponse.json({ error: "LLM provider error" }, { status: 502 });
 	}
 }

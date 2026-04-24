@@ -22,12 +22,14 @@ describe("buildContextFromEditorState (context mapper)", () => {
 			name: "intro.mp4",
 			type: "video",
 			duration: 30,
+			usedInTimeline: false,
 		});
 		expect(ctx.mediaAssets[1]).toEqual({
 			id: "m2",
 			name: "bgm.mp3",
 			type: "audio",
 			duration: 180,
+			usedInTimeline: false,
 		});
 		expect(ctx.playbackTimeMs).toBe(15000);
 	});
@@ -59,6 +61,33 @@ describe("buildContextFromEditorState (context mapper)", () => {
 		expect(ctx.mediaAssets[0].duration).toBe(0);
 	});
 
+	test("marks media assets used by the active timeline", () => {
+		const ctx = buildContextFromEditorState({
+			project: { metadata: { id: "proj-1" } },
+			activeScene: {
+				id: "scene-A",
+				tracks: {
+					main: { elements: [{ mediaId: "m1" }] },
+					overlay: [{ elements: [{ mediaId: "m3" }] }],
+					audio: [{ elements: [{ mediaId: "m2" }] }],
+				},
+			},
+			assets: [
+				{ id: "m1", name: "intro.mp4", type: "video", duration: 30 },
+				{ id: "m2", name: "bgm.mp3", type: "audio", duration: 180 },
+				{ id: "m4", name: "unused.png", type: "image" },
+			],
+			currentTimeTicks: 0,
+			ticksPerSecond: 100,
+		});
+
+		expect(ctx.mediaAssets.map((asset) => asset.usedInTimeline)).toEqual([
+			true,
+			true,
+			false,
+		]);
+	});
+
 	test("calculates playbackTimeMs from ticks correctly", () => {
 		const ctx = buildContextFromEditorState({
 			project: { metadata: { id: "p" } },
@@ -76,9 +105,7 @@ describe("buildContextFromEditorState (context mapper)", () => {
 		const ctx = buildContextFromEditorState({
 			project: { metadata: { id: "proj-1" } },
 			activeScene: { id: "s1" },
-			assets: [
-				{ id: "m1", name: "a.mp4", type: "video", duration: 10 },
-			],
+			assets: [{ id: "m1", name: "a.mp4", type: "video", duration: 10 }],
 			currentTimeTicks: 100,
 			ticksPerSecond: 100,
 		});

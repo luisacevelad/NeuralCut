@@ -29,12 +29,25 @@ function makeRequest(body: unknown): NextRequest {
 const VALID_CONTEXT = {
 	projectId: null,
 	activeSceneId: null,
-	mediaAssets: [] as Array<{ id: string; name: string; type: string; duration: number }>,
+	mediaAssets: [] as Array<{
+		id: string;
+		name: string;
+		type: string;
+		duration: number;
+		usedInTimeline?: boolean;
+	}>,
 	playbackTimeMs: 0,
 };
 
 const VALID_BODY = {
-	messages: [{ id: "msg_1", role: "user" as const, content: "Hello", timestamp: Date.now() }],
+	messages: [
+		{
+			id: "msg_1",
+			role: "user" as const,
+			content: "Hello",
+			timestamp: Date.now(),
+		},
+	],
 	context: VALID_CONTEXT,
 };
 
@@ -49,7 +62,12 @@ describe("POST /api/agent/chat", () => {
 		mockChat.mockReset();
 
 		// Save and set LLM_* env vars
-		for (const key of ["LLM_PROVIDER", "LLM_API_KEY", "LLM_MODEL", "LLM_BASE_URL"]) {
+		for (const key of [
+			"LLM_PROVIDER",
+			"LLM_API_KEY",
+			"LLM_MODEL",
+			"LLM_BASE_URL",
+		]) {
 			savedEnv[key] = process.env[key];
 		}
 		process.env.LLM_PROVIDER = "openai-compatible";
@@ -115,7 +133,10 @@ describe("POST /api/agent/chat", () => {
 
 		expect(callArgs.messages).toHaveLength(1);
 		expect(callArgs.systemPrompt).toContain("NeuralCut");
-		expect(callArgs.tools).toHaveLength(1);
+		expect(callArgs.tools).toHaveLength(2);
+		expect(
+			callArgs.tools.map((tool) => (tool as { name: string }).name),
+		).toEqual(["list_project_assets", "transcribe_video"]);
 	});
 
 	// -----------------------------------------------------------------------

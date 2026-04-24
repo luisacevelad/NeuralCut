@@ -227,7 +227,7 @@ describe("transcribe_video tool — error branches", () => {
 
 		const result = await tool.execute({ assetId: "v99" }, context);
 		expect(result).toEqual({
-			error: "Could not access file for asset v99",
+			error: 'No asset found with id or name "v99". Available ids: [v1]. Available names: [intro.mp4].',
 		});
 	});
 
@@ -280,5 +280,143 @@ describe("transcribe_video tool — error branches", () => {
 
 		// Tool catches service errors and returns { error } per spec
 		expect(result).toEqual({ error: "Worker not initialized" });
+	});
+});
+
+describe("transcribe_video tool — name-based assetId fallback", () => {
+	beforeEach(() => {
+		mockResolveAssetFile.mockClear();
+		mockGetAssetHasAudio.mockClear();
+		mockDecodeAudio.mockClear();
+		mockTranscribe.mockClear();
+	});
+
+	test("resolves by filename when no id match (exact name)", async () => {
+		const fakeFile = new File([], "conclu.mov", { type: "video/quicktime" });
+		const context = makeContext({
+			mediaAssets: [
+				fakeVideoAsset({ id: "abc123", name: "conclu.mov" }),
+			],
+		});
+
+		mockResolveAssetFile.mockReturnValue(fakeFile);
+		mockGetAssetHasAudio.mockReturnValue(true);
+		mockDecodeAudio.mockResolvedValue({
+			samples: new Float32Array(16000),
+			sampleRate: 16000,
+		});
+		mockTranscribe.mockResolvedValue(fakeTranscriptionResult());
+
+		const tool = toolRegistry.get("transcribe_video");
+		const result = await tool.execute({ assetId: "conclu.mov" }, context);
+
+		expect(result).toEqual(
+			expect.objectContaining({ assetName: "conclu.mov" }),
+		);
+		// Resolved asset must pass its internal id to the adapter
+		expect(mockResolveAssetFile).toHaveBeenCalledWith("abc123");
+		expect(mockGetAssetHasAudio).toHaveBeenCalledWith("abc123");
+	});
+
+	test("resolves by case-insensitive name when no exact id or name match", async () => {
+		const fakeFile = new File([], "Conclu.MOV", { type: "video/quicktime" });
+		const context = makeContext({
+			mediaAssets: [
+				fakeVideoAsset({ id: "abc123", name: "Conclu.MOV" }),
+			],
+		});
+
+		mockResolveAssetFile.mockReturnValue(fakeFile);
+		mockGetAssetHasAudio.mockReturnValue(true);
+		mockDecodeAudio.mockResolvedValue({
+			samples: new Float32Array(16000),
+			sampleRate: 16000,
+		});
+		mockTranscribe.mockResolvedValue(fakeTranscriptionResult());
+
+		const tool = toolRegistry.get("transcribe_video");
+		const result = await tool.execute({ assetId: "conclu.mov" }, context);
+
+		expect(result).toEqual(
+			expect.objectContaining({ assetName: "Conclu.MOV" }),
+		);
+		expect(mockResolveAssetFile).toHaveBeenCalledWith("abc123");
+	});
+
+	test("returns ambiguous error when two assets share same name", async () => {
+		const context = makeContext({
+			mediaAssets: [
+				fakeVideoAsset({ id: "v1", name: "clip.mp4" }),
+				fakeVideoAsset({ id: "v2", name: "clip.mp4" }),
+			],
+		});
+
+		const tool = toolRegistry.get("transcribe_video");
+		const result = await tool.execute({ assetId: "clip.mp4" }, context);
+
+		expect(result).toEqual({
+			error: 'Ambiguous asset name "clip.mp4" matches multiple assets (clip.mp4, clip.mp4). Specify the internal id: v1, v2.',
+		});
+	});
+
+	test("returns ambiguous error for case-insensitive duplicates", async () => {
+		const context = makeContext({
+			mediaAssets: [
+				fakeVideoAsset({ id: "v1", name: "Clip.MP4" }),
+				fakeVideoAsset({ id: "v2", name: "CLIP.MP4" }),
+			],
+		});
+
+		const tool = toolRegistry.get("transcribe_video");
+		const result = await tool.execute({ assetId: "clip.mp4" }, context);
+
+		expect(result).toEqual({
+			error: 'Ambiguous asset name "clip.mp4" matches multiple assets (Clip.MP4, CLIP.MP4). Specify the internal id: v1, v2.',
+		});
+	});
+
+	test("prefers exact id match over name match", async () => {
+		const fakeFile = new File([], "intro.mp4", { type: "video/mp4" });
+		// An asset whose id happens to equal another asset's name
+		const context = makeContext({
+			mediaAssets: [
+				fakeVideoAsset({ id: "v1", name: "intro.mp4" }),
+				fakeVideoAsset({ id: "intro.mp4", name: "outro.mp4" }),
+			],
+		});
+
+		mockResolveAssetFile.mockReturnValue(fakeFile);
+		mockGetAssetHasAudio.mockReturnValue(true);
+		mockDecodeAudio.mockResolvedValue({
+			samples: new Float32Array(16000),
+			sampleRate: 16000,
+		});
+		mockTranscribe.mockResolvedValue(fakeTranscriptionResult());
+
+		const tool = toolRegistry.get("transcribe_video");
+		const result = await tool.execute({ assetId: "intro.mp4" }, context);
+
+		// "intro.mp4" matches v1 by id AND the second asset by id exactly
+		// id lookup is first, so it resolves the second asset (id="intro.mp4")
+		expect(result).toEqual(
+			expect.objectContaining({ assetName: "outro.mp4" }),
+		);
+		expect(mockResolveAssetFile).toHaveBeenCalledWith("intro.mp4");
+	});
+
+	test("returns not-found error with available ids and names for totally unknown assetId", async () => {
+		const context = makeContext({
+			mediaAssets: [
+				fakeVideoAsset({ id: "v1", name: "intro.mp4" }),
+				fakeVideoAsset({ id: "v2", name: "outro.mp4" }),
+			],
+		});
+
+		const tool = toolRegistry.get("transcribe_video");
+		const result = await tool.execute({ assetId: "nonexistent.mov" }, context);
+
+		expect(result).toEqual({
+			error: 'No asset found with id or name "nonexistent.mov". Available ids: [v1, v2]. Available names: [intro.mp4, outro.mp4].',
+		});
 	});
 });

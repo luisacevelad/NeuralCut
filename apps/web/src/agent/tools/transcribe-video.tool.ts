@@ -57,10 +57,43 @@ const transcribeVideoTool: ToolDefinition = {
 		let targetAsset: (typeof mediaCandidates)[number] | undefined;
 
 		if (typedArgs.assetId) {
+			// 1. Exact internal-id match
 			targetAsset = mediaCandidates.find((a) => a.id === typedArgs.assetId);
+
+			// 2. Fallback: exact name match (LLM sometimes passes filename)
 			if (!targetAsset) {
+				const nameMatches = mediaCandidates.filter(
+					(a) => a.name === typedArgs.assetId,
+				);
+				if (nameMatches.length === 1) {
+					targetAsset = nameMatches[0];
+				} else if (nameMatches.length > 1) {
+					return {
+						error: `Ambiguous asset name "${typedArgs.assetId}" matches multiple assets (${nameMatches.map((a) => a.name).join(", ")}). Specify the internal id: ${nameMatches.map((a) => `${a.id}`).join(", ")}.`,
+					};
+				}
+			}
+
+			// 3. Case-insensitive fallback (only if unambiguous)
+			if (!targetAsset) {
+				const lower = typedArgs.assetId.toLowerCase();
+				const ciMatches = mediaCandidates.filter(
+					(a) => a.name.toLowerCase() === lower,
+				);
+				if (ciMatches.length === 1) {
+					targetAsset = ciMatches[0];
+				} else if (ciMatches.length > 1) {
+					return {
+						error: `Ambiguous asset name "${typedArgs.assetId}" matches multiple assets (${ciMatches.map((a) => a.name).join(", ")}). Specify the internal id: ${ciMatches.map((a) => `${a.id}`).join(", ")}.`,
+					};
+				}
+			}
+
+			if (!targetAsset) {
+				const ids = mediaCandidates.map((a) => a.id).join(", ");
+				const names = mediaCandidates.map((a) => a.name).join(", ");
 				return {
-					error: `Could not access file for asset ${typedArgs.assetId}`,
+					error: `No asset found with id or name "${typedArgs.assetId}". Available ids: [${ids}]. Available names: [${names}].`,
 				};
 			}
 		} else {

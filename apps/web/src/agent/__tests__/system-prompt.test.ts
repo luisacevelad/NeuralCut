@@ -37,6 +37,46 @@ describe("buildSystemPrompt", () => {
 		expect(prompt).toContain("NeuralCut video editor");
 	});
 
+	test("includes asset internal id in media listing", () => {
+		const context: AgentContext = {
+			projectId: "proj-1",
+			activeSceneId: "scene-A",
+			mediaAssets: [
+				{ id: "m1", name: "intro.mp4", type: "video", duration: 30 },
+			],
+			playbackTimeMs: 0,
+		};
+
+		const prompt = buildSystemPrompt(context);
+
+		expect(prompt).toContain("[id: m1]");
+	});
+
+	test("includes assetId instruction when media assets are present", () => {
+		const context: AgentContext = {
+			projectId: "proj-1",
+			activeSceneId: "scene-A",
+			mediaAssets: [
+				{ id: "m1", name: "conclu.mov", type: "video", duration: 60 },
+			],
+			playbackTimeMs: 0,
+		};
+
+		const prompt = buildSystemPrompt(context);
+
+		expect(prompt).toContain("IMPORTANT");
+		expect(prompt).toContain("assetId");
+		expect(prompt).toContain('internal "id" value');
+		expect(prompt).toContain("NOT the filename");
+	});
+
+	test("omits assetId instruction when no media assets", () => {
+		const prompt = buildSystemPrompt(BASE_CONTEXT);
+
+		expect(prompt).not.toContain("IMPORTANT");
+		expect(prompt).not.toContain("assetId");
+	});
+
 	test("is valid when no media assets are loaded", () => {
 		const context: AgentContext = {
 			projectId: "proj-2",

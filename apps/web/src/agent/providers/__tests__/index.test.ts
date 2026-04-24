@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createProvider } from "@/agent/providers/index";
 import { OpenAICompatibleAdapter } from "@/agent/providers/openai-compatible";
+import { GeminiAdapter } from "@/agent/providers/gemini";
 import type { ProviderConfig } from "@/agent/providers/types";
 
 describe("createProvider", () => {
@@ -26,6 +27,17 @@ describe("createProvider", () => {
 		const adapter = createProvider(config);
 		expect(adapter).toBeInstanceOf(OpenAICompatibleAdapter);
 		// Adapter was constructed without throwing — config accepted
+	});
+
+	test("returns GeminiAdapter for gemini provider", () => {
+		const config: ProviderConfig = {
+			provider: "gemini",
+			apiKey: "test-gemini-key",
+			model: "gemini-2.0-flash",
+		};
+
+		const adapter = createProvider(config);
+		expect(adapter).toBeInstanceOf(GeminiAdapter);
 	});
 
 	test("throws Error for unknown provider", () => {

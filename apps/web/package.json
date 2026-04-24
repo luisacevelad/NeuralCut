@@ -42,6 +42,7 @@
     "cmdk": "^1.0.0",
     "culori": "^4.0.2",
     "drizzle-orm": "^0.44.2",
+    "@google/generative-ai": "^0.24.0",
     "embla-carousel-react": "^8.5.1",
     "eventemitter3": "^5.0.1",
     "feed": "^5.1.0",

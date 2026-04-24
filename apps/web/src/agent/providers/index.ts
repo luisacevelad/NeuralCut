@@ -1,5 +1,6 @@
 import type { ProviderAdapter, ProviderConfig } from "./types";
 import { OpenAICompatibleAdapter } from "./openai-compatible";
+import { GeminiAdapter } from "./gemini";
 
 /**
  * Factory — resolves a ProviderConfig to a concrete adapter.
@@ -12,6 +13,8 @@ export function createProvider(config: ProviderConfig): ProviderAdapter {
 	switch (config.provider) {
 		case "openai-compatible":
 			return new OpenAICompatibleAdapter(config);
+		case "gemini":
+			return new GeminiAdapter(config);
 		default:
 			throw new Error(`Unknown LLM provider: ${config.provider}`);
 	}

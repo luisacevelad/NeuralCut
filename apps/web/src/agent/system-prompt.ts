@@ -17,7 +17,7 @@ export function buildSystemPrompt(
 ): string {
 	const mediaSection =
 		context.mediaAssets.length > 0
-			? `Active media assets:\n${context.mediaAssets.map((m) => `- ${m.name} (${m.type}, ${m.duration}s)`).join("\n")}`
+			? `Active media assets:\n${context.mediaAssets.map((m) => `- [id: ${m.id}] ${m.name} (${m.type}, ${m.duration}s)`).join("\n")}`
 			: "No media assets loaded.";
 
 	const parts = [
@@ -27,6 +27,12 @@ export function buildSystemPrompt(
 		`Playback position: ${context.playbackTimeMs}ms`,
 		mediaSection,
 	];
+
+	if (context.mediaAssets.length > 0) {
+		parts.push(
+			'IMPORTANT: When calling tools that accept an "assetId" parameter, always use the internal "id" value (e.g., "v1"), NOT the filename or display name.',
+		);
+	}
 
 	if (tools && tools.length > 0) {
 		const toolList = tools

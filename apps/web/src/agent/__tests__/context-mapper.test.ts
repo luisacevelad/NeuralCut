@@ -67,9 +67,13 @@ describe("buildContextFromEditorState (context mapper)", () => {
 			activeScene: {
 				id: "scene-A",
 				tracks: {
-					main: { elements: [{ mediaId: "m1" }] },
-					overlay: [{ elements: [{ mediaId: "m3" }] }],
-					audio: [{ elements: [{ mediaId: "m2" }] }],
+					main: { id: "main", type: "video", elements: [{ mediaId: "m1" }] },
+					overlay: [
+						{ id: "overlay", type: "video", elements: [{ mediaId: "m3" }] },
+					],
+					audio: [
+						{ id: "audio", type: "audio", elements: [{ mediaId: "m2" }] },
+					],
 				},
 			},
 			assets: [
@@ -85,6 +89,109 @@ describe("buildContextFromEditorState (context mapper)", () => {
 			true,
 			true,
 			false,
+		]);
+	});
+
+	test("maps active timeline tracks for agent tools", () => {
+		const ctx = buildContextFromEditorState({
+			project: { metadata: { id: "proj-1" } },
+			activeScene: {
+				id: "scene-A",
+				tracks: {
+					main: {
+						id: "main-track",
+						type: "video",
+						elements: [
+							{
+								id: "clip-1",
+								type: "video",
+								mediaId: "m1",
+								name: "Intro",
+								startTime: 2,
+								duration: 5,
+							},
+						],
+					},
+					overlay: [
+						{
+							id: "text-track",
+							type: "text",
+							elements: [
+								{
+									id: "text-1",
+									type: "text",
+									name: "Caption",
+									startTime: 3,
+									duration: 2,
+								},
+							],
+						},
+					],
+					audio: [
+						{
+							id: "audio-track",
+							type: "audio",
+							elements: [
+								{
+									id: "music-1",
+									type: "audio",
+									mediaId: "m2",
+									name: "Music",
+									startTime: 0,
+									duration: 10,
+								},
+							],
+						},
+					],
+				},
+			},
+			assets: [],
+			currentTimeTicks: 0,
+			ticksPerSecond: 100,
+		});
+
+		expect(ctx.timelineTracks).toEqual([
+			{
+				trackId: "main-track",
+				type: "main",
+				elements: [
+					{
+						elementId: "clip-1",
+						type: "video",
+						assetId: "m1",
+						name: "Intro",
+						start: 2,
+						end: 7,
+					},
+				],
+			},
+			{
+				trackId: "text-track",
+				type: "text",
+				elements: [
+					{
+						elementId: "text-1",
+						type: "text",
+						name: "Caption",
+						start: 3,
+						end: 5,
+					},
+				],
+			},
+			{
+				trackId: "audio-track",
+				type: "audio",
+				elements: [
+					{
+						elementId: "music-1",
+						type: "audio",
+						assetId: "m2",
+						name: "Music",
+						start: 0,
+						end: 10,
+					},
+				],
+			},
 		]);
 	});
 

@@ -30,6 +30,30 @@
 
 **Entregable:** MVP funcional desplegado en web, con un agente capaz de ejecutar al menos 8 "skills" de edición a partir de instrucciones en lenguaje natural.
 
+### 1.1. Estado actual de la dirección técnica
+
+> **Nota para agentes y desarrolladores nuevos:** este documento empezó como propuesta general. La dirección actual del proyecto se refinó durante la implementación inicial. Para tareas concretas de tools, usar también `docs/agent-tools.md` y `docs/agent-tool-specs.md` como referencia operativa.
+
+Decisiones vigentes:
+
+- El agente ya no debe diseñarse como una lista de “features IA” aisladas, sino como un **orquestador con tools primitivas, pequeñas y componibles**.
+- La base del producto es que el agente pueda **entender assets multimodales** con Gemini y luego ejecutar acciones determinísticas sobre el editor.
+- `transcribe_video` existe y es útil, pero queda como **tool secundaria** para subtítulos/captions/búsqueda textual. No debe ser la herramienta principal de comprensión del video.
+- La herramienta principal de percepción a implementar es `load_asset_context`, que carga un asset en el contexto multimodal de Gemini y cachea su referencia.
+- `get_asset_context` es infraestructura interna/cache, no necesariamente una tool visible al LLM.
+- Las tools de edición deben mapearse a acciones reales del editor: cortar, agregar texto, insertar media, borrar elementos, volumen, stickers y efectos existentes.
+- El repo actual tiene infraestructura de efectos, pero el efecto real registrado parece ser **solo `blur`**; corrección de color/LUTs queda fuera del scope inmediato.
+- El core actual del agente es **provider-agnostic** con providers configurables por `LLM_PROVIDER`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_BASE_URL`.
+- Ya existen adapters para `openai-compatible` y `gemini`.
+- Gemini es el proveedor prioritario para video understanding. `LLM_PROVIDER=gemini` con `LLM_MODEL=gemini-3-flash-preview` es la configuración deseada para pruebas de la killer feature.
+
+Roadmap vigente de alto nivel:
+
+1. **Contexto y percepción:** `list_project_assets`, `list_timeline`, `load_asset_context`.
+2. **Edición básica:** `cut_segment`, `add_text`, `add_media_to_timeline`, `delete_element`.
+3. **Ajustes simples:** `set_volume`, `add_sticker`, `apply_effect`.
+4. **UX avanzada:** referencias `@asset`, progreso de uploads/procesamiento, previews/aprobaciones.
+
 ---
 
 ## 2. Problema y solución
@@ -194,16 +218,19 @@ El agente conversacional (orquestación, tool calling, providers, streaming) se 
 | OpenAI | GPT-5 | Alternativa |
 | Local | Qwen3-8B | Para desarrollo |
 
-**Estrategia:** usar Haiku para 80% de decisiones (rápidas/simples) y escalar a Opus solo para razonamiento complejo.
+**Estrategia vigente:** el agente debe ser provider-agnostic. En desarrollo/demo se prioriza Gemini por video understanding. Otros providers OpenAI-compatible/Groq/Ollama pueden usarse para chat y tool calling textual, pero no reemplazan la capacidad multimodal nativa de Gemini.
 
 #### Video Understanding (la killer feature)
 
 | Proveedor | Modelo | Cuándo usarlo |
 |---|---|---|
-| **Google** | **Gemini 2.5 Flash** | Producción/demo. Procesa hasta 6h de video con timestamps nativos. |
+| **Google** | **Gemini 3 Flash / `gemini-3-flash-preview`** | Proveedor prioritario para demo y video understanding multimodal. |
+| **Google** | **Gemini 2.5 Flash** | Fallback/alternativa si Gemini 3 Flash está saturado o no disponible. |
 | **Google** | Gemini 2.5 Pro | Casos complejos. Más caro. |
 | **Local** | **Qwen2.5-VL-7B** | Desarrollo local. Gratis. Entiende video con timestamps nativamente. |
 | **Local** | Qwen2.5-VL-3B | Laptops con menos recursos. |
+
+**Dirección vigente:** Gemini no debe usarse solo como LLM de texto. La ventaja real es cargar el asset de video/audio/imagen al contexto multimodal del modelo mediante Files API o mecanismo equivalente. Esa capacidad se modela en el agente con `load_asset_context`.
 
 #### Transcripción (Speech-to-Text)
 
@@ -381,7 +408,40 @@ ANTHROPIC_API_KEY=...
 
 ## 7. Detalle de tools del agente
 
-Cada tool es una función pura que el LLM puede invocar. Se definen con JSON Schema para que el LLM sepa cuándo llamarlas.
+Cada tool es una función que el LLM puede invocar con entrada estructurada. Se definen con schema para que el modelo sepa cuándo llamarlas y para que el orquestador pueda validar argumentos antes de ejecutar.
+
+> **Actualización importante:** la lista original por tiers queda como referencia histórica de ideas posibles. La dirección vigente del proyecto es usar **tools primitivas y componibles**. Para implementación, usar como fuente principal `docs/agent-tool-specs.md`.
+
+### 7.0. Tools primitivas vigentes
+
+Estas son las tools que el equipo debe priorizar. Son suficientemente pequeñas para implementarse y testearse por separado, pero combinables para resolver tareas complejas.
+
+| Tool | Propósito | Estado / prioridad |
+|---|---|---|
+| `list_project_assets` | Lista assets del proyecto, usados/no usados y por tipo | Prioridad alta |
+| `list_timeline` | Devuelve resumen estructurado del timeline con `trackId`/`elementId` | Prioridad alta |
+| `load_asset_context` | Carga un asset en el contexto multimodal de Gemini y cachea la referencia | Prioridad crítica / killer feature |
+| `cut_segment` | Corta/remueve rangos de tiempo | Prioridad alta |
+| `add_text` | Agrega texto visual: hooks, títulos, labels, subtítulos básicos | Prioridad alta |
+| `update_text` | Modifica texto existente | Prioridad media |
+| `add_media_to_timeline` | Inserta video/audio/imagen existente al timeline | Prioridad alta |
+| `delete_element` | Borra un elemento específico del timeline | Prioridad alta |
+| `set_volume` | Ajusta volumen de audio/video | Prioridad media |
+| `add_sticker` | Inserta sticker existente | Prioridad media |
+| `apply_effect` | Aplica efectos existentes; por ahora principalmente `blur` | Prioridad baja/media |
+
+`transcribe_video` se mantiene como tool secundaria para captions, subtítulos y edición basada en texto. No debe reemplazar a `load_asset_context` para comprensión multimodal.
+
+### 7.0.1. Referencias operativas
+
+- `docs/agent-tools.md` — lista conceptual de tools y decisiones.
+- `docs/agent-tool-specs.md` — contratos de input/output, requirements y errores esperados para cada tool.
+
+---
+
+### Lista histórica original
+
+La siguiente lista se conserva como material de ideación, pero no debe tomarse como backlog implementable directo.
 
 ### Tier 1 — Fundamentales (MVP must-have)
 
@@ -769,21 +829,28 @@ Esto no reemplaza la primera feature de producto; la **habilita**.
 - Como sistema, las tools comparten un contrato estable de entrada y salida
 - Como equipo, podemos alternar entre providers mock, locales y cloud sin cambiar la lógica de negocio
 
-**Must-have (Sprint 3-5):**
-- Como usuario, subo un video y el agente me lo transcribe
-- Como usuario, le pido cortar un segmento específico por timestamp
-- Como usuario, le pido que me identifique las escenas
-- Como usuario, le pregunto sobre el contenido del video y me responde
+**Must-have actualizado:**
+- Como usuario, puedo chatear con un agente conectado a un provider real (`LLM_PROVIDER`).
+- Como sistema, puedo alternar entre providers (`gemini`, `openai-compatible`) sin cambiar el core del agente.
+- Como agente, puedo listar assets del proyecto y saber cuáles están en el timeline.
+- Como agente, puedo cargar un asset con Gemini usando `load_asset_context` para entenderlo multimodalmente.
+- Como usuario, puedo preguntarle al agente sobre el contenido del video después de que el asset esté cargado en contexto.
+- Como usuario, puedo pedir cortes básicos por timestamp usando `cut_segment`.
+- Como usuario, puedo pedir texto visual básico usando `add_text`.
 
-**Should-have (Sprint 6-8):**
-- Como usuario, le pido subtítulos con un estilo específico
-- Como usuario, le pido convertir a vertical siguiendo mi cara
-- Como usuario, le pido un resumen automático de los mejores momentos
+**Should-have actualizado:**
+- Como usuario, puedo insertar assets existentes al timeline con `add_media_to_timeline`.
+- Como usuario, puedo borrar elementos específicos con `delete_element`.
+- Como usuario, puedo ajustar volumen con `set_volume`.
+- Como usuario, puedo agregar stickers con `add_sticker`.
+- Como usuario, puedo aplicar efectos existentes con `apply_effect` (inicialmente `blur`).
 
 **Nice-to-have (Sprint 9+):**
 - Como usuario, puedo deshacer acciones del agente
 - Como usuario, el agente me muestra un preview antes de aplicar cambios grandes
 - Como usuario, comparto el proyecto por URL
+- Como usuario, puedo referenciar assets con `@asset`.
+- Como sistema, cacheo referencias Gemini de assets cargados para evitar re-upload.
 
 ---
 

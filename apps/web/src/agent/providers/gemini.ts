@@ -59,6 +59,9 @@ export function toGeminiContents(messages: ChatMessage[]): Content[] {
 				for (const tc of msg.toolCalls) {
 					parts.push({
 						functionCall: { name: tc.name, args: tc.args },
+						...(tc.thoughtSignature
+							? { thoughtSignature: tc.thoughtSignature }
+							: {}),
 					});
 				}
 			}
@@ -90,10 +93,61 @@ export function toGeminiContents(messages: ChatMessage[]): Content[] {
 					},
 				],
 			});
+
+			const loadedMediaContext = getLoadedMediaContext(responseData);
+			if (loadedMediaContext) {
+				contents.push({
+					role: "user",
+					parts: [
+						{
+							text: `Loaded media context from ${toolName}: ${loadedMediaContext.assetName}. The attached fileData is the actual media file, not just metadata. Use Gemini's multimodal video/audio/visual understanding to answer questions about visible objects, colors, scenes, speech, silence, and timestamps. Do not claim you only have metadata for this loaded file.`,
+						},
+						{
+							fileData: {
+								fileUri: loadedMediaContext.fileUri,
+								mimeType: loadedMediaContext.mimeType,
+							},
+						},
+					],
+				});
+			}
 		}
 	}
 
 	return contents;
+}
+
+function getLoadedMediaContext(responseData: object): {
+	assetName: string;
+	fileUri: string;
+	mimeType: string;
+} | null {
+	const context = (responseData as { context?: unknown }).context;
+	if (!context || typeof context !== "object") {
+		return null;
+	}
+
+	const maybeMediaContext = context as {
+		kind?: unknown;
+		assetName?: unknown;
+		fileUri?: unknown;
+		mimeType?: unknown;
+	};
+
+	if (
+		maybeMediaContext.kind !== "media" ||
+		typeof maybeMediaContext.assetName !== "string" ||
+		typeof maybeMediaContext.fileUri !== "string" ||
+		typeof maybeMediaContext.mimeType !== "string"
+	) {
+		return null;
+	}
+
+	return {
+		assetName: maybeMediaContext.assetName,
+		fileUri: maybeMediaContext.fileUri,
+		mimeType: maybeMediaContext.mimeType,
+	};
 }
 
 /**
@@ -177,10 +231,13 @@ export function fromGeminiResponse(
 			textParts.push(part.text);
 		}
 		if ("functionCall" in part && part.functionCall) {
+			const thoughtSignature = (part as { thoughtSignature?: unknown })
+				.thoughtSignature;
 			toolCalls.push({
 				id: crypto.randomUUID(),
 				name: part.functionCall.name,
 				args: (part.functionCall.args as Record<string, unknown>) ?? {},
+				...(typeof thoughtSignature === "string" ? { thoughtSignature } : {}),
 			});
 		}
 	}

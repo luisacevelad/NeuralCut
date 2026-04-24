@@ -134,6 +134,31 @@ describe("buildSystemPrompt", () => {
 		expect(prompt).toContain("plain text");
 	});
 
+	test("instructs Gemini to analyze loaded fileData as actual media", () => {
+		const tools = [
+			{ name: "load_context", description: "Loads Gemini media context" },
+		];
+
+		const prompt = buildSystemPrompt(BASE_CONTEXT, tools);
+
+		expect(prompt).toContain("attached fileData");
+		expect(prompt).toContain("actual video/audio/image content");
+		expect(prompt).toContain("visual and audio questions directly");
+	});
+
+	test("instructs Gemini to load media before refusing visual questions", () => {
+		const tools = [
+			{ name: "list_timeline", description: "Lists timeline" },
+			{ name: "load_context", description: "Loads Gemini media context" },
+		];
+
+		const prompt = buildSystemPrompt(BASE_CONTEXT, tools);
+
+		expect(prompt).toContain("never answer that you cannot see or hear");
+		expect(prompt).toContain("call list_project_assets or list_timeline");
+		expect(prompt).toContain("then call load_context");
+	});
+
 	test("lists multiple tools when provided", () => {
 		const tools = [
 			{ name: "transcribe_video", description: "Transcribes audio" },

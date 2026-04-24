@@ -55,17 +55,41 @@ function buildTimelineTracks(
 	}
 
 	const tracks: AgentTimelineTrack[] = [];
+	const overlayTracks = scene.tracks.overlay ?? [];
+	let position = 0;
 
-	if (scene.tracks.main) {
-		tracks.push(toTimelineTrack(scene.tracks.main, "main"));
+	for (let index = 0; index < overlayTracks.length; index++) {
+		const track = overlayTracks[index];
+		tracks.push(
+			toTimelineTrack(track, mapOverlayTrackType(track.type), {
+				position: position++,
+				visualLayer: overlayTracks.length - index,
+				isVisualLayer: true,
+				stacking: index === 0 ? "top" : "above_main",
+			}),
+		);
 	}
 
-	for (const track of scene.tracks.overlay ?? []) {
-		tracks.push(toTimelineTrack(track, mapOverlayTrackType(track.type)));
+	if (scene.tracks.main) {
+		tracks.push(
+			toTimelineTrack(scene.tracks.main, "main", {
+				position: position++,
+				visualLayer: 0,
+				isVisualLayer: true,
+				stacking: "main",
+			}),
+		);
 	}
 
 	for (const track of scene.tracks.audio ?? []) {
-		tracks.push(toTimelineTrack(track, "audio"));
+		tracks.push(
+			toTimelineTrack(track, "audio", {
+				position: position++,
+				visualLayer: null,
+				isVisualLayer: false,
+				stacking: "audio",
+			}),
+		);
 	}
 
 	return tracks;
@@ -74,10 +98,15 @@ function buildTimelineTracks(
 function toTimelineTrack(
 	track: TrackInput,
 	type: AgentTimelineTrack["type"],
+	stacking: Pick<
+		AgentTimelineTrack,
+		"position" | "visualLayer" | "isVisualLayer" | "stacking"
+	>,
 ): AgentTimelineTrack {
 	return {
 		trackId: track.id ?? "",
 		type,
+		...stacking,
 		elements: (track.elements ?? [])
 			.filter(hasTimelineElementShape)
 			.map((element) => ({
@@ -85,6 +114,7 @@ function toTimelineTrack(
 				type: element.type,
 				...(hasMediaId(element) ? { assetId: element.mediaId } : {}),
 				...(element.name ? { name: element.name } : {}),
+				...(hasTextContent(element) ? { content: element.content } : {}),
 				start: element.startTime,
 				end: element.startTime + element.duration,
 			})),
@@ -128,6 +158,15 @@ function hasMediaId(element: unknown): element is { mediaId: string } {
 		element !== null &&
 		"mediaId" in element &&
 		typeof element.mediaId === "string"
+	);
+}
+
+function hasTextContent(element: unknown): element is { content: string } {
+	return (
+		typeof element === "object" &&
+		element !== null &&
+		"content" in element &&
+		typeof element.content === "string"
 	);
 }
 

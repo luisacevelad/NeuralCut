@@ -121,6 +121,7 @@ describe("buildContextFromEditorState (context mapper)", () => {
 									id: "text-1",
 									type: "text",
 									name: "Caption",
+									content: "Hello world",
 									startTime: 3,
 									duration: 2,
 								},
@@ -152,8 +153,30 @@ describe("buildContextFromEditorState (context mapper)", () => {
 
 		expect(ctx.timelineTracks).toEqual([
 			{
+				trackId: "text-track",
+				type: "text",
+				position: 0,
+				visualLayer: 1,
+				isVisualLayer: true,
+				stacking: "top",
+				elements: [
+					{
+						elementId: "text-1",
+						type: "text",
+						name: "Caption",
+						content: "Hello world",
+						start: 3,
+						end: 5,
+					},
+				],
+			},
+			{
 				trackId: "main-track",
 				type: "main",
+				position: 1,
+				visualLayer: 0,
+				isVisualLayer: true,
+				stacking: "main",
 				elements: [
 					{
 						elementId: "clip-1",
@@ -166,21 +189,12 @@ describe("buildContextFromEditorState (context mapper)", () => {
 				],
 			},
 			{
-				trackId: "text-track",
-				type: "text",
-				elements: [
-					{
-						elementId: "text-1",
-						type: "text",
-						name: "Caption",
-						start: 3,
-						end: 5,
-					},
-				],
-			},
-			{
 				trackId: "audio-track",
 				type: "audio",
+				position: 2,
+				visualLayer: null,
+				isVisualLayer: false,
+				stacking: "audio",
 				elements: [
 					{
 						elementId: "music-1",

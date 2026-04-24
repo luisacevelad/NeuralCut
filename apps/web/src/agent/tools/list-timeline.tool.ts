@@ -1,0 +1,29 @@
+import type {
+	AgentContext,
+	AgentTimelineTrack,
+	ToolDefinition,
+} from "@/agent/types";
+import { toolRegistry } from "@/agent/tools/registry";
+
+export type ListTimelineResult = {
+	tracks: AgentTimelineTrack[];
+};
+
+const listTimelineTool: ToolDefinition = {
+	name: "list_timeline",
+	description:
+		"Lists the active timeline as structured tracks and editable elements with trackId, elementId, type, assetId, name, start, and end times.",
+	parameters: [],
+	execute: async (
+		_args: Record<string, unknown>,
+		context: AgentContext,
+	): Promise<ListTimelineResult | { error: string }> => {
+		if (!context.activeSceneId || !context.timelineTracks) {
+			return { error: "No active timeline" };
+		}
+
+		return { tracks: context.timelineTracks };
+	},
+};
+
+toolRegistry.register("list_timeline", listTimelineTool);

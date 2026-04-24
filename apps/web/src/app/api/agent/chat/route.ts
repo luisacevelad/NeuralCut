@@ -22,6 +22,13 @@ const providerToolDefs: ToolDefinition[] = [
 		execute: async () => ({}), // stub — never called server-side
 	},
 	{
+		name: "list_timeline",
+		description:
+			"Lists the active timeline as structured tracks and editable elements with trackId, elementId, type, assetId, name, start, and end times.",
+		parameters: [],
+		execute: async () => ({}), // stub — never called server-side
+	},
+	{
 		name: "transcribe_video",
 		description:
 			"Transcribes the audio of a video or audio asset using Whisper. Returns structured transcript with segments and timestamps.",
@@ -66,6 +73,24 @@ const chatRequestSchema = z.object({
 				usedInTimeline: z.boolean().optional(),
 			}),
 		),
+		timelineTracks: z
+			.array(
+				z.object({
+					trackId: z.string(),
+					type: z.enum(["main", "overlay", "audio", "text", "effect"]),
+					elements: z.array(
+						z.object({
+							elementId: z.string(),
+							type: z.string(),
+							assetId: z.string().optional(),
+							name: z.string().optional(),
+							start: z.number(),
+							end: z.number(),
+						}),
+					),
+				}),
+			)
+			.optional(),
 		playbackTimeMs: z.number(),
 	}) satisfies z.ZodType<AgentContext>,
 });

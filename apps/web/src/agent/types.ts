@@ -38,8 +38,22 @@ export interface AgentContext {
 		duration: number;
 		usedInTimeline?: boolean;
 	}>;
+	timelineTracks?: AgentTimelineTrack[];
 	playbackTimeMs: number;
 }
+
+export type AgentTimelineTrack = {
+	trackId: string;
+	type: "main" | "overlay" | "audio" | "text" | "effect";
+	elements: Array<{
+		elementId: string;
+		type: string;
+		assetId?: string;
+		name?: string;
+		start: number;
+		end: number;
+	}>;
+};
 
 export interface ToolDefinition {
 	name: string;

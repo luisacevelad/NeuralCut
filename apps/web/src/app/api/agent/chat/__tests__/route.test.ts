@@ -36,6 +36,20 @@ const VALID_CONTEXT = {
 		duration: number;
 		usedInTimeline?: boolean;
 	}>,
+	timelineTracks: undefined as
+		| Array<{
+				trackId: string;
+				type: "main" | "overlay" | "audio" | "text" | "effect";
+				elements: Array<{
+					elementId: string;
+					type: string;
+					assetId?: string;
+					name?: string;
+					start: number;
+					end: number;
+				}>;
+		  }>
+		| undefined,
 	playbackTimeMs: 0,
 };
 
@@ -133,10 +147,10 @@ describe("POST /api/agent/chat", () => {
 
 		expect(callArgs.messages).toHaveLength(1);
 		expect(callArgs.systemPrompt).toContain("NeuralCut");
-		expect(callArgs.tools).toHaveLength(2);
+		expect(callArgs.tools).toHaveLength(3);
 		expect(
 			callArgs.tools.map((tool) => (tool as { name: string }).name),
-		).toEqual(["list_project_assets", "transcribe_video"]);
+		).toEqual(["list_project_assets", "list_timeline", "transcribe_video"]);
 	});
 
 	// -----------------------------------------------------------------------

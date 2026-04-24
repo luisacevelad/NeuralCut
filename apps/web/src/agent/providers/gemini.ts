@@ -27,6 +27,51 @@ const TYPE_MAP: Record<string, SchemaType> = {
 	object: SchemaType.OBJECT,
 };
 
+const GEMINI_MAX_ATTEMPTS = 5;
+const GEMINI_RETRY_BASE_DELAY_MS = process.env.NODE_ENV === "test" ? 0 : 1000;
+const GEMINI_RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
+
+function getProviderStatus(error: unknown): number | null {
+	const status = (error as { status?: unknown })?.status;
+	if (typeof status === "number") return status;
+
+	const message = error instanceof Error ? error.message : String(error);
+	const match = message.match(/\[(\d{3})\s/);
+	return match ? Number(match[1]) : null;
+}
+
+function isRetryableProviderError(error: unknown): boolean {
+	const status = getProviderStatus(error);
+	return status !== null && GEMINI_RETRYABLE_STATUSES.has(status);
+}
+
+function wait(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withGeminiRetry<T>(operation: () => Promise<T>): Promise<T> {
+	let lastError: unknown;
+
+	for (let attempt = 1; attempt <= GEMINI_MAX_ATTEMPTS; attempt++) {
+		try {
+			return await operation();
+		} catch (error) {
+			lastError = error;
+
+			if (attempt === GEMINI_MAX_ATTEMPTS || !isRetryableProviderError(error)) {
+				throw error;
+			}
+
+			const backoffMs = GEMINI_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+			const jitterMs =
+				GEMINI_RETRY_BASE_DELAY_MS === 0 ? 0 : Math.random() * 250;
+			await wait(backoffMs + jitterMs);
+		}
+	}
+
+	throw lastError;
+}
+
 /**
  * Converts internal ChatMessages into Gemini Content[].
  *
@@ -291,7 +336,9 @@ export class GeminiAdapter implements ProviderAdapter {
 			request.tools = [{ functionDeclarations }];
 		}
 
-		const result = await this.model.generateContent(request);
+		const result = await withGeminiRetry(() =>
+			this.model.generateContent(request),
+		);
 		return fromGeminiResponse(result);
 	}
 }

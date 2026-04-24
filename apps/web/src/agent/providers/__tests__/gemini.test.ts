@@ -574,4 +574,42 @@ describe("GeminiAdapter.chat()", () => {
 		expect(callArgs.tools).toBeDefined();
 		expect(callArgs.tools[0].functionDeclarations).toHaveLength(1);
 	});
+
+	test("retries transient provider failures before returning content", async () => {
+		const providerError = Object.assign(new Error("Service Unavailable"), {
+			status: 503,
+		});
+		mockGenerateContent
+			.mockRejectedValueOnce(providerError)
+			.mockRejectedValueOnce(providerError)
+			.mockResolvedValueOnce(makeGeminiResponse({ text: "Recovered" }));
+
+		const adapter = new GeminiAdapter(TEST_CONFIG);
+		const result = await adapter.chat({
+			messages: [makeChatMessage("user", "Hi")],
+			systemPrompt: "",
+			tools: [],
+		});
+
+		expect(result.content).toBe("Recovered");
+		expect(mockGenerateContent).toHaveBeenCalledTimes(3);
+	});
+
+	test("does not retry non-transient provider failures", async () => {
+		const providerError = Object.assign(new Error("Bad request"), {
+			status: 400,
+		});
+		mockGenerateContent.mockRejectedValueOnce(providerError);
+
+		const adapter = new GeminiAdapter(TEST_CONFIG);
+		await expect(
+			adapter.chat({
+				messages: [makeChatMessage("user", "Hi")],
+				systemPrompt: "",
+				tools: [],
+			}),
+		).rejects.toThrow("Bad request");
+
+		expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+	});
 });

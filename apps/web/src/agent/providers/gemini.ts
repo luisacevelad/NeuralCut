@@ -4,6 +4,7 @@ import {
 	type FunctionDeclaration,
 	type FunctionDeclarationSchema,
 	type GenerateContentResult,
+	type Schema,
 	SchemaType,
 } from "@google/generative-ai";
 import type { ChatMessage, ToolCall, ToolSchema } from "@/agent/types";
@@ -16,16 +17,6 @@ import type {
 // ---------------------------------------------------------------------------
 // Internal conversion helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Maps internal type strings to Gemini SchemaType values.
- */
-const TYPE_MAP: Record<string, SchemaType> = {
-	string: SchemaType.STRING,
-	number: SchemaType.NUMBER,
-	boolean: SchemaType.BOOLEAN,
-	object: SchemaType.OBJECT,
-};
 
 const GEMINI_MAX_ATTEMPTS = 5;
 const GEMINI_RETRY_BASE_DELAY_MS = process.env.NODE_ENV === "test" ? 0 : 1000;
@@ -42,7 +33,18 @@ function getProviderStatus(error: unknown): number | null {
 
 function isRetryableProviderError(error: unknown): boolean {
 	const status = getProviderStatus(error);
+	if (status === 429 && isBillingOrQuotaExhaustedError(error)) {
+		return false;
+	}
+
 	return status !== null && GEMINI_RETRYABLE_STATUSES.has(status);
+}
+
+function isBillingOrQuotaExhaustedError(error: unknown): boolean {
+	const message = error instanceof Error ? error.message : String(error);
+	return /prepayment credits are depleted|billing|quota.*(?:depleted|exhausted)/i.test(
+		message,
+	);
 }
 
 function wait(ms: number): Promise<void> {
@@ -230,9 +232,7 @@ export function toGeminiTools(tools: ToolSchema[]): FunctionDeclaration[] {
 		const properties: FunctionDeclarationSchema["properties"] = {};
 
 		for (const param of tool.parameters) {
-			const geminiType = TYPE_MAP[param.type] ?? SchemaType.STRING;
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			(properties as Record<string, any>)[param.key] = { type: geminiType };
+			properties[param.key] = toGeminiParameterSchema(param.type);
 		}
 
 		const requiredParams = tool.parameters
@@ -249,6 +249,17 @@ export function toGeminiTools(tools: ToolSchema[]): FunctionDeclaration[] {
 			},
 		};
 	});
+}
+
+function toGeminiParameterSchema(type: string): Schema {
+	if (type === "number") return { type: SchemaType.NUMBER };
+	if (type === "boolean") return { type: SchemaType.BOOLEAN };
+	if (type === "object") return { type: SchemaType.OBJECT, properties: {} };
+	if (type === "number[]") {
+		return { type: SchemaType.ARRAY, items: { type: SchemaType.NUMBER } };
+	}
+
+	return { type: SchemaType.STRING };
 }
 
 /**

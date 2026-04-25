@@ -9,6 +9,7 @@ import { toolRegistry } from "@/agent/tools/registry";
 import "@/agent/tools/load-context.tool";
 import "@/agent/tools/list-project-assets.tool";
 import "@/agent/tools/list-timeline.tool";
+import "@/agent/tools/split.tool";
 import { useChatStore } from "@/stores/chat-store";
 import { useAgentStore } from "@/stores/agent-store";
 
@@ -52,9 +53,7 @@ export async function run(
 				} catch {
 					detail = response.statusText;
 				}
-				throw new Error(
-					`API error ${response.status}: ${detail}`,
-				);
+				throw new Error(`API error ${response.status}: ${detail}`);
 			}
 
 			const data: APIResponse = await response.json();
@@ -160,6 +159,13 @@ function validateToolArgs(
 		}
 		if (param.type === "boolean" && actualType !== "boolean") {
 			return `Argument "${param.key}" must be a boolean, got ${actualType}`;
+		}
+		if (
+			param.type === "number[]" &&
+			(!Array.isArray(value) ||
+				!value.every((item) => typeof item === "number"))
+		) {
+			return `Argument "${param.key}" must be an array of numbers`;
 		}
 	}
 

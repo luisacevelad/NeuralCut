@@ -89,23 +89,24 @@ Uso:
 
 ## Tools de edición primitivas
 
-### `cut_segment`
+### `split`
 
-Corta o remueve un rango de tiempo del timeline.
+Hace splits/cortes en uno o más puntos de tiempo del timeline, sin borrar contenido.
 
 ```ts
 {
-  start: number;
-  end: number;
-  mode: "remove" | "keep";
+  times: number[]; // timeline seconds
 }
 ```
 
 Uso:
-- quitar silencios,
-- quitar errores,
-- recortar intro/outro,
-- construir highlights.
+- cortar en un punto específico,
+- aislar una sección antes de borrarla con otra tool usando dos tiempos,
+- preparar edición por rangos,
+- separar intro/outro sin eliminar nada,
+- dejarle al agente una primitive composable para flujos más grandes.
+
+> `split` NO elimina material. Si el usuario pide “eliminá esta parte”, el agente debe componer `split` con una tool de borrado cuando exista.
 
 ---
 
@@ -294,7 +295,7 @@ Descartada porque `analysisType` introduce categorías artificiales. Gemini debe
 
 ### `remove_silences`
 
-Diferida/no prioritaria porque se puede expresar como flujo con `cut_segment`.
+Diferida/no prioritaria porque se puede expresar como flujo con `split` + tool de borrado.
 
 ### `generate_subtitles`
 
@@ -311,7 +312,7 @@ Diferida porque el repo actual no parece tener corrección de color/LUTs impleme
 1. `list_project_assets`
 2. `list_timeline`
 3. `load_asset_context`
-4. `cut_segment`
+4. `split`
 5. `add_text`
 6. `add_media_to_timeline`
 7. `delete_element`

@@ -21,6 +21,7 @@ jest.mock("@google/generative-ai", () => ({
 		NUMBER: "number",
 		BOOLEAN: "boolean",
 		OBJECT: "object",
+		ARRAY: "array",
 	},
 }));
 
@@ -308,6 +309,7 @@ describe("toGeminiTools", () => {
 				parameters: [
 					{ key: "name", type: "string", required: true },
 					{ key: "count", type: "number", required: false },
+					{ key: "times", type: "number[]", required: false },
 					{ key: "active", type: "boolean", required: false },
 					{ key: "meta", type: "object", required: false },
 				],
@@ -317,11 +319,13 @@ describe("toGeminiTools", () => {
 		const declarations = toGeminiTools(tools);
 		const props = declarations[0].parameters?.properties as Record<
 			string,
-			{ type: string }
+			{ type: string; items?: { type: string } }
 		>;
 
 		expect(props.name.type).toBe(SchemaType.STRING);
 		expect(props.count.type).toBe(SchemaType.NUMBER);
+		expect(props.times.type).toBe(SchemaType.ARRAY);
+		expect(props.times.items?.type).toBe(SchemaType.NUMBER);
 		expect(props.active.type).toBe(SchemaType.BOOLEAN);
 		expect(props.meta.type).toBe(SchemaType.OBJECT);
 	});
@@ -609,6 +613,25 @@ describe("GeminiAdapter.chat()", () => {
 				tools: [],
 			}),
 		).rejects.toThrow("Bad request");
+
+		expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+	});
+
+	test("does not retry depleted billing credits", async () => {
+		const providerError = Object.assign(
+			new Error("Your prepayment credits are depleted. Manage billing."),
+			{ status: 429 },
+		);
+		mockGenerateContent.mockRejectedValueOnce(providerError);
+
+		const adapter = new GeminiAdapter(TEST_CONFIG);
+		await expect(
+			adapter.chat({
+				messages: [makeChatMessage("user", "Hi")],
+				systemPrompt: "",
+				tools: [],
+			}),
+		).rejects.toThrow("prepayment credits are depleted");
 
 		expect(mockGenerateContent).toHaveBeenCalledTimes(1);
 	});

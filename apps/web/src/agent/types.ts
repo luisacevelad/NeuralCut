@@ -58,7 +58,9 @@ export type AgentTimelineTrack = {
 		assetId?: string;
 		name?: string;
 		content?: string;
+		/** Timeline start in seconds. */
 		start: number;
+		/** Timeline end in seconds. */
 		end: number;
 	}>;
 };

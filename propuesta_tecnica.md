@@ -50,7 +50,7 @@ Decisiones vigentes:
 Roadmap vigente de alto nivel:
 
 1. **Contexto y percepción:** `list_project_assets`, `list_timeline`, `load_asset_context`.
-2. **Edición básica:** `cut_segment`, `add_text`, `add_media_to_timeline`, `delete_element`.
+2. **Edición básica:** `split`, `add_text`, `add_media_to_timeline`, `delete_element`.
 3. **Ajustes simples:** `set_volume`, `add_sticker`, `apply_effect`.
 4. **UX avanzada:** referencias `@asset`, progreso de uploads/procesamiento, previews/aprobaciones.
 
@@ -421,7 +421,7 @@ Estas son las tools que el equipo debe priorizar. Son suficientemente pequeñas 
 | `list_project_assets` | Lista assets del proyecto, usados/no usados y por tipo | Prioridad alta |
 | `list_timeline` | Devuelve resumen estructurado del timeline con `trackId`/`elementId` | Prioridad alta |
 | `load_asset_context` | Carga un asset en el contexto multimodal de Gemini y cachea la referencia | Prioridad crítica / killer feature |
-| `cut_segment` | Corta/remueve rangos de tiempo | Prioridad alta |
+| `split` | Hace cortes puntuales en uno o más timestamps sin borrar contenido | Prioridad alta |
 | `add_text` | Agrega texto visual: hooks, títulos, labels, subtítulos básicos | Prioridad alta |
 | `update_text` | Modifica texto existente | Prioridad media |
 | `add_media_to_timeline` | Inserta video/audio/imagen existente al timeline | Prioridad alta |
@@ -481,16 +481,16 @@ La siguiente lista se conserva como material de ideación, pero no debe tomarse 
 ```
 **Implementación (TS → FFmpeg o Rust WASM):** frame diff analysis. FFmpeg scene filter para rápido, Rust WASM para precisión.
 
-#### 7.4. `cut_segment`
+#### 7.4. `split`
 ```typescript
 {
-  name: "cut_segment",
-  description: "Cut a segment from the video and add it to the timeline",
-  input: { video_id: string, start: number, end: number, track?: number },
-  output: { clip_id: string, position: number }
+  name: "split",
+  description: "Split timeline elements at one or more timestamps without deleting content",
+  input: { times: number[] /* timeline seconds */ },
+  output: { success: boolean, affectedElements: string[] }
 }
 ```
-**Implementación (TS → Zustand store):** manipula el `timelineStore` de NeuralCut directamente desde el agente en TS.
+**Implementación (TS → comandos del editor):** ejecuta splits determinísticos usando la infraestructura de timeline/commands para preservar undo/redo.
 
 #### 7.5. `concat_segments`
 ```typescript
@@ -671,7 +671,7 @@ los mejores momentos y subtítulos amarillos"
          │
          ▼
 4. Para cada highlight:
-   - cut_segment(start, end)
+   - split({ times: [start, end] })
          │
          ▼
 5. concat_segments(ids) ──────► Reel de ~30s
@@ -716,7 +716,7 @@ Usuario: "quita la parte donde me equivoco"
 Agente: watch_video("where does the person mess up?")
          → identifica timestamp 1:23-1:31
          → pide confirmación
-         → cut_segment para remover
+         → split({ times: [start, end] }) + tool de borrado
 ```
 
 ---
@@ -809,7 +809,7 @@ Esto no reemplaza la primera feature de producto; la **habilita**.
 | **2** | 1 semana | Ideación + diseño | Wireframes del panel de chat. Diseño de la capa de abstracción. Decisión de scope de tools. |
 | **3** | 1 semana | Infraestructura habilitadora | ChatPanel mínimo funcional, `chatStore`/`agentStore`, endpoint `/api/agent/chat`, orquestador básico, registro de tools, tipos compartidos, integración con video activo. |
 | **4** | 1 semana | Primer vertical slice real | `transcribe_video` conectada end-to-end con provider real o local, respuesta visible en chat y timestamps persistidos en estado. |
-| **5** | 1 semana | Tier 1 tools | detect_silences, detect_scenes, cut_segment, concat_segments sobre la base ya creada. |
+| **5** | 1 semana | Tier 1 tools | detect_silences, detect_scenes, split, concat_segments sobre la base ya creada. |
 | **6** | 1 semana | Video understanding | watch_video + take_screenshot + describe_scene. Primera demo "wow". |
 | **7** | 1 semana | Creative tools | generate_subtitles, apply_lut, detect_faces. |
 | **8** | 1 semana | Reframe + beats | auto_reframe (MediaPipe), detect_beats (Essentia). |
@@ -835,7 +835,7 @@ Esto no reemplaza la primera feature de producto; la **habilita**.
 - Como agente, puedo listar assets del proyecto y saber cuáles están en el timeline.
 - Como agente, puedo cargar un asset con Gemini usando `load_asset_context` para entenderlo multimodalmente.
 - Como usuario, puedo preguntarle al agente sobre el contenido del video después de que el asset esté cargado en contexto.
-- Como usuario, puedo pedir cortes básicos por timestamp usando `cut_segment`.
+- Como usuario, puedo pedir cortes básicos por timestamp usando `split`.
 - Como usuario, puedo pedir texto visual básico usando `add_text`.
 
 **Should-have actualizado:**

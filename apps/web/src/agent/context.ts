@@ -1,6 +1,7 @@
 import { EditorCore } from "@/core";
 import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { buildContextFromEditorState } from "@/agent/context-mapper";
+import type { SceneTracks } from "@/lib/timeline";
 
 /**
  * Thin adapter: the ONLY file in agent/ that imports from core/.
@@ -50,6 +51,39 @@ export const EditorContextAdapter = {
 		const asset = core.media.getAssets().find((a) => a.id === assetId);
 		return asset?.hasAudio;
 	},
+
+	splitTimeline({
+		times,
+	}: {
+		times: number[];
+	}): { success: boolean; affectedElements: string[] } | { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		if (!hasTimelineContent(activeScene.tracks)) {
+			return { error: "No timeline content" };
+		}
+
+		const affectedElements = core.timeline.split({
+			times: times.map((time) => secondsToTicks(time)),
+		});
+		return { success: true, affectedElements };
+	},
 };
+
+function secondsToTicks(seconds: number): number {
+	return Math.round(seconds * TICKS_PER_SECOND);
+}
+
+function hasTimelineContent(tracks: SceneTracks): boolean {
+	return (
+		tracks.main.elements.length > 0 ||
+		tracks.overlay.some((track) => track.elements.length > 0) ||
+		tracks.audio.some((track) => track.elements.length > 0)
+	);
+}
 
 export { buildSystemPrompt } from "@/agent/system-prompt";

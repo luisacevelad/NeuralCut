@@ -12,7 +12,7 @@ export type ListTimelineResult = {
 const listTimelineTool: ToolDefinition = {
 	name: "list_timeline",
 	description:
-		"Lists the active timeline as structured tracks and editable elements with layer metadata. position is timeline row order from top to bottom; visualLayer is render stacking where higher renders above lower, and audio tracks have null visualLayer.",
+		"Lists the active timeline as structured tracks and editable elements with layer metadata. Element start/end values are in seconds. position is timeline row order from top to bottom; visualLayer is render stacking where higher renders above lower, and audio tracks have null visualLayer.",
 	parameters: [],
 	execute: async (
 		_args: Record<string, unknown>,

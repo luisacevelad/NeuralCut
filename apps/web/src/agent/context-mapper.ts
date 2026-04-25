@@ -25,7 +25,10 @@ export function buildContextFromEditorState(params: {
 			duration: a.duration ?? 0,
 			usedInTimeline: usedMediaIds.has(a.id),
 		})),
-		timelineTracks: buildTimelineTracks(params.activeScene),
+		timelineTracks: buildTimelineTracks(
+			params.activeScene,
+			params.ticksPerSecond,
+		),
 		playbackTimeMs: Math.round(
 			(params.currentTimeTicks / params.ticksPerSecond) * 1000,
 		),
@@ -49,6 +52,7 @@ type TrackInput = {
 
 function buildTimelineTracks(
 	scene: ActiveSceneInput | null,
+	ticksPerSecond: number,
 ): AgentTimelineTrack[] | undefined {
 	if (!scene?.tracks) {
 		return undefined;
@@ -61,7 +65,7 @@ function buildTimelineTracks(
 	for (let index = 0; index < overlayTracks.length; index++) {
 		const track = overlayTracks[index];
 		tracks.push(
-			toTimelineTrack(track, mapOverlayTrackType(track.type), {
+			toTimelineTrack(track, mapOverlayTrackType(track.type), ticksPerSecond, {
 				position: position++,
 				visualLayer: overlayTracks.length - index,
 				isVisualLayer: true,
@@ -72,7 +76,7 @@ function buildTimelineTracks(
 
 	if (scene.tracks.main) {
 		tracks.push(
-			toTimelineTrack(scene.tracks.main, "main", {
+			toTimelineTrack(scene.tracks.main, "main", ticksPerSecond, {
 				position: position++,
 				visualLayer: 0,
 				isVisualLayer: true,
@@ -83,7 +87,7 @@ function buildTimelineTracks(
 
 	for (const track of scene.tracks.audio ?? []) {
 		tracks.push(
-			toTimelineTrack(track, "audio", {
+			toTimelineTrack(track, "audio", ticksPerSecond, {
 				position: position++,
 				visualLayer: null,
 				isVisualLayer: false,
@@ -98,6 +102,7 @@ function buildTimelineTracks(
 function toTimelineTrack(
 	track: TrackInput,
 	type: AgentTimelineTrack["type"],
+	ticksPerSecond: number,
 	stacking: Pick<
 		AgentTimelineTrack,
 		"position" | "visualLayer" | "isVisualLayer" | "stacking"
@@ -115,10 +120,14 @@ function toTimelineTrack(
 				...(hasMediaId(element) ? { assetId: element.mediaId } : {}),
 				...(element.name ? { name: element.name } : {}),
 				...(hasTextContent(element) ? { content: element.content } : {}),
-				start: element.startTime,
-				end: element.startTime + element.duration,
+				start: toSeconds(element.startTime, ticksPerSecond),
+				end: toSeconds(element.startTime + element.duration, ticksPerSecond),
 			})),
 	};
+}
+
+function toSeconds(ticks: number, ticksPerSecond: number): number {
+	return ticks / ticksPerSecond;
 }
 
 function mapOverlayTrackType(

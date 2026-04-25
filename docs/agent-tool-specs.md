@@ -147,17 +147,15 @@ Cargar un asset en el contexto multimodal del agente usando Gemini. Esta es la b
 
 ---
 
-## 4. `cut_segment`
+## 4. `split`
 
 ### Propósito
-Cortar o remover un rango de tiempo del timeline.
+Dividir elementos del timeline en uno o más puntos de tiempo, sin borrar contenido. Esta primitive equivale a hacer cortes/splits puntuales en el editor; eliminar material debe ser una tool separada y puede componerse después de hacer splits.
 
 ### Input
 ```ts
 {
-  start: number;
-  end: number;
-  mode: "remove" | "keep";
+  times: number[]; // timeline seconds
 }
 ```
 
@@ -170,17 +168,17 @@ Cortar o remover un rango de tiempo del timeline.
 ```
 
 ### Requirements
-- MUST validate `start < end`.
-- MUST operate on timeline time, using the editor’s canonical time unit internally.
+- MUST validate `times` contains at least one finite number.
+- MUST accept timeline times in seconds and convert to the editor’s canonical time unit internally.
 - MUST use existing timeline/command infrastructure when possible.
-- `remove` MUST remove the selected time range.
-- `keep` MUST preserve only the selected time range and remove outside material, if feasible in current editor model.
+- MUST split every timeline element intersecting each requested time when the split point falls strictly inside the element.
+- MUST NOT delete, trim away, or move timeline content.
+- MUST be idempotent at existing boundaries: if a requested time already equals an element boundary, it MUST NOT create a duplicate split there.
 - MUST preserve undo/redo behavior if the editor supports it for the operation.
 
 ### Errors
-- Invalid range: `{ error: "Invalid time range" }`.
+- Invalid times: `{ error: "Invalid split times" }`.
 - Empty timeline: `{ error: "No timeline content" }`.
-- Unsupported mode: `{ error: "Unsupported cut mode" }`.
 
 ---
 

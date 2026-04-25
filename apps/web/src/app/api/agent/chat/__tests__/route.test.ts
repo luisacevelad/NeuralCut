@@ -152,13 +152,14 @@ describe("POST /api/agent/chat", () => {
 
 		expect(callArgs.messages).toHaveLength(1);
 		expect(callArgs.systemPrompt).toContain("NeuralCut");
-		expect(callArgs.tools).toHaveLength(3);
+		expect(callArgs.tools).toHaveLength(4);
 		expect(
 			callArgs.tools.map((tool) => (tool as { name: string }).name),
 		).toEqual([
 			"load_context",
 			"list_project_assets",
 			"list_timeline",
+			"split",
 		]);
 	});
 
@@ -239,5 +240,23 @@ describe("POST /api/agent/chat", () => {
 
 		const data = await res.json();
 		expect(data.error).toBe("LLM provider error");
+	});
+
+	test("returns clear error when Gemini credits are depleted", async () => {
+		mockChat.mockRejectedValueOnce(
+			Object.assign(
+				new Error(
+					"[GoogleGenerativeAI Error]: [429 Too Many Requests] Your prepayment credits are depleted.",
+				),
+				{ status: 429 },
+			),
+		);
+
+		const res = await POST(makeRequest(VALID_BODY));
+		expect(res.status).toBe(402);
+
+		const data = await res.json();
+		expect(data.error).toContain("Gemini credits are depleted");
+		expect(data.providerStatus).toBe(429);
 	});
 });

@@ -34,8 +34,14 @@ const providerToolSchemas: ToolSchema[] = [
 	{
 		name: "list_timeline",
 		description:
-			"Lists the active timeline as structured tracks and editable elements with layer metadata. Tracks include position (top-to-bottom timeline row), visualLayer (higher renders above lower, null for audio), isVisualLayer, and stacking. Use this to understand which clips visually cover others and to discover ids before load_context.",
+			"Lists the active timeline as structured tracks and editable elements with layer metadata. Element start/end values are in seconds. Tracks include position (top-to-bottom timeline row), visualLayer (higher renders above lower, null for audio), isVisualLayer, and stacking. Use this to understand which clips visually cover others and to discover ids before load_context.",
 		parameters: [],
+	},
+	{
+		name: "split",
+		description:
+			"Splits timeline elements at one or more requested timeline times in seconds without deleting, trimming, or moving content. Use one time for a single cut, or multiple times to isolate ranges before separate edit/delete operations.",
+		parameters: [{ key: "times", type: "number[]", required: true }],
 	},
 ];
 
@@ -160,16 +166,39 @@ export async function POST(request: NextRequest) {
 		const status = (error as { status?: number }).status;
 		const message =
 			error instanceof Error ? error.message : "Unknown provider error";
+		const providerError = toProviderErrorResponse({ message, status });
 		console.error("[agent/chat] Provider error:", error);
 		return NextResponse.json(
 			{
-				error: "LLM provider error",
+				error: providerError.error,
 				...(status ? { providerStatus: status } : {}),
-				...(process.env.NODE_ENV === "development"
-					? { detail: message }
-					: {}),
+				...(process.env.NODE_ENV === "development" ? { detail: message } : {}),
 			},
-			{ status: 502 },
+			{ status: providerError.status },
 		);
 	}
+}
+
+function toProviderErrorResponse({
+	message,
+	status,
+}: {
+	message: string;
+	status?: number;
+}): { error: string; status: number } {
+	if (status === 429 && isBillingOrQuotaExhaustedMessage(message)) {
+		return {
+			status: 402,
+			error:
+				"Gemini credits are depleted. Add credits in AI Studio or switch LLM_PROVIDER/LLM_MODEL in .env.local.",
+		};
+	}
+
+	return { status: 502, error: "LLM provider error" };
+}
+
+function isBillingOrQuotaExhaustedMessage(message: string): boolean {
+	return /prepayment credits are depleted|billing|quota.*(?:depleted|exhausted)/i.test(
+		message,
+	);
 }

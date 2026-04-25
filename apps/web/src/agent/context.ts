@@ -72,6 +72,39 @@ export const EditorContextAdapter = {
 		});
 		return { success: true, affectedElements };
 	},
+
+	deleteTimelineElements({
+		elementIds,
+	}: {
+		elementIds: string[];
+	}): { success: boolean; deletedElements: string[] } | { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		if (!hasTimelineContent(activeScene.tracks)) {
+			return { error: "No timeline content" };
+		}
+
+		const requestedIds = [...new Set(elementIds)];
+		const elements = findTimelineElementsByIds({
+			tracks: activeScene.tracks,
+			elementIds: requestedIds,
+		});
+		const foundIds = new Set(elements.map((element) => element.elementId));
+		const missingIds = requestedIds.filter(
+			(elementId) => !foundIds.has(elementId),
+		);
+
+		if (missingIds.length > 0) {
+			return { error: `Timeline elements not found: ${missingIds.join(", ")}` };
+		}
+
+		core.timeline.deleteElements({ elements });
+		return { success: true, deletedElements: requestedIds };
+	},
 };
 
 function secondsToTicks(seconds: number): number {
@@ -84,6 +117,28 @@ function hasTimelineContent(tracks: SceneTracks): boolean {
 		tracks.overlay.some((track) => track.elements.length > 0) ||
 		tracks.audio.some((track) => track.elements.length > 0)
 	);
+}
+
+function findTimelineElementsByIds({
+	tracks,
+	elementIds,
+}: {
+	tracks: SceneTracks;
+	elementIds: string[];
+}): Array<{ trackId: string; elementId: string }> {
+	const requestedIds = new Set(elementIds);
+	const result: Array<{ trackId: string; elementId: string }> = [];
+	const allTracks = [tracks.main, ...tracks.overlay, ...tracks.audio];
+
+	for (const track of allTracks) {
+		for (const element of track.elements) {
+			if (requestedIds.has(element.id)) {
+				result.push({ trackId: track.id, elementId: element.id });
+			}
+		}
+	}
+
+	return result;
 }
 
 export { buildSystemPrompt } from "@/agent/system-prompt";

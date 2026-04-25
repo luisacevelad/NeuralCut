@@ -43,6 +43,12 @@ const providerToolSchemas: ToolSchema[] = [
 			"Splits timeline elements at one or more requested timeline times in seconds without deleting, trimming, or moving content. Use one time for a single cut, or multiple times to isolate ranges before separate edit/delete operations.",
 		parameters: [{ key: "times", type: "number[]", required: true }],
 	},
+	{
+		name: "delete_timeline_elements",
+		description:
+			"Deletes one or more timeline elements by elementId. Use list_timeline first to discover exact elementIds. To delete a time range, split at the range boundaries first, then delete the isolated elementIds.",
+		parameters: [{ key: "elementIds", type: "string[]", required: true }],
+	},
 ];
 
 // ---------------------------------------------------------------------------

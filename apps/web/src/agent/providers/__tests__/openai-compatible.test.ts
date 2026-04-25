@@ -35,9 +35,7 @@ const SIMPLE_TOOLS: ToolDefinition[] = [
 	{
 		name: "test_tool",
 		description: "A test tool",
-		parameters: [
-			{ key: "input", type: "string", required: true },
-		],
+		parameters: [{ key: "input", type: "string", required: true }],
 		execute: async () => ({}),
 	},
 ];
@@ -117,6 +115,49 @@ describe("OpenAICompatibleAdapter.chat()", () => {
 		});
 	});
 
+	test("maps array parameter schemas to OpenAI format", async () => {
+		mockCreate.mockResolvedValueOnce(makeOpenAIResponse({ content: "ok" }));
+
+		const adapter = new OpenAICompatibleAdapter(TEST_CONFIG);
+		await adapter.chat({
+			messages: [{ id: "1", role: "user", content: "Run tool", timestamp: 0 }],
+			systemPrompt: "System",
+			tools: [
+				{
+					name: "delete_timeline_elements",
+					description: "Delete elements",
+					parameters: [
+						{ key: "elementIds", type: "string[]", required: true },
+						{ key: "times", type: "number[]", required: false },
+					],
+				},
+			],
+		});
+
+		const callArgs = mockCreate.mock.calls[0][0] as {
+			tools: Array<{
+				function: {
+					parameters: {
+						properties: Record<
+							string,
+							{ type: string; items?: { type: string } }
+						>;
+					};
+				};
+			}>;
+		};
+
+		const props = callArgs.tools[0].function.parameters.properties;
+		expect(props.elementIds).toEqual({
+			type: "array",
+			items: { type: "string" },
+		});
+		expect(props.times).toEqual({
+			type: "array",
+			items: { type: "number" },
+		});
+	});
+
 	test("prepends system prompt as first message", async () => {
 		mockCreate.mockResolvedValueOnce(makeOpenAIResponse({ content: "ok" }));
 
@@ -141,9 +182,7 @@ describe("OpenAICompatibleAdapter.chat()", () => {
 
 		const adapter = new OpenAICompatibleAdapter(TEST_CONFIG);
 		await adapter.chat({
-			messages: [
-				{ id: "1", role: "user", content: "Hello", timestamp: 0 },
-			],
+			messages: [{ id: "1", role: "user", content: "Hello", timestamp: 0 }],
 			systemPrompt: "System",
 			tools: [],
 		});
@@ -168,9 +207,7 @@ describe("OpenAICompatibleAdapter.chat()", () => {
 					id: "1",
 					role: "assistant",
 					content: "Let me check.",
-					toolCalls: [
-						{ id: "tc_1", name: "test_tool", args: { input: "x" } },
-					],
+					toolCalls: [{ id: "tc_1", name: "test_tool", args: { input: "x" } }],
 					timestamp: 0,
 				},
 			],

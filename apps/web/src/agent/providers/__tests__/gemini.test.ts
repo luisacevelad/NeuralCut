@@ -310,6 +310,7 @@ describe("toGeminiTools", () => {
 					{ key: "name", type: "string", required: true },
 					{ key: "count", type: "number", required: false },
 					{ key: "times", type: "number[]", required: false },
+					{ key: "elementIds", type: "string[]", required: false },
 					{ key: "active", type: "boolean", required: false },
 					{ key: "meta", type: "object", required: false },
 				],
@@ -326,6 +327,8 @@ describe("toGeminiTools", () => {
 		expect(props.count.type).toBe(SchemaType.NUMBER);
 		expect(props.times.type).toBe(SchemaType.ARRAY);
 		expect(props.times.items?.type).toBe(SchemaType.NUMBER);
+		expect(props.elementIds.type).toBe(SchemaType.ARRAY);
+		expect(props.elementIds.items?.type).toBe(SchemaType.STRING);
 		expect(props.active.type).toBe(SchemaType.BOOLEAN);
 		expect(props.meta.type).toBe(SchemaType.OBJECT);
 	});

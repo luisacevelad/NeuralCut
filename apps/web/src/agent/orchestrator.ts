@@ -10,10 +10,11 @@ import "@/agent/tools/load-context.tool";
 import "@/agent/tools/list-project-assets.tool";
 import "@/agent/tools/list-timeline.tool";
 import "@/agent/tools/split.tool";
+import "@/agent/tools/delete-timeline-elements.tool";
 import { useChatStore } from "@/stores/chat-store";
 import { useAgentStore } from "@/stores/agent-store";
 
-const MAX_ITERATIONS = 8;
+const MAX_ITERATIONS = 20;
 
 interface APIResponse {
 	content: string;
@@ -166,6 +167,13 @@ function validateToolArgs(
 				!value.every((item) => typeof item === "number"))
 		) {
 			return `Argument "${param.key}" must be an array of numbers`;
+		}
+		if (
+			param.type === "string[]" &&
+			(!Array.isArray(value) ||
+				!value.every((item) => typeof item === "string"))
+		) {
+			return `Argument "${param.key}" must be an array of strings`;
 		}
 	}
 

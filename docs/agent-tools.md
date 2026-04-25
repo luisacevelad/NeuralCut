@@ -106,7 +106,7 @@ Uso:
 - separar intro/outro sin eliminar nada,
 - dejarle al agente una primitive composable para flujos más grandes.
 
-> `split` NO elimina material. Si el usuario pide “eliminá esta parte”, el agente debe componer `split` con una tool de borrado cuando exista.
+> `split` NO elimina material. Si el usuario pide “eliminá esta parte”, el agente debe componer `split` con `delete_timeline_elements`.
 
 ---
 
@@ -130,14 +130,13 @@ Uso:
 
 ---
 
-### `delete_element`
+### `delete_timeline_elements`
 
-Elimina un elemento específico del timeline.
+Elimina uno o más elementos específicos del timeline.
 
 ```ts
 {
-  trackId: string;
-  elementId: string;
+	elementIds: string[];
 }
 ```
 
@@ -146,6 +145,8 @@ Uso:
 - borrar textos,
 - borrar stickers,
 - borrar efectos standalone si aplica.
+
+> Para borrar un rango, el agente debe hacer `split({ times: [start, end] })`, volver a listar/identificar los elementos aislados si hace falta, y luego llamar `delete_timeline_elements`.
 
 ---
 
@@ -295,7 +296,7 @@ Descartada porque `analysisType` introduce categorías artificiales. Gemini debe
 
 ### `remove_silences`
 
-Diferida/no prioritaria porque se puede expresar como flujo con `split` + tool de borrado.
+Diferida/no prioritaria porque se puede expresar como flujo con `split` + `delete_timeline_elements`.
 
 ### `generate_subtitles`
 
@@ -313,9 +314,9 @@ Diferida porque el repo actual no parece tener corrección de color/LUTs impleme
 2. `list_timeline`
 3. `load_asset_context`
 4. `split`
-5. `add_text`
-6. `add_media_to_timeline`
-7. `delete_element`
+5. `delete_timeline_elements`
+6. `add_text`
+7. `add_media_to_timeline`
 8. `set_volume`
 9. `add_sticker`
 10. `apply_effect`

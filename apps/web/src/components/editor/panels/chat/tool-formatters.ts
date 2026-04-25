@@ -77,6 +77,17 @@ const TOOL_CALL_FORMATTERS: Record<
 			description: `at ${formatted}`,
 		};
 	},
+	delete_timeline_elements: (args) => {
+		const elementIds = args.elementIds as string[] | undefined;
+		const count = elementIds?.length ?? 0;
+		return {
+			label: "Delete",
+			description:
+				count > 0
+					? `${count} element${count !== 1 ? "s" : ""}`
+					: "No elements specified",
+		};
+	},
 	load_context: (args) => {
 		const targetType = String(args.targetType ?? "unknown");
 		const id = args.id ?? args.assetId ?? args.elementId;
@@ -131,6 +142,20 @@ const TOOL_RESULT_FORMATTERS: Record<
 			label: "Split",
 			description: data.success
 				? `${count} element${count !== 1 ? "s" : ""} affected`
+				: "Failed",
+		};
+	},
+	delete_timeline_elements: (parsed) => {
+		const data = parsed as {
+			success?: boolean;
+			deletedElements?: string[];
+		} | null;
+		if (!data) return null;
+		const count = data.deletedElements?.length ?? 0;
+		return {
+			label: "Deleted",
+			description: data.success
+				? `${count} element${count !== 1 ? "s" : ""}`
 				: "Failed",
 		};
 	},

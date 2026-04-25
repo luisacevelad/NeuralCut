@@ -258,6 +258,9 @@ function toGeminiParameterSchema(type: string): Schema {
 	if (type === "number[]") {
 		return { type: SchemaType.ARRAY, items: { type: SchemaType.NUMBER } };
 	}
+	if (type === "string[]") {
+		return { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } };
+	}
 
 	return { type: SchemaType.STRING };
 }

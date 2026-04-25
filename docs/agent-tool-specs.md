@@ -182,7 +182,42 @@ Dividir elementos del timeline en uno o más puntos de tiempo, sin borrar conten
 
 ---
 
-## 5. `add_text`
+## 5. `delete_timeline_elements`
+
+### Propósito
+Eliminar uno o más elementos concretos del timeline por `elementId`. Para eliminar un rango de tiempo, el agente debe primero usar `split({ times: [start, end] })` y luego borrar los elementos aislados.
+
+### Input
+```ts
+{
+  elementIds: string[];
+}
+```
+
+### Output
+```ts
+{
+  success: boolean;
+  deletedElements: string[];
+}
+```
+
+### Requirements
+- MUST validate `elementIds` contains at least one non-empty string.
+- MUST use `list_timeline` first when exact `elementId` values are unknown.
+- MUST resolve `elementId` values against the active timeline before mutating.
+- MUST fail without mutating if any requested element is missing.
+- MUST remove only the requested elements.
+- MUST preserve undo/redo behavior if supported.
+
+### Errors
+- Invalid ids: `{ error: "Invalid element ids" }`.
+- Missing element: `{ error: "Timeline elements not found: <ids>" }`.
+- Empty timeline: `{ error: "No timeline content" }`.
+
+---
+
+## 6. `add_text`
 
 ### Propósito
 Agregar texto visual al timeline. Esta primitive cubre títulos, hooks, labels y subtítulos básicos.
@@ -220,7 +255,7 @@ Agregar texto visual al timeline. Esta primitive cubre títulos, hooks, labels y
 
 ---
 
-## 6. `update_text`
+## 7. `update_text`
 
 ### Propósito
 Editar un texto existente en el timeline.
@@ -258,7 +293,7 @@ Editar un texto existente en el timeline.
 
 ---
 
-## 7. `add_media_to_timeline`
+## 8. `add_media_to_timeline`
 
 ### Propósito
 Agregar un asset existente al timeline.
@@ -292,10 +327,10 @@ Agregar un asset existente al timeline.
 
 ---
 
-## 8. `delete_element`
+## 9. `delete_element` *(deprecated in favor of `delete_timeline_elements`)*
 
 ### Propósito
-Eliminar un elemento específico del timeline.
+Eliminar un elemento específico del timeline. La implementación actual debe preferir `delete_timeline_elements` porque soporta borrado en lote y permite componer rangos después de `split`.
 
 ### Input
 ```ts
@@ -322,7 +357,7 @@ Eliminar un elemento específico del timeline.
 
 ---
 
-## 9. `set_volume`
+## 10. `set_volume`
 
 ### Propósito
 Ajustar volumen de un elemento de audio o video.
@@ -355,7 +390,7 @@ Ajustar volumen de un elemento de audio o video.
 
 ---
 
-## 10. `add_sticker`
+## 11. `add_sticker`
 
 ### Propósito
 Agregar un sticker existente al timeline.
@@ -390,7 +425,7 @@ Agregar un sticker existente al timeline.
 
 ---
 
-## 11. `apply_effect`
+## 12. `apply_effect`
 
 ### Propósito
 Aplicar un efecto existente a un clip. En el estado actual del repo, el efecto real disponible parece ser `blur`.

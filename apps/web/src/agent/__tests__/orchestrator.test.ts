@@ -63,6 +63,13 @@ const testTool: ToolDefinition = {
 	execute: async (args) => ({ echoed: args.input, flag: args.flag }),
 };
 
+const stringArrayTool: ToolDefinition = {
+	name: "_test_string_array_tool",
+	description: "A test tool with string array params",
+	parameters: [{ key: "ids", type: "string[]", required: true }],
+	execute: async (args) => ({ ids: args.ids }),
+};
+
 /** Tool that intentionally throws during execution — used to prove the
  *  orchestrator's resolveToolCalls catch block works at runtime. */
 const throwingTool: ToolDefinition = {
@@ -78,6 +85,7 @@ const throwingTool: ToolDefinition = {
 
 // Register once (registry is a singleton — re-registering overwrites)
 toolRegistry.register("_test_tool", testTool);
+toolRegistry.register("_test_string_array_tool", stringArrayTool);
 toolRegistry.register("_test_throwing_tool", throwingTool);
 
 // ---------------------------------------------------------------------------
@@ -221,8 +229,8 @@ describe("orchestrator", () => {
 		const chat = useChatStore.getState();
 		const agent = useAgentStore.getState();
 
-		// 8 iterations × (1 assistant + 1 tool_result) + 1 cap message = 17
-		expect(chat.messages).toHaveLength(17);
+		// 20 iterations × (1 assistant + 1 tool_result) + 1 cap message = 41
+		expect(chat.messages).toHaveLength(41);
 
 		// Last message is the cap message
 		const lastMsg = chat.messages[chat.messages.length - 1];
@@ -358,6 +366,36 @@ describe("orchestrator", () => {
 		expect(toolResult.role).toBe("tool_result");
 		expect(toolResult.content).toContain("flag");
 		expect(toolResult.content).toContain("must be a boolean");
+	});
+
+	test("validates string array arguments", async () => {
+		let callCount = 0;
+		setMockFetch(() => {
+			callCount++;
+			if (callCount === 1) {
+				return mockFetchResponse({
+					content: "Running tool",
+					toolCalls: [
+						{
+							id: "tc_string_array",
+							name: "_test_string_array_tool",
+							args: { ids: ["a", 2] },
+						},
+					],
+				});
+			}
+			return mockFetchResponse({ content: "Done" });
+		});
+
+		await run(
+			[{ id: "1", role: "user", content: "Test", timestamp: Date.now() }],
+			MOCK_CONTEXT,
+		);
+
+		const toolResult = useChatStore.getState().messages[1];
+		expect(toolResult.role).toBe("tool_result");
+		expect(toolResult.content).toContain("ids");
+		expect(toolResult.content).toContain("must be an array of strings");
 	});
 
 	// -----------------------------------------------------------------------

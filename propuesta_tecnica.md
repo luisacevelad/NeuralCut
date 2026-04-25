@@ -50,7 +50,7 @@ Decisiones vigentes:
 Roadmap vigente de alto nivel:
 
 1. **Contexto y percepción:** `list_project_assets`, `list_timeline`, `load_asset_context`.
-2. **Edición básica:** `split`, `add_text`, `add_media_to_timeline`, `delete_element`.
+2. **Edición básica:** `split`, `delete_timeline_elements`, `add_text`, `add_media_to_timeline`.
 3. **Ajustes simples:** `set_volume`, `add_sticker`, `apply_effect`.
 4. **UX avanzada:** referencias `@asset`, progreso de uploads/procesamiento, previews/aprobaciones.
 
@@ -422,10 +422,11 @@ Estas son las tools que el equipo debe priorizar. Son suficientemente pequeñas 
 | `list_timeline` | Devuelve resumen estructurado del timeline con `trackId`/`elementId` | Prioridad alta |
 | `load_asset_context` | Carga un asset en el contexto multimodal de Gemini y cachea la referencia | Prioridad crítica / killer feature |
 | `split` | Hace cortes puntuales en uno o más timestamps sin borrar contenido | Prioridad alta |
+| `delete_timeline_elements` | Borra uno o más elementos concretos del timeline por `elementId` | Prioridad alta |
 | `add_text` | Agrega texto visual: hooks, títulos, labels, subtítulos básicos | Prioridad alta |
 | `update_text` | Modifica texto existente | Prioridad media |
 | `add_media_to_timeline` | Inserta video/audio/imagen existente al timeline | Prioridad alta |
-| `delete_element` | Borra un elemento específico del timeline | Prioridad alta |
+| `delete_element` | Reemplazada por `delete_timeline_elements` para soportar borrado en lote | Baja |
 | `set_volume` | Ajusta volumen de audio/video | Prioridad media |
 | `add_sticker` | Inserta sticker existente | Prioridad media |
 | `apply_effect` | Aplica efectos existentes; por ahora principalmente `blur` | Prioridad baja/media |
@@ -716,7 +717,7 @@ Usuario: "quita la parte donde me equivoco"
 Agente: watch_video("where does the person mess up?")
          → identifica timestamp 1:23-1:31
          → pide confirmación
-         → split({ times: [start, end] }) + tool de borrado
+         → split({ times: [start, end] }) + delete_timeline_elements
 ```
 
 ---
@@ -840,7 +841,7 @@ Esto no reemplaza la primera feature de producto; la **habilita**.
 
 **Should-have actualizado:**
 - Como usuario, puedo insertar assets existentes al timeline con `add_media_to_timeline`.
-- Como usuario, puedo borrar elementos específicos con `delete_element`.
+- Como usuario, puedo borrar elementos específicos con `delete_timeline_elements`.
 - Como usuario, puedo ajustar volumen con `set_volume`.
 - Como usuario, puedo agregar stickers con `add_sticker`.
 - Como usuario, puedo aplicar efectos existentes con `apply_effect` (inicialmente `blur`).

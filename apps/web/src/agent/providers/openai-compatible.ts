@@ -17,7 +17,7 @@ interface OpenAIFunctionTool {
 		description: string;
 		parameters: {
 			type: "object";
-			properties: Record<string, { type: string }>;
+			properties: Record<string, { type: string; items?: { type: string } }>;
 			required?: string[];
 		};
 	};
@@ -83,16 +83,23 @@ function toOpenAIFunctions(tools: ToolSchema[]): OpenAIFunctionTool[] {
 			parameters: {
 				type: "object" as const,
 				properties: Object.fromEntries(
-					tool.parameters.map((p) => [p.key, { type: p.type }]),
+					tool.parameters.map((p) => [p.key, toOpenAIParameterSchema(p.type)]),
 				),
 				...(tool.parameters.some((p) => p.required) && {
-					required: tool.parameters
-						.filter((p) => p.required)
-						.map((p) => p.key),
+					required: tool.parameters.filter((p) => p.required).map((p) => p.key),
 				}),
 			},
 		},
 	}));
+}
+
+function toOpenAIParameterSchema(type: string): {
+	type: string;
+	items?: { type: string };
+} {
+	if (type === "number[]") return { type: "array", items: { type: "number" } };
+	if (type === "string[]") return { type: "array", items: { type: "string" } };
+	return { type };
 }
 
 // ---------------------------------------------------------------------------
@@ -138,8 +145,7 @@ export class OpenAICompatibleAdapter implements ProviderAdapter {
 			requestParams.tools = openaiTools;
 		}
 
-		const response =
-			await this.client.chat.completions.create(requestParams);
+		const response = await this.client.chat.completions.create(requestParams);
 
 		const choice = response.choices[0];
 		if (!choice) {
@@ -149,12 +155,12 @@ export class OpenAICompatibleAdapter implements ProviderAdapter {
 		const content = choice.message.content ?? "";
 		let toolCalls: ToolCall[] | undefined;
 
-		if (
-			choice.message.tool_calls &&
-			choice.message.tool_calls.length > 0
-		) {
+		if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
 			toolCalls = choice.message.tool_calls
-				.filter((tc): tc is Extract<typeof tc, { type: "function" }> => tc.type === "function")
+				.filter(
+					(tc): tc is Extract<typeof tc, { type: "function" }> =>
+						tc.type === "function",
+				)
 				.map((tc) => ({
 					id: tc.id,
 					name: tc.function.name,

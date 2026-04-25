@@ -1,6 +1,8 @@
 import { EditorContextAdapter } from "@/agent/context";
 import type { AgentContext, ToolDefinition } from "@/agent/types";
 import { toolRegistry } from "@/agent/tools/registry";
+import { resolveElementIds } from "@/agent/tools/resolve-element-ids";
+import { moveTimelineElementsSchema } from "@/agent/tools/schemas";
 
 export type MoveTimelineElementsArgs = {
 	elementIds: string[];
@@ -19,22 +21,19 @@ export type MoveTimelineElementsResult = {
 };
 
 const moveTimelineElementsTool: ToolDefinition = {
-	name: "move_timeline_elements",
-	description:
-		"Moves one or more existing timeline elements to a new timeline start time in seconds. For multiple elements, the earliest selected element is moved to start and the others preserve their relative offsets. Optionally pass targetTrackId to move them to another compatible track.",
-	parameters: [
-		{ key: "elementIds", type: "string[]", required: true },
-		{ key: "start", type: "number", required: true },
-		{ key: "targetTrackId", type: "string", required: false },
-	],
+	...moveTimelineElementsSchema,
 	execute: async (
 		args: Record<string, unknown>,
 		_context: AgentContext,
 	): Promise<MoveTimelineElementsResult | { error: string }> => {
-		const { elementIds, start, targetTrackId } = args;
+		const { start, targetTrackId } = args;
+		const elementIds = resolveElementIds(args.elementIds);
 
-		if (!isValidElementIds(elementIds)) {
-			return { error: "Invalid element ids" };
+		if (!elementIds) {
+			return {
+				error:
+					'elementIds must be a non-empty JSON array of strings, e.g. ["id1","id2"]',
+			};
 		}
 		if (!isValidStart(start)) {
 			return { error: "Invalid start time" };
@@ -51,17 +50,6 @@ const moveTimelineElementsTool: ToolDefinition = {
 	},
 };
 
-function isValidElementIds(elementIds: unknown): elementIds is string[] {
-	return (
-		Array.isArray(elementIds) &&
-		elementIds.length > 0 &&
-		elementIds.every(
-			(elementId) =>
-				typeof elementId === "string" && elementId.trim().length > 0,
-		)
-	);
-}
-
 function isValidStart(start: unknown): start is number {
 	return typeof start === "number" && Number.isFinite(start) && start >= 0;
 }
@@ -75,4 +63,7 @@ function isValidOptionalTargetTrackId(
 	);
 }
 
-toolRegistry.register("move_timeline_elements", moveTimelineElementsTool);
+toolRegistry.register(
+	moveTimelineElementsSchema.name,
+	moveTimelineElementsTool,
+);

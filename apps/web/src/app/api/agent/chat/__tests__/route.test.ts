@@ -152,7 +152,7 @@ describe("POST /api/agent/chat", () => {
 
 		expect(callArgs.messages).toHaveLength(1);
 		expect(callArgs.systemPrompt).toContain("NeuralCut");
-		expect(callArgs.tools).toHaveLength(8);
+		expect(callArgs.tools).toHaveLength(10);
 		expect(
 			callArgs.tools.map((tool) => (tool as { name: string }).name),
 		).toEqual([
@@ -164,6 +164,8 @@ describe("POST /api/agent/chat", () => {
 			"move_timeline_elements",
 			"add_media_to_timeline",
 			"update_timeline_element_timing",
+			"add_text",
+			"update_text",
 		]);
 	});
 

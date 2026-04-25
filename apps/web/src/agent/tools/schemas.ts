@@ -1,0 +1,153 @@
+import type { ToolSchema } from "@/agent/types";
+
+/**
+ * Single source of truth for agent tool schemas.
+ *
+ * Both the server route (provider-facing schema list) and the client tool
+ * definitions (`*.tool.ts`) import from here. This guarantees that the
+ * description and parameters the model sees are exactly what the executor
+ * validates against — no drift possible.
+ *
+ * Pure data: no side effects, no EditorCore imports. Safe for server use.
+ */
+
+export const loadContextSchema: ToolSchema = {
+	name: "load_context",
+	description:
+		"Loads the actual Gemini multimodal context for a project asset or timeline element. Use this before answering questions about visible objects, colors, scenes, speech, silence, or timestamps in media. Use targetType='asset' with assetId/id for media, or targetType='timeline_element' with trackId and elementId/id for captions, text, or timeline media elements.",
+	parameters: [
+		{ key: "targetType", type: "string", required: true },
+		{ key: "id", type: "string", required: false },
+		{ key: "assetId", type: "string", required: false },
+		{ key: "trackId", type: "string", required: false },
+		{ key: "elementId", type: "string", required: false },
+	],
+};
+
+export const listProjectAssetsSchema: ToolSchema = {
+	name: "list_project_assets",
+	description:
+		"Lists project media assets with stable ids, type, duration, and whether each asset is used in the active timeline.",
+	parameters: [
+		{ key: "filter", type: "string", required: false },
+		{ key: "type", type: "string", required: false },
+	],
+};
+
+export const listTimelineSchema: ToolSchema = {
+	name: "list_timeline",
+	description:
+		"Lists the active timeline as structured tracks and editable elements with layer metadata. Element start/end values are in seconds. Tracks include position (top-to-bottom timeline row), visualLayer (higher renders above lower, null for audio), isVisualLayer, and stacking. Use this to understand which clips visually cover others and to discover ids before load_context.",
+	parameters: [],
+};
+
+export const splitSchema: ToolSchema = {
+	name: "split",
+	description:
+		"Splits timeline elements at one or more requested timeline times in seconds without deleting, trimming, or moving content. Use one time for a single cut, or multiple times to isolate ranges before separate edit/delete operations.",
+	parameters: [{ key: "times", type: "number[]", required: true }],
+};
+
+export const deleteTimelineElementsSchema: ToolSchema = {
+	name: "delete_timeline_elements",
+	description:
+		"Deletes one or more timeline elements by elementId. Use list_timeline first to discover exact elementIds. To delete a time range, split at the range boundaries first, then delete the isolated elementIds.",
+	parameters: [{ key: "elementIds", type: "string[]", required: true }],
+};
+
+export const moveTimelineElementsSchema: ToolSchema = {
+	name: "move_timeline_elements",
+	description:
+		"Moves one or more existing timeline elements to a new timeline start time in seconds. For multiple elements, the earliest selected element is moved to start and the others preserve their relative offsets. Optionally pass targetTrackId to move them to another compatible track.",
+	parameters: [
+		{ key: "elementIds", type: "string[]", required: true },
+		{ key: "start", type: "number", required: true },
+		{ key: "targetTrackId", type: "string", required: false },
+	],
+};
+
+export const addMediaToTimelineSchema: ToolSchema = {
+	name: "add_media_to_timeline",
+	description:
+		"Adds an existing project media asset to the active timeline. Use list_project_assets first to discover assetId. startTime and optional duration are in timeline seconds. trackType must be main, overlay, or audio.",
+	parameters: [
+		{ key: "assetId", type: "string", required: true },
+		{ key: "startTime", type: "number", required: true },
+		{ key: "trackType", type: "string", required: true },
+		{ key: "duration", type: "number", required: false },
+	],
+};
+
+export const updateTimelineElementTimingSchema: ToolSchema = {
+	name: "update_timeline_element_timing",
+	description:
+		"Updates an existing timeline element's timing. Use list_timeline first to discover elementId. start, end, and duration are timeline seconds; pass at least one of start, end, or duration.",
+	parameters: [
+		{ key: "elementId", type: "string", required: true },
+		{ key: "start", type: "number", required: false },
+		{ key: "end", type: "number", required: false },
+		{ key: "duration", type: "number", required: false },
+	],
+};
+
+export const addTextSchema: ToolSchema = {
+	name: "add_text",
+	description:
+		"Adds visual text to the active timeline. Use for titles, hooks, labels, and simple subtitle blocks. start and end are timeline seconds. position must be top, center, or bottom; style may be plain, subtitle, hook, or label. Override style defaults with color (hex), fontSize (scaled units), fontFamily, fontWeight (normal/bold), fontStyle (normal/italic), textAlign (left/center/right), letterSpacing, positionX/positionY (offset from -50 to 50), or background ({ enabled, color?, cornerRadius?, padding? }).",
+	parameters: [
+		{ key: "text", type: "string", required: true },
+		{ key: "start", type: "number", required: true },
+		{ key: "end", type: "number", required: true },
+		{ key: "position", type: "string", required: true },
+		{ key: "style", type: "string", required: false },
+		{ key: "color", type: "string", required: false },
+		{ key: "fontSize", type: "number", required: false },
+		{ key: "fontFamily", type: "string", required: false },
+		{ key: "fontWeight", type: "string", required: false },
+		{ key: "fontStyle", type: "string", required: false },
+		{ key: "textAlign", type: "string", required: false },
+		{ key: "letterSpacing", type: "number", required: false },
+		{ key: "positionX", type: "number", required: false },
+		{ key: "positionY", type: "number", required: false },
+		{ key: "background", type: "object", required: false },
+	],
+};
+
+export const updateTextSchema: ToolSchema = {
+	name: "update_text",
+	description:
+		"Updates visual properties of existing text elements. Pass elementIds (from list_timeline) and any combination of text style overrides. Only text elements are updated; non-text elements are skipped. All listed text elements receive the same overrides — use for bulk styling subtitle blocks.",
+	parameters: [
+		// "array" (not "string[]") so the orchestrator validator stays
+		// tolerant of CSV-string fallback handled by resolveElementIds.
+		{ key: "elementIds", type: "array", required: true },
+		{ key: "content", type: "string", required: false },
+		{ key: "color", type: "string", required: false },
+		{ key: "fontSize", type: "number", required: false },
+		{ key: "fontFamily", type: "string", required: false },
+		{ key: "fontWeight", type: "string", required: false },
+		{ key: "fontStyle", type: "string", required: false },
+		{ key: "textAlign", type: "string", required: false },
+		{ key: "letterSpacing", type: "number", required: false },
+		{ key: "positionX", type: "number", required: false },
+		{ key: "positionY", type: "number", required: false },
+		{ key: "background", type: "object", required: false },
+	],
+};
+
+/**
+ * The exact list of schemas exposed to the LLM.
+ * Excludes internal-only tools (transcribe_video, mock).
+ */
+export const providerToolSchemas: ToolSchema[] = [
+	loadContextSchema,
+	listProjectAssetsSchema,
+	listTimelineSchema,
+	splitSchema,
+	deleteTimelineElementsSchema,
+	moveTimelineElementsSchema,
+	addMediaToTimelineSchema,
+	updateTimelineElementTimingSchema,
+	addTextSchema,
+	updateTextSchema,
+];

@@ -116,6 +116,37 @@ const TOOL_CALL_FORMATTERS: Record<
 			description: parts.length > 0 ? parts.join(", ") : "No timing changes",
 		};
 	},
+	add_text: (args) => {
+		const parts: string[] = [];
+		if (args.color) parts.push(String(args.color));
+		if (args.fontSize) parts.push(`size ${args.fontSize}`);
+		if (args.fontFamily) parts.push(String(args.fontFamily));
+		if ((args.background as Record<string, unknown> | undefined)?.enabled)
+			parts.push("bg");
+		return {
+			label: "Add Text",
+			description: `${String(args.text ?? "text")} · ${formatSeconds(args.start)}-${formatSeconds(args.end)}${parts.length > 0 ? ` · ${parts.join(" ")}` : ""}`,
+		};
+	},
+	update_text: (args) => {
+		const raw = args.elementIds;
+		const ids = Array.isArray(raw)
+			? raw.length
+			: typeof raw === "string"
+				? raw.split(",").filter((id) => id.trim().length > 0).length
+				: 0;
+		const overrides: string[] = [];
+		if (args.content) overrides.push("text");
+		if (args.color) overrides.push(String(args.color));
+		if (args.fontSize) overrides.push(`size ${args.fontSize}`);
+		if (args.fontFamily) overrides.push(String(args.fontFamily));
+		if ((args.background as Record<string, unknown> | undefined)?.enabled)
+			overrides.push("bg");
+		return {
+			label: "Update Text",
+			description: `${ids} element${ids !== 1 ? "s" : ""}${overrides.length > 0 ? ` · ${overrides.join(" ")}` : ""}`,
+		};
+	},
 	load_context: (args) => {
 		const targetType = String(args.targetType ?? "unknown");
 		const id = args.id ?? args.assetId ?? args.elementId;
@@ -224,6 +255,33 @@ const TOOL_RESULT_FORMATTERS: Record<
 			label: "Timing Updated",
 			description: data.success
 				? `${formatSeconds(data.start)}-${formatSeconds(data.end)} (${formatSeconds(data.duration)})`
+				: "Failed",
+		};
+	},
+	add_text: (parsed) => {
+		const data = parsed as {
+			elementId?: string;
+			trackId?: string;
+		} | null;
+		if (!data) return null;
+		return {
+			label: "Text Added",
+			description: data.trackId ? `track ${data.trackId}` : "Inserted",
+		};
+	},
+	update_text: (parsed) => {
+		const data = parsed as {
+			success?: boolean;
+			updated?: Array<{ elementId: string }>;
+			skipped?: string[];
+		} | null;
+		if (!data) return null;
+		const count = data.updated?.length ?? 0;
+		const skipped = data.skipped?.length ?? 0;
+		return {
+			label: "Text Updated",
+			description: data.success
+				? `${count} updated${skipped > 0 ? `, ${skipped} skipped` : ""}`
 				: "Failed",
 		};
 	},

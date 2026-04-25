@@ -67,7 +67,8 @@ describe("move_timeline_elements tool", () => {
 		const tool = toolRegistry.get("move_timeline_elements");
 
 		expect(await tool.execute({ elementIds: [], start: 0 }, context)).toEqual({
-			error: "Invalid element ids",
+			error:
+				'elementIds must be a non-empty JSON array of strings, e.g. ["id1","id2"]',
 		});
 		expect(
 			await tool.execute({ elementIds: ["clip-1"], start: -1 }, context),

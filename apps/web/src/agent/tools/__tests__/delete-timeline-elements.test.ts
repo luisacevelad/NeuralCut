@@ -51,19 +51,28 @@ describe("delete_timeline_elements tool", () => {
 		const tool = toolRegistry.get("delete_timeline_elements");
 
 		expect(await tool.execute({ elementIds: [] }, context)).toEqual({
-			error: "Invalid element ids",
+			error:
+				'elementIds must be a non-empty JSON array of strings, e.g. ["id1","id2"]',
 		});
-		expect(await tool.execute({ elementIds: ["clip-1", ""] }, context)).toEqual(
+		expect(await tool.execute({ elementIds: ["", "  "] }, context)).toEqual(
 			{
-				error: "Invalid element ids",
+				error:
+					'elementIds must be a non-empty JSON array of strings, e.g. ["id1","id2"]',
 			},
 		);
-		expect(await tool.execute({ elementIds: ["clip-1", 2] }, context)).toEqual({
-			error: "Invalid element ids",
-		});
-		expect(await tool.execute({ elementIds: "clip-1" }, context)).toEqual({
-			error: "Invalid element ids",
+		expect(await tool.execute({}, context)).toEqual({
+			error:
+				'elementIds must be a non-empty JSON array of strings, e.g. ["id1","id2"]',
 		});
 		expect(mockDeleteTimelineElements).not.toHaveBeenCalled();
+	});
+
+	test("accepts comma-separated string as elementIds", async () => {
+		const tool = toolRegistry.get("delete_timeline_elements");
+
+		await tool.execute({ elementIds: "clip-1,clip-2" }, context);
+		expect(mockDeleteTimelineElements).toHaveBeenCalledWith({
+			elementIds: ["clip-1", "clip-2"],
+		});
 	});
 });

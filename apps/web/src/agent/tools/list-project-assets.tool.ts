@@ -1,5 +1,6 @@
 import type { AgentContext, ToolDefinition } from "@/agent/types";
 import { toolRegistry } from "@/agent/tools/registry";
+import { listProjectAssetsSchema } from "@/agent/tools/schemas";
 
 type AssetTypeFilter = "all" | "video" | "audio" | "image";
 type UsageFilter = "all" | "used" | "unused";
@@ -27,13 +28,7 @@ const assetTypes = new Set<AssetTypeFilter>(["all", "video", "audio", "image"]);
 const usageFilters = new Set<UsageFilter>(["all", "used", "unused"]);
 
 const listProjectAssetsTool: ToolDefinition = {
-	name: "list_project_assets",
-	description:
-		"Lists project media assets with stable ids, type, duration, and whether each asset is used in the active timeline.",
-	parameters: [
-		{ key: "filter", type: "string", required: false },
-		{ key: "type", type: "string", required: false },
-	],
+	...listProjectAssetsSchema,
 	execute: async (
 		args: Record<string, unknown>,
 		context: AgentContext,
@@ -82,4 +77,4 @@ function isSupportedAsset(
 	);
 }
 
-toolRegistry.register("list_project_assets", listProjectAssetsTool);
+toolRegistry.register(listProjectAssetsSchema.name, listProjectAssetsTool);

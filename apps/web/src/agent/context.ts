@@ -4,13 +4,21 @@ import { buildContextFromEditorState } from "@/agent/context-mapper";
 import { BatchCommand } from "@/lib/commands";
 import { AddTrackCommand, InsertElementCommand } from "@/lib/commands/timeline";
 import { DEFAULT_NEW_ELEMENT_DURATION } from "@/lib/timeline/creation";
-import { buildElementFromMedia } from "@/lib/timeline/element-utils";
+import {
+	buildElementFromMedia,
+	buildTextElement,
+} from "@/lib/timeline/element-utils";
+import { DEFAULTS } from "@/lib/timeline/defaults";
 import type {
 	SceneTracks,
+	TextBackground,
+	TextElement,
 	TimelineElement,
 	TimelineTrack,
 	TrackType,
 } from "@/lib/timeline";
+import type { TextStyleOverrides } from "@/agent/tools/add-text.tool";
+import type { UpdateTextArgs } from "@/agent/tools/update-text.tool";
 import { canPlaceTimeSpansOnTrack } from "@/lib/timeline/placement/overlap";
 import { validateElementTrackCompatibility } from "@/lib/timeline/placement";
 import { findTrackInSceneTracks } from "@/lib/timeline/track-element-update";
@@ -367,6 +375,176 @@ export const EditorContextAdapter = {
 			duration: ticksToSeconds(element.duration),
 		};
 	},
+
+	addText({
+		text,
+		start,
+		end,
+		position,
+		style = "plain",
+		color,
+		fontSize,
+		fontFamily,
+		fontWeight,
+		fontStyle,
+		textAlign,
+		letterSpacing,
+		positionX,
+		positionY,
+		background,
+	}: {
+		text: string;
+		start: number;
+		end: number;
+		position: "top" | "center" | "bottom";
+		style?: "plain" | "subtitle" | "hook" | "label";
+	} & TextStyleOverrides):
+		| { elementId: string; trackId: string }
+		| { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		const startTicks = secondsToTicks(start);
+		const duration = secondsToTicks(end) - startTicks;
+		if (duration <= 0) {
+			return { error: "Invalid time range" };
+		}
+
+		const preset = getTextStylePreset(style);
+		const resolvedPosition = getTextPosition(position);
+		const overridePosition =
+			positionX !== undefined || positionY !== undefined
+				? {
+						x: positionX ?? resolvedPosition.x,
+						y: positionY ?? resolvedPosition.y,
+					}
+				: resolvedPosition;
+
+		const resolvedBackground = resolveBackground(preset.background, background);
+
+		const element = buildTextElement({
+			raw: {
+				...preset,
+				...(color !== undefined && { color }),
+				...(fontSize !== undefined && { fontSize }),
+				...(fontFamily !== undefined && { fontFamily }),
+				...(fontWeight !== undefined && { fontWeight }),
+				...(fontStyle !== undefined && { fontStyle }),
+				...(textAlign !== undefined && { textAlign }),
+				...(letterSpacing !== undefined && { letterSpacing }),
+				background: resolvedBackground,
+				name: text,
+				content: text,
+				duration,
+				transform: {
+					...DEFAULTS.text.element.transform,
+					position: overridePosition,
+				},
+			},
+			startTime: startTicks,
+		});
+
+		const insertCommand = new InsertElementCommand({
+			element,
+			placement: { mode: "auto", trackType: "text" },
+		});
+		core.command.execute({ command: insertCommand });
+
+		const trackId = insertCommand.getTrackId();
+		if (!trackId) {
+			return { error: "Failed to add text" };
+		}
+
+		return {
+			elementId: insertCommand.getElementId(),
+			trackId,
+		};
+	},
+
+	updateText({
+		elementIds,
+		content,
+		color,
+		fontSize,
+		fontFamily,
+		fontWeight,
+		fontStyle,
+		textAlign,
+		letterSpacing,
+		positionX,
+		positionY,
+		background,
+	}: {
+		elementIds: string[];
+	} & Omit<UpdateTextArgs, "elementIds">):
+		| {
+				success: boolean;
+				updated: Array<{ elementId: string; trackId: string }>;
+				skipped: string[];
+		  }
+		| { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		const resolved = findTimelineElementsWithTracksByIds({
+			tracks: activeScene.tracks,
+			elementIds,
+		});
+
+		const textElements = resolved.filter(
+			({ element }) => element.type === "text",
+		);
+		const foundIds = new Set(textElements.map(({ element }) => element.id));
+		const skipped = elementIds.filter((id) => !foundIds.has(id));
+
+		if (textElements.length === 0) {
+			return {
+				success: false,
+				updated: [],
+				skipped,
+			};
+		}
+
+		const updates: Array<{
+			trackId: string;
+			elementId: string;
+			patch: Partial<TimelineElement>;
+		}> = [];
+
+		for (const { element, track } of textElements) {
+			const patch = buildTextPatch(element, {
+				content,
+				color,
+				fontSize,
+				fontFamily,
+				fontWeight,
+				fontStyle,
+				textAlign,
+				letterSpacing,
+				positionX,
+				positionY,
+				background,
+			});
+			updates.push({ trackId: track.id, elementId: element.id, patch });
+		}
+
+		core.timeline.updateElements({ updates });
+
+		return {
+			success: true,
+			updated: updates.map((u) => ({
+				elementId: u.elementId,
+				trackId: u.trackId,
+			})),
+			skipped,
+		};
+	},
 };
 
 function secondsToTicks(seconds: number): number {
@@ -490,6 +668,78 @@ function getMaxElementDurationTicks({
 	);
 }
 
+function getTextPosition(position: "top" | "center" | "bottom"): {
+	x: number;
+	y: number;
+} {
+	if (position === "top") {
+		return { x: 0, y: -35 };
+	}
+	if (position === "bottom") {
+		return { x: 0, y: 35 };
+	}
+	return { x: 0, y: 0 };
+}
+
+function resolveBackground(
+	presetBackground: TextBackground | undefined,
+	override: TextStyleOverrides["background"],
+): TextBackground | undefined {
+	if (!override) return presetBackground;
+	const base = presetBackground ?? DEFAULTS.text.element.background;
+	return {
+		...base,
+		enabled: override.enabled,
+		...(override.color !== undefined && { color: override.color }),
+		...(override.cornerRadius !== undefined && {
+			cornerRadius: override.cornerRadius,
+		}),
+		...(override.padding !== undefined && {
+			paddingX: override.padding,
+			paddingY: override.padding,
+		}),
+	};
+}
+
+function getTextStylePreset(style: "plain" | "subtitle" | "hook" | "label") {
+	const noBackground = {
+		...DEFAULTS.text.element.background,
+		enabled: false,
+		color: "transparent",
+	};
+
+	if (style === "subtitle") {
+		return {
+			fontSize: 5,
+			fontWeight: "bold" as const,
+			background: {
+				...DEFAULTS.text.element.background,
+				enabled: true,
+				color: "#000000",
+			},
+		};
+	}
+	if (style === "hook") {
+		return {
+			fontSize: 8,
+			fontWeight: "bold" as const,
+			background: noBackground,
+		};
+	}
+	if (style === "label") {
+		return {
+			fontSize: 5,
+			fontWeight: "bold" as const,
+			background: {
+				...DEFAULTS.text.element.background,
+				enabled: true,
+				color: "#000000",
+			},
+		};
+	}
+	return { fontSize: 6, background: noBackground };
+}
+
 function isAssetCompatibleWithRequestedTrack({
 	assetType,
 	trackType,
@@ -590,6 +840,58 @@ function findTimelineElementsWithTracksByIds({
 	}
 
 	return result;
+}
+
+function buildTextPatch(
+	element: TimelineElement,
+	overrides: Omit<UpdateTextArgs, "elementIds">,
+): Partial<TimelineElement> {
+	if (element.type !== "text") return {};
+
+	const patch: Partial<TextElement> = {};
+
+	if (overrides.content !== undefined) patch.content = overrides.content;
+	if (overrides.color !== undefined) patch.color = overrides.color;
+	if (overrides.fontSize !== undefined) patch.fontSize = overrides.fontSize;
+	if (overrides.fontFamily !== undefined)
+		patch.fontFamily = overrides.fontFamily;
+	if (overrides.fontWeight !== undefined)
+		patch.fontWeight = overrides.fontWeight;
+	if (overrides.fontStyle !== undefined) patch.fontStyle = overrides.fontStyle;
+	if (overrides.textAlign !== undefined) patch.textAlign = overrides.textAlign;
+	if (overrides.letterSpacing !== undefined)
+		patch.letterSpacing = overrides.letterSpacing;
+
+	if (overrides.positionX !== undefined || overrides.positionY !== undefined) {
+		const currentPos = element.transform.position;
+		patch.transform = {
+			...element.transform,
+			position: {
+				x: overrides.positionX ?? currentPos.x,
+				y: overrides.positionY ?? currentPos.y,
+			},
+		};
+	}
+
+	if (overrides.background !== undefined) {
+		const currentBg = element.background;
+		patch.background = {
+			...currentBg,
+			enabled: overrides.background.enabled,
+			...(overrides.background.color !== undefined && {
+				color: overrides.background.color,
+			}),
+			...(overrides.background.cornerRadius !== undefined && {
+				cornerRadius: overrides.background.cornerRadius,
+			}),
+			...(overrides.background.padding !== undefined && {
+				paddingX: overrides.background.padding,
+				paddingY: overrides.background.padding,
+			}),
+		};
+	}
+
+	return patch as Partial<TimelineElement>;
 }
 
 export { buildSystemPrompt } from "@/agent/system-prompt";

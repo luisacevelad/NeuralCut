@@ -6,14 +6,7 @@ import type {
 	ToolResult,
 } from "@/agent/types";
 import { toolRegistry } from "@/agent/tools/registry";
-import "@/agent/tools/load-context.tool";
-import "@/agent/tools/list-project-assets.tool";
-import "@/agent/tools/list-timeline.tool";
-import "@/agent/tools/split.tool";
-import "@/agent/tools/delete-timeline-elements.tool";
-import "@/agent/tools/move-timeline-elements.tool";
-import "@/agent/tools/add-media-to-timeline.tool";
-import "@/agent/tools/update-timeline-element-timing.tool";
+import "@/agent/tools";
 import { useChatStore } from "@/stores/chat-store";
 import { useAgentStore } from "@/stores/agent-store";
 

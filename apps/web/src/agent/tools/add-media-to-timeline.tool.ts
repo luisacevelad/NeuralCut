@@ -1,6 +1,7 @@
 import { EditorContextAdapter } from "@/agent/context";
 import type { AgentContext, ToolDefinition } from "@/agent/types";
 import { toolRegistry } from "@/agent/tools/registry";
+import { addMediaToTimelineSchema } from "@/agent/tools/schemas";
 
 type AddMediaTrackType = "main" | "overlay" | "audio";
 
@@ -17,15 +18,7 @@ export type AddMediaToTimelineResult = {
 };
 
 const addMediaToTimelineTool: ToolDefinition = {
-	name: "add_media_to_timeline",
-	description:
-		"Adds an existing project media asset to the active timeline. Use list_project_assets first to discover assetId. startTime and optional duration are in timeline seconds. trackType chooses main video, overlay video, or audio placement.",
-	parameters: [
-		{ key: "assetId", type: "string", required: true },
-		{ key: "startTime", type: "number", required: true },
-		{ key: "trackType", type: "string", required: true },
-		{ key: "duration", type: "number", required: false },
-	],
+	...addMediaToTimelineSchema,
 	execute: async (
 		args: Record<string, unknown>,
 		_context: AgentContext,
@@ -81,4 +74,4 @@ function isValidOptionalDuration(
 	);
 }
 
-toolRegistry.register("add_media_to_timeline", addMediaToTimelineTool);
+toolRegistry.register(addMediaToTimelineSchema.name, addMediaToTimelineTool);

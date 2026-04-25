@@ -5,6 +5,7 @@ import type {
 } from "@/agent/types";
 import { EditorContextAdapter } from "@/agent/context";
 import { toolRegistry } from "@/agent/tools/registry";
+import { loadContextSchema } from "@/agent/tools/schemas";
 
 type LoadContextTargetType = "asset" | "timeline_element";
 
@@ -68,16 +69,7 @@ const assetContextCache = new Map<string, UploadedGeminiFile>();
 const textContextCache = new Map<string, TextContext>();
 
 const loadContextTool: ToolDefinition = {
-	name: "load_context",
-	description:
-		"Loads relevant Gemini context for a project asset or timeline element. Media assets are uploaded through the server-side Gemini Files API; text/caption elements are loaded as exact structured text.",
-	parameters: [
-		{ key: "targetType", type: "string", required: true },
-		{ key: "id", type: "string", required: false },
-		{ key: "assetId", type: "string", required: false },
-		{ key: "trackId", type: "string", required: false },
-		{ key: "elementId", type: "string", required: false },
-	],
+	...loadContextSchema,
 	execute: async (
 		args: Record<string, unknown>,
 		context: AgentContext,
@@ -388,4 +380,4 @@ type TimelineElementRef = {
 	end: number;
 };
 
-toolRegistry.register("load_context", loadContextTool);
+toolRegistry.register(loadContextSchema.name, loadContextTool);

@@ -1,0 +1,22 @@
+/**
+ * Client-only barrel for agent tools. Importing this file registers every
+ * tool with `toolRegistry` via side effects.
+ *
+ * IMPORTANT: do NOT import this from server code. Tool modules transitively
+ * import EditorContextAdapter, which touches WASM/EditorCore (browser-only).
+ * Server code should import schemas from `./schemas` instead.
+ *
+ * To add a new tool: declare its schema in `./schemas.ts`, create the
+ * `*.tool.ts` file, then add a single side-effect import below.
+ */
+
+import "@/agent/tools/load-context.tool";
+import "@/agent/tools/list-project-assets.tool";
+import "@/agent/tools/list-timeline.tool";
+import "@/agent/tools/split.tool";
+import "@/agent/tools/delete-timeline-elements.tool";
+import "@/agent/tools/move-timeline-elements.tool";
+import "@/agent/tools/add-media-to-timeline.tool";
+import "@/agent/tools/update-timeline-element-timing.tool";
+import "@/agent/tools/add-text.tool";
+import "@/agent/tools/update-text.tool";

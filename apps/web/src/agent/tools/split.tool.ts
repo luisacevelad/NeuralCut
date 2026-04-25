@@ -1,6 +1,7 @@
 import { EditorContextAdapter } from "@/agent/context";
 import type { AgentContext, ToolDefinition } from "@/agent/types";
 import { toolRegistry } from "@/agent/tools/registry";
+import { splitSchema } from "@/agent/tools/schemas";
 
 export type SplitArgs = {
 	times: number[];
@@ -12,10 +13,7 @@ export type SplitResult = {
 };
 
 const splitTool: ToolDefinition = {
-	name: "split",
-	description:
-		"Splits timeline elements at one or more requested times without deleting, trimming, or moving content. Use one time for a single cut, or multiple times to isolate ranges before separate edit/delete operations.",
-	parameters: [{ key: "times", type: "number[]", required: true }],
+	...splitSchema,
 	execute: async (
 		args: Record<string, unknown>,
 		_context: AgentContext,
@@ -40,4 +38,4 @@ function isValidTimes(times: unknown): times is number[] {
 	);
 }
 
-toolRegistry.register("split", splitTool);
+toolRegistry.register(splitSchema.name, splitTool);

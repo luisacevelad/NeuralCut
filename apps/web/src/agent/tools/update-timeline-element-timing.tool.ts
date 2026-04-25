@@ -1,6 +1,7 @@
 import { EditorContextAdapter } from "@/agent/context";
 import type { AgentContext, ToolDefinition } from "@/agent/types";
 import { toolRegistry } from "@/agent/tools/registry";
+import { updateTimelineElementTimingSchema } from "@/agent/tools/schemas";
 
 export type UpdateTimelineElementTimingArgs = {
 	elementId: string;
@@ -19,15 +20,7 @@ export type UpdateTimelineElementTimingResult = {
 };
 
 const updateTimelineElementTimingTool: ToolDefinition = {
-	name: "update_timeline_element_timing",
-	description:
-		"Updates an existing timeline element's timing. Use list_timeline first to discover elementId. start, end, and duration are timeline seconds; pass at least one of start, end, or duration.",
-	parameters: [
-		{ key: "elementId", type: "string", required: true },
-		{ key: "start", type: "number", required: false },
-		{ key: "end", type: "number", required: false },
-		{ key: "duration", type: "number", required: false },
-	],
+	...updateTimelineElementTimingSchema,
 	execute: async (
 		args: Record<string, unknown>,
 		_context: AgentContext,
@@ -87,6 +80,6 @@ function isValidOptionalDuration(
 }
 
 toolRegistry.register(
-	"update_timeline_element_timing",
+	updateTimelineElementTimingSchema.name,
 	updateTimelineElementTimingTool,
 );

@@ -88,6 +88,34 @@ const TOOL_CALL_FORMATTERS: Record<
 					: "No elements specified",
 		};
 	},
+	move_timeline_elements: (args) => {
+		const elementIds = args.elementIds as string[] | undefined;
+		const count = elementIds?.length ?? 0;
+		const start = formatSeconds(args.start);
+		return {
+			label: "Move",
+			description: `${count} element${count !== 1 ? "s" : ""} to ${start}`,
+		};
+	},
+	add_media_to_timeline: (args) => ({
+		label: "Add Media",
+		description: `${String(args.assetId ?? "asset")} to ${String(args.trackType ?? "timeline")} at ${formatSeconds(args.startTime)}${typeof args.duration === "number" ? ` for ${formatSeconds(args.duration)}` : ""}`,
+	}),
+	update_timeline_element_timing: (args) => {
+		const parts = [
+			typeof args.start === "number"
+				? `start ${formatSeconds(args.start)}`
+				: null,
+			typeof args.end === "number" ? `end ${formatSeconds(args.end)}` : null,
+			typeof args.duration === "number"
+				? `duration ${formatSeconds(args.duration)}`
+				: null,
+		].filter(Boolean);
+		return {
+			label: "Update Timing",
+			description: parts.length > 0 ? parts.join(", ") : "No timing changes",
+		};
+	},
 	load_context: (args) => {
 		const targetType = String(args.targetType ?? "unknown");
 		const id = args.id ?? args.assetId ?? args.elementId;
@@ -156,6 +184,46 @@ const TOOL_RESULT_FORMATTERS: Record<
 			label: "Deleted",
 			description: data.success
 				? `${count} element${count !== 1 ? "s" : ""}`
+				: "Failed",
+		};
+	},
+	move_timeline_elements: (parsed) => {
+		const data = parsed as {
+			success?: boolean;
+			movedElements?: unknown[];
+		} | null;
+		if (!data) return null;
+		const count = data.movedElements?.length ?? 0;
+		return {
+			label: "Moved",
+			description: data.success
+				? `${count} element${count !== 1 ? "s" : ""}`
+				: "Failed",
+		};
+	},
+	add_media_to_timeline: (parsed) => {
+		const data = parsed as {
+			elementId?: string;
+			trackId?: string;
+		} | null;
+		if (!data) return null;
+		return {
+			label: "Media Added",
+			description: data.trackId ? `track ${data.trackId}` : "Inserted",
+		};
+	},
+	update_timeline_element_timing: (parsed) => {
+		const data = parsed as {
+			success?: boolean;
+			start?: number;
+			end?: number;
+			duration?: number;
+		} | null;
+		if (!data) return null;
+		return {
+			label: "Timing Updated",
+			description: data.success
+				? `${formatSeconds(data.start)}-${formatSeconds(data.end)} (${formatSeconds(data.duration)})`
 				: "Failed",
 		};
 	},

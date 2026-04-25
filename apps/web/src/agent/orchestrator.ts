@@ -11,6 +11,9 @@ import "@/agent/tools/list-project-assets.tool";
 import "@/agent/tools/list-timeline.tool";
 import "@/agent/tools/split.tool";
 import "@/agent/tools/delete-timeline-elements.tool";
+import "@/agent/tools/move-timeline-elements.tool";
+import "@/agent/tools/add-media-to-timeline.tool";
+import "@/agent/tools/update-timeline-element-timing.tool";
 import { useChatStore } from "@/stores/chat-store";
 import { useAgentStore } from "@/stores/agent-store";
 

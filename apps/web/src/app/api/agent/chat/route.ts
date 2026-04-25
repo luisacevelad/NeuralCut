@@ -49,6 +49,38 @@ const providerToolSchemas: ToolSchema[] = [
 			"Deletes one or more timeline elements by elementId. Use list_timeline first to discover exact elementIds. To delete a time range, split at the range boundaries first, then delete the isolated elementIds.",
 		parameters: [{ key: "elementIds", type: "string[]", required: true }],
 	},
+	{
+		name: "move_timeline_elements",
+		description:
+			"Moves one or more existing timeline elements to a new timeline start time in seconds. For multiple elements, the earliest selected element is moved to start and the others preserve their relative offsets. Optionally pass targetTrackId to move them to another compatible track.",
+		parameters: [
+			{ key: "elementIds", type: "string[]", required: true },
+			{ key: "start", type: "number", required: true },
+			{ key: "targetTrackId", type: "string", required: false },
+		],
+	},
+	{
+		name: "add_media_to_timeline",
+		description:
+			"Adds an existing project media asset to the active timeline. Use list_project_assets first to discover assetId. startTime and optional duration are in timeline seconds. trackType must be main, overlay, or audio.",
+		parameters: [
+			{ key: "assetId", type: "string", required: true },
+			{ key: "startTime", type: "number", required: true },
+			{ key: "trackType", type: "string", required: true },
+			{ key: "duration", type: "number", required: false },
+		],
+	},
+	{
+		name: "update_timeline_element_timing",
+		description:
+			"Updates an existing timeline element's timing. Use list_timeline first to discover elementId. start, end, and duration are timeline seconds; pass at least one of start, end, or duration.",
+		parameters: [
+			{ key: "elementId", type: "string", required: true },
+			{ key: "start", type: "number", required: false },
+			{ key: "end", type: "number", required: false },
+			{ key: "duration", type: "number", required: false },
+		],
+	},
 ];
 
 // ---------------------------------------------------------------------------

@@ -217,7 +217,52 @@ Eliminar uno o más elementos concretos del timeline por `elementId`. Para elimi
 
 ---
 
-## 6. `add_text`
+## 6. `move_timeline_elements`
+
+### Propósito
+Mover uno o más elementos existentes del timeline a un nuevo tiempo inicial. Si se mueven varios elementos, el elemento más temprano queda en `start` y los demás conservan sus offsets relativos. Opcionalmente puede moverse el grupo a otra pista compatible con `targetTrackId`.
+
+### Input
+```ts
+{
+  elementIds: string[];
+  start: number; // timeline seconds
+  targetTrackId?: string;
+}
+```
+
+### Output
+```ts
+{
+  success: boolean;
+  movedElements: Array<{
+    elementId: string;
+    trackId: string;
+    start: number;
+    end: number;
+  }>;
+}
+```
+
+### Requirements
+- MUST validate `elementIds` contains at least one non-empty string.
+- MUST validate `start` is a finite non-negative timeline time in seconds.
+- MUST use `list_timeline` first when exact `elementId` or `targetTrackId` values are unknown.
+- MUST preserve relative offsets when moving multiple elements.
+- MUST keep elements on their current tracks when `targetTrackId` is omitted.
+- MUST fail without mutating if any requested element is missing or the target track is incompatible.
+- MUST preserve undo/redo behavior if supported.
+
+### Errors
+- Invalid ids: `{ error: "Invalid element ids" }`.
+- Invalid start: `{ error: "Invalid start time" }`.
+- Missing element: `{ error: "Timeline elements not found: <ids>" }`.
+- Missing target track: `{ error: "Target track not found: <id>" }`.
+- Empty timeline: `{ error: "No timeline content" }`.
+
+---
+
+## 7. `add_text`
 
 ### Propósito
 Agregar texto visual al timeline. Esta primitive cubre títulos, hooks, labels y subtítulos básicos.
@@ -255,7 +300,7 @@ Agregar texto visual al timeline. Esta primitive cubre títulos, hooks, labels y
 
 ---
 
-## 7. `update_text`
+## 8. `update_text`
 
 ### Propósito
 Editar un texto existente en el timeline.
@@ -293,7 +338,7 @@ Editar un texto existente en el timeline.
 
 ---
 
-## 8. `add_media_to_timeline`
+## 9. `add_media_to_timeline`
 
 ### Propósito
 Agregar un asset existente al timeline.
@@ -304,6 +349,7 @@ Agregar un asset existente al timeline.
   assetId: string;
   startTime: number;
   trackType: "main" | "overlay" | "audio";
+  duration?: number; // timeline seconds
 }
 ```
 
@@ -318,16 +364,72 @@ Agregar un asset existente al timeline.
 ### Requirements
 - MUST resolve asset by `assetId`.
 - MUST validate asset type compatibility with `trackType`.
+- MUST validate optional `duration` as a positive timeline duration in seconds.
 - MUST insert the element using existing timeline APIs.
+- MUST use full source duration for video/audio by default.
+- MUST use editor default duration for images when `duration` is omitted.
+- MUST reject requested video/audio duration beyond known source duration.
 - SHOULD choose a sensible track when one is not obvious, but first version requires explicit `trackType`.
 
 ### Errors
 - Asset not found: `{ error: "Asset not found" }`.
 - Invalid track type: `{ error: "Invalid track type for asset" }`.
+- Invalid duration: `{ error: "Invalid duration" }`.
+- Duration too long: `{ error: "Duration exceeds source duration" }`.
 
 ---
 
-## 9. `delete_element` *(deprecated in favor of `delete_timeline_elements`)*
+## 10. `update_timeline_element_timing`
+
+### Propósito
+Actualizar el inicio, final o duración de un elemento existente del timeline sin cambiar el asset original. Esta primitive cubre pedidos como “hacé que esta foto dure 10 segundos” o “que este clip termine en 00:15”.
+
+### Input
+```ts
+{
+  elementId: string;
+  start?: number; // timeline seconds
+  end?: number; // timeline seconds
+  duration?: number; // timeline seconds
+}
+```
+
+### Output
+```ts
+{
+  success: boolean;
+  elementId: string;
+  trackId: string;
+  start: number;
+  end: number;
+  duration: number;
+}
+```
+
+### Requirements
+- MUST validate `elementId` as a non-empty string.
+- MUST require at least one of `start`, `end`, or `duration`.
+- MUST accept all timing values in seconds and convert to the editor’s canonical unit internally.
+- MUST use `list_timeline` first when exact `elementId` is unknown.
+- MUST update only the timeline element, never the project asset.
+- MUST preserve undo/redo behavior if supported.
+- MUST reject conflicting `end` and `duration` values when both are provided.
+- MUST reject video/audio duration beyond known source duration.
+
+### Errors
+- Invalid id: `{ error: "Invalid element id" }`.
+- Invalid update: `{ error: "Invalid timing update" }`.
+- Invalid start: `{ error: "Invalid start time" }`.
+- Invalid end: `{ error: "Invalid end time" }`.
+- Invalid duration: `{ error: "Invalid duration" }`.
+- Invalid range: `{ error: "Invalid time range" }`.
+- Conflicting values: `{ error: "Conflicting timing values" }`.
+- Missing element: `{ error: "Timeline element not found: <id>" }`.
+- Duration too long: `{ error: "Duration exceeds source duration" }`.
+
+---
+
+## 11. `delete_element` *(deprecated in favor of `delete_timeline_elements`)*
 
 ### Propósito
 Eliminar un elemento específico del timeline. La implementación actual debe preferir `delete_timeline_elements` porque soporta borrado en lote y permite componer rangos después de `split`.
@@ -357,7 +459,7 @@ Eliminar un elemento específico del timeline. La implementación actual debe pr
 
 ---
 
-## 10. `set_volume`
+## 12. `set_volume`
 
 ### Propósito
 Ajustar volumen de un elemento de audio o video.
@@ -390,7 +492,7 @@ Ajustar volumen de un elemento de audio o video.
 
 ---
 
-## 11. `add_sticker`
+## 13. `add_sticker`
 
 ### Propósito
 Agregar un sticker existente al timeline.
@@ -425,7 +527,7 @@ Agregar un sticker existente al timeline.
 
 ---
 
-## 12. `apply_effect`
+## 14. `apply_effect`
 
 ### Propósito
 Aplicar un efecto existente a un clip. En el estado actual del repo, el efecto real disponible parece ser `blur`.

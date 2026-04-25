@@ -119,6 +119,7 @@ Agrega un asset existente al timeline.
   assetId: string;
   startTime: number;
   trackType: "main" | "overlay" | "audio";
+  duration?: number; // timeline seconds
 }
 ```
 
@@ -126,7 +127,29 @@ Uso:
 - insertar clips,
 - agregar música,
 - poner b-roll,
-- agregar imágenes/logos.
+- agregar imágenes/logos,
+- definir cuánto dura una imagen o un tramo insertado.
+
+---
+
+### `update_timeline_element_timing`
+
+Actualiza el inicio, final o duración de un elemento existente del timeline.
+
+```ts
+{
+  elementId: string;
+  start?: number;
+  end?: number;
+  duration?: number;
+}
+```
+
+Uso:
+- hacer que una foto dure más o menos,
+- ajustar el final de un texto/sticker/imagen,
+- mover el inicio y mantener o recalcular duración,
+- recortar la duración visible de audio/video sin cambiar el asset original.
 
 ---
 
@@ -147,6 +170,26 @@ Uso:
 - borrar efectos standalone si aplica.
 
 > Para borrar un rango, el agente debe hacer `split({ times: [start, end] })`, volver a listar/identificar los elementos aislados si hace falta, y luego llamar `delete_timeline_elements`.
+
+---
+
+### `move_timeline_elements`
+
+Mueve uno o más elementos existentes del timeline a otro tiempo y, opcionalmente, a otra pista compatible.
+
+```ts
+{
+  elementIds: string[];
+  start: number; // timeline seconds
+  targetTrackId?: string;
+}
+```
+
+Uso:
+- mover un clip al inicio,
+- correr subtítulos unos segundos,
+- reubicar b-roll en una pista superior,
+- mantener un grupo sincronizado preservando offsets relativos.
 
 ---
 
@@ -315,11 +358,13 @@ Diferida porque el repo actual no parece tener corrección de color/LUTs impleme
 3. `load_asset_context`
 4. `split`
 5. `delete_timeline_elements`
-6. `add_text`
+6. `move_timeline_elements`
 7. `add_media_to_timeline`
-8. `set_volume`
-9. `add_sticker`
-10. `apply_effect`
+8. `update_timeline_element_timing`
+9. `add_text`
+10. `set_volume`
+11. `add_sticker`
+12. `apply_effect`
 
 Infra interna asociada:
 

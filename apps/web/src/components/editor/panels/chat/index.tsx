@@ -67,7 +67,7 @@ export function ChatPanel() {
 				<ScrollArea className="flex-1 p-3" ref={scrollRef}>
 					<div className="flex flex-col gap-2">
 						{messages.map((msg) => (
-							<MessageBubble key={msg.id} message={msg} />
+							<MessageBubble key={msg.id} message={msg} messages={messages} />
 						))}
 						{loading && (
 							<div className="flex items-center gap-2 px-3 py-2">

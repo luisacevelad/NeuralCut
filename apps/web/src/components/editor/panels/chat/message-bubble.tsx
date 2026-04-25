@@ -1,23 +1,30 @@
 "use client";
 
 import { cn } from "@/utils/ui";
-import type { ChatMessage } from "@/agent/types";
-import {
-	isTranscriptData,
-	formatTimestamp,
-} from "./transcript-utils";
+import type { ChatMessage, ToolCall } from "@/agent/types";
+import { isTranscriptData, formatTimestamp } from "./transcript-utils";
 import type { TranscriptData } from "./transcript-utils";
+import { ToolCallCard } from "./tool-call-card";
+import { ToolResultCard } from "./tool-result-card";
 
 interface MessageBubbleProps {
 	message: ChatMessage;
+	messages: ChatMessage[];
 }
 
-const ROLE_LABELS: Record<ChatMessage["role"], string> = {
-	user: "You",
-	assistant: "Assistant",
-	tool_result: "Tool",
-	system: "System",
-};
+function findToolCallName(
+	messages: ChatMessage[],
+	toolCallId?: string,
+): string | null {
+	if (!toolCallId) return null;
+	for (const msg of messages) {
+		if (msg.role === "assistant" && msg.toolCalls) {
+			const match = msg.toolCalls.find((tc: ToolCall) => tc.id === toolCallId);
+			if (match) return match.name;
+		}
+	}
+	return null;
+}
 
 function TranscriptCard({ data }: { data: TranscriptData }) {
 	return (
@@ -46,39 +53,62 @@ function TranscriptCard({ data }: { data: TranscriptData }) {
 	);
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, messages }: MessageBubbleProps) {
 	const isUser = message.role === "user";
 
-	// For tool_result messages, try to parse as transcript
 	if (message.role === "tool_result") {
+		const toolName = findToolCallName(messages, message.toolCallId);
+
 		try {
 			const parsed = JSON.parse(message.content);
 			if (isTranscriptData(parsed)) {
 				return (
-					<div className="flex flex-col gap-1 rounded-md px-3 py-2">
-						<span className="text-muted-foreground text-xs font-medium">
-							{ROLE_LABELS.tool_result}
-						</span>
+					<div className="px-3 py-0.5">
 						<TranscriptCard data={parsed} />
 					</div>
 				);
 			}
 		} catch {
-			// Not JSON — fall through to plain text
+			// not JSON
 		}
+
+		if (toolName) {
+			return (
+				<div className="px-3 py-0.5">
+					<ToolResultCard name={toolName} content={message.content} />
+				</div>
+			);
+		}
+
+		return (
+			<div className="px-3 py-0.5">
+				<ToolResultCard name="Tool" content={message.content} />
+			</div>
+		);
 	}
+
+	const hasToolCalls =
+		message.role === "assistant" &&
+		message.toolCalls &&
+		message.toolCalls.length > 0;
 
 	return (
 		<div
 			className={cn(
-				"flex flex-col gap-1 rounded-md px-3 py-2",
+				"flex flex-col gap-1.5 rounded-md px-3 py-2",
 				isUser ? "bg-secondary" : "bg-transparent",
 			)}
 		>
-			<span className="text-muted-foreground text-xs font-medium">
-				{ROLE_LABELS[message.role]}
-			</span>
-			<p className="text-sm whitespace-pre-wrap">{message.content}</p>
+			{message.content && (
+				<p className="text-sm whitespace-pre-wrap">{message.content}</p>
+			)}
+			{hasToolCalls && (
+				<div className="flex flex-col gap-1">
+					{message.toolCalls?.map((tc: ToolCall) => (
+						<ToolCallCard key={tc.id} toolCall={tc} />
+					))}
+				</div>
+			)}
 		</div>
 	);
 }

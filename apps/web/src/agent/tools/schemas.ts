@@ -135,6 +135,32 @@ export const updateTextSchema: ToolSchema = {
 	],
 };
 
+export const listEffectsSchema: ToolSchema = {
+	name: "list_effects",
+	description:
+		"Lists all available effects that can be applied to visual timeline elements. Returns each effect's id, name, and description of what it does. Use this to discover effects before calling get_effect for parameter details.",
+	parameters: [{ key: "query", type: "string", required: false }],
+};
+
+export const getEffectSchema: ToolSchema = {
+	name: "get_effect",
+	description:
+		"Returns detailed metadata for a specific effect, including all configurable parameters with their types, ranges, defaults, and descriptions. Use this after list_effects to understand how to configure an effect before calling apply_effect.",
+	parameters: [{ key: "effectType", type: "string", required: true }],
+};
+
+export const applyEffectSchema: ToolSchema = {
+	name: "apply_effect",
+	description:
+		"Applies an effect to a visual timeline element (video, image, text, sticker, or graphic). Use list_effects to discover available effects, get_effect to learn their parameters, then apply_effect with the desired params. Default parameter values are used when params are omitted.",
+	parameters: [
+		{ key: "trackId", type: "string", required: true },
+		{ key: "elementId", type: "string", required: true },
+		{ key: "effectType", type: "string", required: true },
+		{ key: "params", type: "object", required: false },
+	],
+};
+
 /**
  * The exact list of schemas exposed to the LLM.
  * Excludes internal-only tools (transcribe_video, mock).
@@ -150,4 +176,7 @@ export const providerToolSchemas: ToolSchema[] = [
 	updateTimelineElementTimingSchema,
 	addTextSchema,
 	updateTextSchema,
+	listEffectsSchema,
+	getEffectSchema,
+	applyEffectSchema,
 ];

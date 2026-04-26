@@ -20,3 +20,6 @@ import "@/agent/tools/add-media-to-timeline.tool";
 import "@/agent/tools/update-timeline-element-timing.tool";
 import "@/agent/tools/add-text.tool";
 import "@/agent/tools/update-text.tool";
+import "@/agent/tools/list-effects.tool";
+import "@/agent/tools/get-effect.tool";
+import "@/agent/tools/apply-effect.tool";

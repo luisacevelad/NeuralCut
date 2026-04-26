@@ -16,12 +16,18 @@ import type {
 	TimelineElement,
 	TimelineTrack,
 	TrackType,
+	VisualElement,
 } from "@/lib/timeline";
 import type { TextStyleOverrides } from "@/agent/tools/add-text.tool";
 import type { UpdateTextArgs } from "@/agent/tools/update-text.tool";
 import { canPlaceTimeSpansOnTrack } from "@/lib/timeline/placement/overlap";
 import { validateElementTrackCompatibility } from "@/lib/timeline/placement";
 import { findTrackInSceneTracks } from "@/lib/timeline/track-element-update";
+import { isVisualElement } from "@/lib/timeline";
+import { AddClipEffectCommand } from "@/lib/commands/timeline/element/effects/add-effect";
+import { UpdateClipEffectParamsCommand } from "@/lib/commands/timeline/element/effects/update-effect-params";
+import { effectsRegistry } from "@/lib/effects";
+import type { ParamValues } from "@/lib/params";
 
 /**
  * Thin adapter: the ONLY file in agent/ that imports from core/.
@@ -545,6 +551,85 @@ export const EditorContextAdapter = {
 			skipped,
 		};
 	},
+
+	addEffect({
+		trackId,
+		elementId,
+		effectType,
+		params,
+	}: {
+		trackId: string;
+		elementId: string;
+		effectType: string;
+		params?: Record<string, number | string | boolean>;
+	}):
+		| { effectId: string; elementId: string; appliedParams: ParamValues }
+		| { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		if (!effectsRegistry.has(effectType)) {
+			return { error: `Effect not found: ${effectType}` };
+		}
+
+		const [resolved] = findTimelineElementsWithTracksByIds({
+			tracks: activeScene.tracks,
+			elementIds: [elementId],
+		});
+		if (!resolved) {
+			return { error: `Timeline element not found: ${elementId}` };
+		}
+		if (resolved.track.id !== trackId) {
+			return { error: `Track not found: ${trackId}` };
+		}
+		if (!isVisualElement(resolved.element)) {
+			return { error: "Element does not support effects" };
+		}
+
+		const definition = effectsRegistry.get(effectType);
+
+		if (params) {
+			const validationError = validateEffectParams(definition.params, params);
+			if (validationError) {
+				return { error: validationError };
+			}
+		}
+
+		const addCommand = new AddClipEffectCommand({
+			trackId,
+			elementId,
+			effectType,
+		});
+		core.command.execute({ command: addCommand });
+
+		const effectId = addCommand.getEffectId();
+		if (!effectId) {
+			return { error: "Failed to apply effect" };
+		}
+
+		let appliedParams: ParamValues = {};
+		const effect = (resolved.element as VisualElement).effects?.find(
+			(e) => e.id === effectId,
+		);
+		appliedParams = effect?.params ?? {};
+
+		if (params && Object.keys(params).length > 0) {
+			const updateCommand = new UpdateClipEffectParamsCommand({
+				trackId,
+				elementId,
+				effectId,
+				params,
+			});
+			core.command.execute({ command: updateCommand });
+
+			appliedParams = { ...appliedParams, ...params };
+		}
+
+		return { effectId, elementId, appliedParams };
+	},
 };
 
 function secondsToTicks(seconds: number): number {
@@ -892,6 +977,49 @@ function buildTextPatch(
 	}
 
 	return patch as Partial<TimelineElement>;
+}
+
+function validateEffectParams(
+	paramDefs: import("@/lib/params").ParamDefinition[],
+	params: Record<string, number | string | boolean>,
+): string | null {
+	for (const [key, value] of Object.entries(params)) {
+		const def = paramDefs.find((p) => p.key === key);
+		if (!def) {
+			return `Unknown parameter: ${key}`;
+		}
+
+		if (def.type === "number") {
+			if (typeof value !== "number") {
+				return `Parameter '${key}' must be a number`;
+			}
+			if (def.min !== undefined && value < def.min) {
+				return `Parameter '${key}' must be >= ${def.min}`;
+			}
+			if (def.max !== undefined && value > def.max) {
+				return `Parameter '${key}' must be <= ${def.max}`;
+			}
+		}
+
+		if (def.type === "boolean" && typeof value !== "boolean") {
+			return `Parameter '${key}' must be a boolean`;
+		}
+
+		if (def.type === "color" && typeof value !== "string") {
+			return `Parameter '${key}' must be a string (hex color)`;
+		}
+
+		if (def.type === "select") {
+			if (typeof value !== "string") {
+				return `Parameter '${key}' must be a string`;
+			}
+			const validValues = def.options.map((o) => o.value);
+			if (!validValues.includes(value)) {
+				return `Parameter '${key}' must be one of: ${validValues.join(", ")}`;
+			}
+		}
+	}
+	return null;
 }
 
 export { buildSystemPrompt } from "@/agent/system-prompt";

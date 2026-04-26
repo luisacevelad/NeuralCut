@@ -527,20 +527,97 @@ Agregar un sticker existente al timeline.
 
 ---
 
-## 14. `apply_effect`
+## 14. `list_effects`
 
 ### Propósito
-Aplicar un efecto existente a un clip. En el estado actual del repo, el efecto real disponible parece ser `blur`.
+Listar todos los efectos disponibles para que el agente descubra qué efectos puede aplicar a elementos visuales del timeline. Esta es la primera tool en el flujo de efectos: `list_effects` → `get_effect` → `apply_effect`.
+
+### Input
+```ts
+{
+  query?: string;
+}
+```
+
+### Output
+```ts
+{
+  effects: Array<{
+    id: string;
+    name: string;
+    description: string;
+  }>;
+}
+```
+
+### Requirements
+- MUST return all registered effects by default.
+- MUST support optional `query` filtering by name or keywords (case-insensitive).
+- MUST NOT mutate editor state.
+- MUST use the effects registry directly (static data, not project-dependent).
+
+### Errors
+- None (always returns a list, possibly empty).
+
+---
+
+## 15. `get_effect`
+
+### Propósito
+Obtener metadata detallada de un efecto específico, incluyendo todos los parámetros configurables con sus tipos, rangos, valores default y descripciones. El agente usa esto después de `list_effects` para saber cómo configurar un efecto antes de llamar `apply_effect`.
+
+### Input
+```ts
+{
+  effectType: string;
+}
+```
+
+### Output
+```ts
+{
+  id: string;
+  name: string;
+  description: string;
+  params: Array<{
+    key: string;
+    label: string;
+    type: "number" | "boolean" | "color" | "select";
+    default: number | string | boolean;
+    min?: number;
+    max?: number;
+    step?: number;
+    options?: Array<{ value: string; label: string }>;
+    description: string;
+  }>;
+}
+```
+
+### Requirements
+- MUST resolve the effect by `effectType` from the effects registry.
+- MUST include full parameter metadata for each effect parameter.
+- MUST generate a human-readable `description` for each parameter (e.g. "Number between 0 and 100, step 1. Default: 15").
+- MUST NOT mutate editor state.
+- MUST NOT include renderer/shader details (internal only).
+
+### Errors
+- Invalid type: `{ error: "Invalid effect type" }`.
+- Effect not found: `{ error: "Effect not found: <type>" }`.
+
+---
+
+## 16. `apply_effect`
+
+### Propósito
+Aplicar un efecto existente a un elemento visual del timeline (video, imagen, texto, sticker o gráfico). Soporta los 7 efectos registrados: blur, brightness-contrast, grayscale, saturation, sepia, invert, vignette.
 
 ### Input
 ```ts
 {
   trackId: string;
   elementId: string;
-  effectType: "blur";
-  params?: {
-    intensity?: number;
-  };
+  effectType: string;
+  params?: Record<string, number | string | boolean>;
 }
 ```
 
@@ -549,20 +626,32 @@ Aplicar un efecto existente a un clip. En el estado actual del repo, el efecto r
 {
   effectId: string;
   elementId: string;
+  appliedParams: Record<string, number | string | boolean>;
 }
 ```
 
 ### Requirements
-- MUST validate the element is visual and supports effects.
 - MUST validate `effectType` exists in the effects registry.
+- MUST validate `trackId` + `elementId` exist in the active timeline.
+- MUST validate the target element is a visual element (video, image, text, sticker, graphic).
+- MUST validate `params` against the effect's parameter definitions (types, ranges).
 - MUST apply default params when `params` are omitted.
-- MUST validate `intensity` if provided.
-- MUST preserve undo/redo behavior if supported.
+- MUST use `AddClipEffectCommand` for the initial effect creation.
+- MUST use `UpdateClipEffectParamsCommand` when custom params are provided.
+- MUST preserve undo/redo behavior (both commands go on the undo stack).
+- MUST return the final applied parameter values.
 
 ### Errors
-- Effect not found: `{ error: "Effect not found" }`.
-- Unsupported element: `{ error: "Element does not support effects" }`.
+- Invalid track id: `{ error: "Invalid track id" }`.
+- Invalid element id: `{ error: "Invalid element id" }`.
+- Invalid effect type: `{ error: "Invalid effect type" }`.
 - Invalid params: `{ error: "Invalid effect parameters" }`.
+- Effect not found: `{ error: "Effect not found: <type>" }`.
+- Missing element: `{ error: "Timeline element not found: <id>" }`.
+- Missing track: `{ error: "Track not found: <id>" }`.
+- Unsupported element: `{ error: "Element does not support effects" }`.
+- Unknown parameter: `{ error: "Unknown parameter: <key>" }`.
+- Out of range: `{ error: "Parameter '<key>' must be >= <min>" }`.
 
 ---
 

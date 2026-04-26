@@ -25,6 +25,26 @@ const SHADER_REGISTRY: &[(&str, &str, UniformPacker)] = &[
         include_str!("shaders/grayscale.wgsl"),
         pack_grayscale as UniformPacker,
     ),
+    (
+        "saturation",
+        include_str!("shaders/saturation.wgsl"),
+        pack_saturation as UniformPacker,
+    ),
+    (
+        "sepia",
+        include_str!("shaders/sepia.wgsl"),
+        pack_sepia as UniformPacker,
+    ),
+    (
+        "invert",
+        include_str!("shaders/invert.wgsl"),
+        pack_invert as UniformPacker,
+    ),
+    (
+        "vignette",
+        include_str!("shaders/vignette.wgsl"),
+        pack_vignette as UniformPacker,
+    ),
 ];
 
 pub struct ApplyEffectsOptions<'a> {
@@ -404,5 +424,59 @@ fn pack_grayscale(
     let mut buf = GenericUniformBuffer::default();
     buf.resolution = [width as f32, height as f32];
     buf.scalars[0][0] = intensity;
+    Ok(buf)
+}
+
+fn pack_saturation(
+    pass: &EffectPass,
+    width: u32,
+    height: u32,
+) -> Result<GenericUniformBuffer, EffectsError> {
+    let saturation = read_number_uniform_or(pass, "u_saturation", 1.0);
+
+    let mut buf = GenericUniformBuffer::default();
+    buf.resolution = [width as f32, height as f32];
+    buf.scalars[0][0] = saturation;
+    Ok(buf)
+}
+
+fn pack_sepia(
+    pass: &EffectPass,
+    width: u32,
+    height: u32,
+) -> Result<GenericUniformBuffer, EffectsError> {
+    let intensity = read_number_uniform_or(pass, "u_intensity", 1.0);
+
+    let mut buf = GenericUniformBuffer::default();
+    buf.resolution = [width as f32, height as f32];
+    buf.scalars[0][0] = intensity;
+    Ok(buf)
+}
+
+fn pack_invert(
+    pass: &EffectPass,
+    width: u32,
+    height: u32,
+) -> Result<GenericUniformBuffer, EffectsError> {
+    let intensity = read_number_uniform_or(pass, "u_intensity", 1.0);
+
+    let mut buf = GenericUniformBuffer::default();
+    buf.resolution = [width as f32, height as f32];
+    buf.scalars[0][0] = intensity;
+    Ok(buf)
+}
+
+fn pack_vignette(
+    pass: &EffectPass,
+    width: u32,
+    height: u32,
+) -> Result<GenericUniformBuffer, EffectsError> {
+    let radius = read_number_uniform_or(pass, "u_radius", 0.75);
+    let softness = read_number_uniform_or(pass, "u_softness", 0.35);
+
+    let mut buf = GenericUniformBuffer::default();
+    buf.resolution = [width as f32, height as f32];
+    buf.scalars[0][0] = radius;
+    buf.scalars[0][1] = softness;
     Ok(buf)
 }

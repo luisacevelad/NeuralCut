@@ -10,39 +10,39 @@ const applyEffectTool: ToolDefinition = {
 		_context: AgentContext,
 	): Promise<
 		| {
-				effectId: string;
 				elementId: string;
+				trackId: string;
 				appliedParams: Record<string, number | string | boolean>;
 		  }
 		| { error: string }
 	> => {
-		const trackId = args.trackId;
-		const elementId = args.elementId;
 		const effectType = args.effectType;
+		const start = args.start;
+		const end = args.end;
 		const params = args.params as
 			| Record<string, number | string | boolean>
 			| undefined;
 
-		if (typeof trackId !== "string" || !trackId.trim()) {
-			return { error: "Invalid track id" };
-		}
-
-		if (typeof elementId !== "string" || !elementId.trim()) {
-			return { error: "Invalid element id" };
-		}
-
 		if (typeof effectType !== "string" || !effectType.trim()) {
 			return { error: "Invalid effect type" };
+		}
+
+		if (typeof start !== "number" || !Number.isFinite(start) || start < 0) {
+			return { error: "Invalid start time" };
+		}
+
+		if (typeof end !== "number" || !Number.isFinite(end) || end <= start) {
+			return { error: "Invalid end time" };
 		}
 
 		if (params !== undefined && typeof params !== "object") {
 			return { error: "Invalid effect parameters" };
 		}
 
-		return EditorContextAdapter.addEffect({
-			trackId,
-			elementId,
+		return EditorContextAdapter.addEffectElement({
 			effectType,
+			start,
+			end,
 			params,
 		});
 	},

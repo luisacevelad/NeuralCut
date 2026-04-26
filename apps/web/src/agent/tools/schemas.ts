@@ -152,11 +152,11 @@ export const getEffectSchema: ToolSchema = {
 export const applyEffectSchema: ToolSchema = {
 	name: "apply_effect",
 	description:
-		"Applies an effect to a visual timeline element (video, image, text, sticker, or graphic). Use list_effects to discover available effects, get_effect to learn their parameters, then apply_effect with the desired params. Default parameter values are used when params are omitted.",
+		"Adds an effect element to the timeline on an effect track, like dragging an effect from the effects panel. The effect covers the time range from start to end (in seconds). Use list_effects to discover available effects, get_effect to learn their parameters, then apply_effect with the desired params. Default parameter values are used when params are omitted.",
 	parameters: [
-		{ key: "trackId", type: "string", required: true },
-		{ key: "elementId", type: "string", required: true },
 		{ key: "effectType", type: "string", required: true },
+		{ key: "start", type: "number", required: true },
+		{ key: "end", type: "number", required: true },
 		{ key: "params", type: "object", required: false },
 	],
 };

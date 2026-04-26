@@ -6,6 +6,7 @@ import { AddTrackCommand, InsertElementCommand } from "@/lib/commands/timeline";
 import { DEFAULT_NEW_ELEMENT_DURATION } from "@/lib/timeline/creation";
 import {
 	buildElementFromMedia,
+	buildEffectElement,
 	buildTextElement,
 } from "@/lib/timeline/element-utils";
 import { DEFAULTS } from "@/lib/timeline/defaults";
@@ -16,18 +17,13 @@ import type {
 	TimelineElement,
 	TimelineTrack,
 	TrackType,
-	VisualElement,
 } from "@/lib/timeline";
 import type { TextStyleOverrides } from "@/agent/tools/add-text.tool";
 import type { UpdateTextArgs } from "@/agent/tools/update-text.tool";
 import { canPlaceTimeSpansOnTrack } from "@/lib/timeline/placement/overlap";
 import { validateElementTrackCompatibility } from "@/lib/timeline/placement";
 import { findTrackInSceneTracks } from "@/lib/timeline/track-element-update";
-import { isVisualElement } from "@/lib/timeline";
-import { AddClipEffectCommand } from "@/lib/commands/timeline/element/effects/add-effect";
-import { UpdateClipEffectParamsCommand } from "@/lib/commands/timeline/element/effects/update-effect-params";
 import { effectsRegistry } from "@/lib/effects";
-import type { ParamValues } from "@/lib/params";
 
 /**
  * Thin adapter: the ONLY file in agent/ that imports from core/.
@@ -552,18 +548,22 @@ export const EditorContextAdapter = {
 		};
 	},
 
-	addEffect({
-		trackId,
-		elementId,
+	addEffectElement({
 		effectType,
+		start,
+		end,
 		params,
 	}: {
-		trackId: string;
-		elementId: string;
 		effectType: string;
+		start: number;
+		end: number;
 		params?: Record<string, number | string | boolean>;
 	}):
-		| { effectId: string; elementId: string; appliedParams: ParamValues }
+		| {
+				elementId: string;
+				trackId: string;
+				appliedParams: Record<string, number | string | boolean>;
+		  }
 		| { error: string } {
 		const core = EditorCore.getInstance();
 		const activeScene = core.scenes.getActiveSceneOrNull();
@@ -575,20 +575,6 @@ export const EditorContextAdapter = {
 			return { error: `Effect not found: ${effectType}` };
 		}
 
-		const [resolved] = findTimelineElementsWithTracksByIds({
-			tracks: activeScene.tracks,
-			elementIds: [elementId],
-		});
-		if (!resolved) {
-			return { error: `Timeline element not found: ${elementId}` };
-		}
-		if (resolved.track.id !== trackId) {
-			return { error: `Track not found: ${trackId}` };
-		}
-		if (!isVisualElement(resolved.element)) {
-			return { error: "Element does not support effects" };
-		}
-
 		const definition = effectsRegistry.get(effectType);
 
 		if (params) {
@@ -598,37 +584,38 @@ export const EditorContextAdapter = {
 			}
 		}
 
-		const addCommand = new AddClipEffectCommand({
-			trackId,
-			elementId,
-			effectType,
-		});
-		core.command.execute({ command: addCommand });
-
-		const effectId = addCommand.getEffectId();
-		if (!effectId) {
-			return { error: "Failed to apply effect" };
+		const startTimeTicks = secondsToTicks(start);
+		const durationTicks = secondsToTicks(end) - startTimeTicks;
+		if (durationTicks <= 0) {
+			return { error: "Invalid time range" };
 		}
 
-		let appliedParams: ParamValues = {};
-		const effect = (resolved.element as VisualElement).effects?.find(
-			(e) => e.id === effectId,
-		);
-		appliedParams = effect?.params ?? {};
+		const element = buildEffectElement({
+			effectType,
+			startTime: startTimeTicks,
+			duration: durationTicks,
+		});
 
 		if (params && Object.keys(params).length > 0) {
-			const updateCommand = new UpdateClipEffectParamsCommand({
-				trackId,
-				elementId,
-				effectId,
-				params,
-			});
-			core.command.execute({ command: updateCommand });
-
-			appliedParams = { ...appliedParams, ...params };
+			element.params = { ...element.params, ...params };
 		}
 
-		return { effectId, elementId, appliedParams };
+		const insertCommand = new InsertElementCommand({
+			element,
+			placement: { mode: "auto", trackType: "effect" },
+		});
+		core.command.execute({ command: insertCommand });
+
+		const trackId = insertCommand.getTrackId();
+		if (!trackId) {
+			return { error: "Failed to place effect element" };
+		}
+
+		return {
+			elementId: insertCommand.getElementId(),
+			trackId,
+			appliedParams: element.params,
+		};
 	},
 };
 

@@ -609,14 +609,14 @@ Obtener metadata detallada de un efecto específico, incluyendo todos los parám
 ## 16. `apply_effect`
 
 ### Propósito
-Aplicar un efecto existente a un elemento visual del timeline (video, imagen, texto, sticker o gráfico). Soporta los 7 efectos registrados: blur, brightness-contrast, grayscale, saturation, sepia, invert, vignette.
+Agregar un efecto como elemento standalone al timeline en una pista de efectos, equivalente a drag & dropear un efecto desde el panel de efectos. Soporta los 7 efectos registrados: blur, brightness-contrast, grayscale, saturation, sepia, invert, vignette.
 
 ### Input
 ```ts
 {
-  trackId: string;
-  elementId: string;
   effectType: string;
+  start: number;
+  end: number;
   params?: Record<string, number | string | boolean>;
 }
 ```
@@ -624,32 +624,31 @@ Aplicar un efecto existente a un elemento visual del timeline (video, imagen, te
 ### Output
 ```ts
 {
-  effectId: string;
   elementId: string;
+  trackId: string;
   appliedParams: Record<string, number | string | boolean>;
 }
 ```
 
 ### Requirements
 - MUST validate `effectType` exists in the effects registry.
-- MUST validate `trackId` + `elementId` exist in the active timeline.
-- MUST validate the target element is a visual element (video, image, text, sticker, graphic).
+- MUST validate `start` and `end` as valid timeline seconds with `start < end`.
 - MUST validate `params` against the effect's parameter definitions (types, ranges).
-- MUST apply default params when `params` are omitted.
-- MUST use `AddClipEffectCommand` for the initial effect creation.
-- MUST use `UpdateClipEffectParamsCommand` when custom params are provided.
-- MUST preserve undo/redo behavior (both commands go on the undo stack).
+- MUST create an `EffectElement` via `buildEffectElement()` with the requested time range.
+- MUST merge custom `params` into the default effect instance before insertion.
+- MUST use `InsertElementCommand` with `{ mode: "auto", trackType: "effect" }` to place on an effect track (creating one if needed).
+- MUST preserve undo/redo behavior.
 - MUST return the final applied parameter values.
 
 ### Errors
-- Invalid track id: `{ error: "Invalid track id" }`.
-- Invalid element id: `{ error: "Invalid element id" }`.
 - Invalid effect type: `{ error: "Invalid effect type" }`.
+- Invalid start time: `{ error: "Invalid start time" }`.
+- Invalid end time: `{ error: "Invalid end time" }`.
 - Invalid params: `{ error: "Invalid effect parameters" }`.
 - Effect not found: `{ error: "Effect not found: <type>" }`.
-- Missing element: `{ error: "Timeline element not found: <id>" }`.
-- Missing track: `{ error: "Track not found: <id>" }`.
-- Unsupported element: `{ error: "Element does not support effects" }`.
+- Invalid time range: `{ error: "Invalid time range" }`.
+- No active timeline: `{ error: "No active timeline" }`.
+- Failed placement: `{ error: "Failed to place effect element" }`.
 - Unknown parameter: `{ error: "Unknown parameter: <key>" }`.
 - Out of range: `{ error: "Parameter '<key>' must be >= <min>" }`.
 

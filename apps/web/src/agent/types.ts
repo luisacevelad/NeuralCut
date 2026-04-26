@@ -58,6 +58,9 @@ export type AgentTimelineTrack = {
 		assetId?: string;
 		name?: string;
 		content?: string;
+		hasMask?: boolean;
+		hasEffects?: boolean;
+		isHidden?: boolean;
 		/** Timeline start in seconds. */
 		start: number;
 		/** Timeline end in seconds. */

@@ -120,6 +120,9 @@ function toTimelineTrack(
 				...(hasMediaId(element) ? { assetId: element.mediaId } : {}),
 				...(element.name ? { name: element.name } : {}),
 				...(hasTextContent(element) ? { content: element.content } : {}),
+				...(hasNonEmptyArray(element, "masks") ? { hasMask: true } : {}),
+				...(hasNonEmptyArray(element, "effects") ? { hasEffects: true } : {}),
+				...(element.hidden === true ? { isHidden: true } : {}),
 				start: toSeconds(element.startTime, ticksPerSecond),
 				end: toSeconds(element.startTime + element.duration, ticksPerSecond),
 			})),
@@ -185,6 +188,9 @@ function hasTimelineElementShape(element: unknown): element is {
 	name?: string;
 	startTime: number;
 	duration: number;
+	masks?: unknown[];
+	effects?: unknown[];
+	hidden?: boolean;
 } {
 	return (
 		typeof element === "object" &&
@@ -199,4 +205,10 @@ function hasTimelineElementShape(element: unknown): element is {
 		typeof element.startTime === "number" &&
 		typeof element.duration === "number"
 	);
+}
+
+function hasNonEmptyArray(obj: unknown, key: string): boolean {
+	if (typeof obj !== "object" || obj === null || !(key in obj)) return false;
+	const value = (obj as Record<string, unknown>)[key];
+	return Array.isArray(value) && value.length > 0;
 }

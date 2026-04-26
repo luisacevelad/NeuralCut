@@ -79,6 +79,55 @@ export const EditorContextAdapter = {
 		return asset?.hasAudio;
 	},
 
+	undo(): { remainingUndoDepth: number } | { error: string } {
+		const core = EditorCore.getInstance();
+		if (!core.command.canUndo()) {
+			return { error: "Nothing to undo" };
+		}
+		core.command.undo();
+		const remainingUndoDepth = core.command.canUndo() ? 1 : 0;
+		return { remainingUndoDepth };
+	},
+
+	duplicateElements({ elementIds }: { elementIds: string[] }):
+		| {
+				success: boolean;
+				duplicated: Array<{ elementId: string; trackId: string }>;
+		  }
+		| { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		if (!hasTimelineContent(activeScene.tracks)) {
+			return { error: "No timeline content" };
+		}
+
+		const requestedIds = [...new Set(elementIds)];
+		const elements = findTimelineElementsWithTracksByIds({
+			tracks: activeScene.tracks,
+			elementIds: requestedIds,
+		});
+		const foundIds = new Set(elements.map(({ element }) => element.id));
+		const missingIds = requestedIds.filter((id) => !foundIds.has(id));
+
+		if (missingIds.length > 0) {
+			return {
+				error: `Timeline elements not found: ${missingIds.join(", ")}`,
+			};
+		}
+
+		const refs = elements.map(({ element, track }) => ({
+			trackId: track.id,
+			elementId: element.id,
+		}));
+
+		const duplicated = core.timeline.duplicateElements({ elements: refs });
+		return { success: true, duplicated };
+	},
+
 	splitTimeline({
 		times,
 	}: {

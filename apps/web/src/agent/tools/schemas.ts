@@ -171,6 +171,20 @@ export const updateEffectSchema: ToolSchema = {
 	],
 };
 
+export const undoSchema: ToolSchema = {
+	name: "undo",
+	description:
+		"Undoes the last editing action performed by any tool. Use this to revert mistakes. Returns the remaining undo stack depth. Consecutive calls undo earlier actions.",
+	parameters: [],
+};
+
+export const duplicateElementsSchema: ToolSchema = {
+	name: "duplicate_elements",
+	description:
+		"Duplicates one or more timeline elements. The copies are placed on new tracks above the originals. Use list_timeline to discover elementIds first.",
+	parameters: [{ key: "elementIds", type: "string[]", required: true }],
+};
+
 export const getElementSchema: ToolSchema = {
 	name: "get_element",
 	description:
@@ -211,6 +225,7 @@ export const providerToolSchemas: ToolSchema[] = [
 	splitSchema,
 	deleteTimelineElementsSchema,
 	moveTimelineElementsSchema,
+	duplicateElementsSchema,
 	addMediaToTimelineSchema,
 	updateTimelineElementTimingSchema,
 	addTextSchema,
@@ -220,4 +235,5 @@ export const providerToolSchemas: ToolSchema[] = [
 	applyEffectSchema,
 	updateEffectSchema,
 	updateClipSchema,
+	undoSchema,
 ];

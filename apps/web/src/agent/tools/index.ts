@@ -13,6 +13,7 @@
 import "@/agent/tools/load-context.tool";
 import "@/agent/tools/list-project-assets.tool";
 import "@/agent/tools/list-timeline.tool";
+import "@/agent/tools/get-element.tool";
 import "@/agent/tools/split.tool";
 import "@/agent/tools/delete-timeline-elements.tool";
 import "@/agent/tools/move-timeline-elements.tool";
@@ -24,3 +25,4 @@ import "@/agent/tools/list-effects.tool";
 import "@/agent/tools/get-effect.tool";
 import "@/agent/tools/apply-effect.tool";
 import "@/agent/tools/update-effect.tool";
+import "@/agent/tools/update-clip.tool";

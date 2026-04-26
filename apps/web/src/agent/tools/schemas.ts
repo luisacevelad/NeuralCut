@@ -171,6 +171,34 @@ export const updateEffectSchema: ToolSchema = {
 	],
 };
 
+export const getElementSchema: ToolSchema = {
+	name: "get_element",
+	description:
+		"Returns full metadata for a single timeline element. Use list_timeline to discover elementIds, then get_element for deep inspection. Returns type-specific properties: video/image/graphic elements include transform, opacity, blendMode, masks, hidden, and applied effects. Text elements include content, font styles, background, transform. Audio elements include volume, muted. Effect elements include effectType and all parameter values.",
+	parameters: [{ key: "elementId", type: "string", required: true }],
+};
+
+export const updateClipSchema: ToolSchema = {
+	name: "update_clip",
+	description:
+		"Updates properties of any timeline element (video, image, graphic, text, sticker, audio, effect). Use list_timeline to discover elementId, then get_element to inspect current values. Only provide the properties you want to change. mask: { action: 'add', maskType } to add, { action: 'update', params: {...} } to modify, { action: 'remove' } to delete. Mask types: rectangle, ellipse, heart, diamond, star, split, cinematic-bars. Only video/image/graphic support masks. name: rename the element. opacity: 0-100. positionX/positionY: position offset. rotation: degrees. scaleX/scaleY: scale factor. blendMode: normal, darken, multiply, screen, etc. hidden: boolean. volume: 0-100 (video/audio only). muted: boolean (video/audio only).",
+	parameters: [
+		{ key: "elementId", type: "string", required: true },
+		{ key: "name", type: "string", required: false },
+		{ key: "mask", type: "object", required: false },
+		{ key: "opacity", type: "number", required: false },
+		{ key: "positionX", type: "number", required: false },
+		{ key: "positionY", type: "number", required: false },
+		{ key: "rotation", type: "number", required: false },
+		{ key: "scaleX", type: "number", required: false },
+		{ key: "scaleY", type: "number", required: false },
+		{ key: "blendMode", type: "string", required: false },
+		{ key: "hidden", type: "boolean", required: false },
+		{ key: "volume", type: "number", required: false },
+		{ key: "muted", type: "boolean", required: false },
+	],
+};
+
 /**
  * The exact list of schemas exposed to the LLM.
  * Excludes internal-only tools (transcribe_video, mock).
@@ -179,6 +207,7 @@ export const providerToolSchemas: ToolSchema[] = [
 	loadContextSchema,
 	listProjectAssetsSchema,
 	listTimelineSchema,
+	getElementSchema,
 	splitSchema,
 	deleteTimelineElementsSchema,
 	moveTimelineElementsSchema,
@@ -190,4 +219,5 @@ export const providerToolSchemas: ToolSchema[] = [
 	getEffectSchema,
 	applyEffectSchema,
 	updateEffectSchema,
+	updateClipSchema,
 ];

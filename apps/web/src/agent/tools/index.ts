@@ -23,3 +23,4 @@ import "@/agent/tools/update-text.tool";
 import "@/agent/tools/list-effects.tool";
 import "@/agent/tools/get-effect.tool";
 import "@/agent/tools/apply-effect.tool";
+import "@/agent/tools/update-effect.tool";

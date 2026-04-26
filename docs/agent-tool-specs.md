@@ -654,6 +654,49 @@ Agregar un efecto como elemento standalone al timeline en una pista de efectos, 
 
 ---
 
+## 17. `update_effect`
+
+### Propósito
+Actualizar los parámetros de un elemento de efecto existente en el timeline. Solo se actualizan los parámetros proporcionados; el resto mantiene sus valores actuales.
+
+### Input
+```ts
+{
+  elementId: string;
+  params: Record<string, number | string | boolean>;
+}
+```
+
+### Output
+```ts
+{
+  success: boolean;
+  elementId: string;
+  appliedParams: Record<string, number | string | boolean>;
+}
+```
+
+### Requirements
+- MUST validate `elementId` exists in the active timeline.
+- MUST validate the target element is an effect element (`type: "effect"`).
+- MUST validate `params` against the effect's parameter definitions (types, ranges).
+- MUST merge provided `params` with existing params (only override specified keys).
+- MUST use `updateElements` to apply the param patch.
+- MUST preserve undo/redo behavior.
+- MUST return the full merged params after update.
+
+### Errors
+- Invalid element id: `{ error: "Invalid element id" }`.
+- Missing params: `{ error: "params is required and must be a non-empty object" }`.
+- No active timeline: `{ error: "No active timeline" }`.
+- Missing element: `{ error: "Timeline element not found: <id>" }`.
+- Wrong type: `{ error: "Element is not an effect" }`.
+- Effect not found: `{ error: "Effect not found: <type>" }`.
+- Unknown parameter: `{ error: "Unknown parameter: <key>" }`.
+- Out of range: `{ error: "Parameter '<key>' must be >= <min>" }`.
+
+---
+
 ## Existing/secondary tool: `transcribe_video`
 
 ### Propósito

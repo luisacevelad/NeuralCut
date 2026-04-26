@@ -617,6 +617,66 @@ export const EditorContextAdapter = {
 			appliedParams: element.params,
 		};
 	},
+
+	updateEffectElement({
+		elementId,
+		params,
+	}: {
+		elementId: string;
+		params: Record<string, number | string | boolean>;
+	}):
+		| {
+				success: boolean;
+				elementId: string;
+				appliedParams: Record<string, number | string | boolean>;
+		  }
+		| { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		const [resolved] = findTimelineElementsWithTracksByIds({
+			tracks: activeScene.tracks,
+			elementIds: [elementId],
+		});
+		if (!resolved) {
+			return { error: `Timeline element not found: ${elementId}` };
+		}
+		if (resolved.element.type !== "effect") {
+			return { error: "Element is not an effect" };
+		}
+
+		const effectElement = resolved.element as import("@/lib/timeline/types").EffectElement;
+		const definition = effectsRegistry.get(effectElement.effectType);
+		if (!definition) {
+			return { error: `Effect not found: ${effectElement.effectType}` };
+		}
+
+		const validationError = validateEffectParams(definition.params, params);
+		if (validationError) {
+			return { error: validationError };
+		}
+
+		const mergedParams = { ...effectElement.params, ...params };
+
+		core.timeline.updateElements({
+			updates: [
+				{
+					trackId: resolved.track.id,
+					elementId,
+					patch: { params: mergedParams } as Partial<import("@/lib/timeline/types").TimelineElement>,
+				},
+			],
+		});
+
+		return {
+			success: true,
+			elementId,
+			appliedParams: mergedParams,
+		};
+	},
 };
 
 function secondsToTicks(seconds: number): number {

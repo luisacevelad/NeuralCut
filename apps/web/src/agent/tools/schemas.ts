@@ -161,6 +161,16 @@ export const applyEffectSchema: ToolSchema = {
 	],
 };
 
+export const updateEffectSchema: ToolSchema = {
+	name: "update_effect",
+	description:
+		"Updates parameters of an existing effect element on the timeline. Use list_timeline to find the elementId of the effect, then pass the params you want to change. Only the provided parameters are updated; others keep their current values. Use get_effect to discover valid parameter keys and ranges.",
+	parameters: [
+		{ key: "elementId", type: "string", required: true },
+		{ key: "params", type: "object", required: true },
+	],
+};
+
 /**
  * The exact list of schemas exposed to the LLM.
  * Excludes internal-only tools (transcribe_video, mock).
@@ -179,4 +189,5 @@ export const providerToolSchemas: ToolSchema[] = [
 	listEffectsSchema,
 	getEffectSchema,
 	applyEffectSchema,
+	updateEffectSchema,
 ];

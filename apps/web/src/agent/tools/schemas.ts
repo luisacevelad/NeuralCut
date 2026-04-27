@@ -171,6 +171,27 @@ export const updateEffectSchema: ToolSchema = {
 	],
 };
 
+export const redoSchema: ToolSchema = {
+	name: "redo",
+	description:
+		"Redoes the last undone action. Only works after an undo. Returns whether there are more actions to redo.",
+	parameters: [],
+};
+
+export const toggleTrackMuteSchema: ToolSchema = {
+	name: "toggle_track_mute",
+	description:
+		"Toggles mute on a timeline track. Use list_timeline to discover trackIds. Only works on tracks that support audio (video and audio tracks). Returns the new muted state.",
+	parameters: [{ key: "trackId", type: "string", required: true }],
+};
+
+export const toggleTrackVisibilitySchema: ToolSchema = {
+	name: "toggle_track_visibility",
+	description:
+		"Toggles visibility on a timeline track. Hidden tracks are not rendered in the preview. Use list_timeline to discover trackIds. Returns the new hidden state.",
+	parameters: [{ key: "trackId", type: "string", required: true }],
+};
+
 export const undoSchema: ToolSchema = {
 	name: "undo",
 	description:
@@ -195,11 +216,13 @@ export const getElementSchema: ToolSchema = {
 export const updateClipSchema: ToolSchema = {
 	name: "update_clip",
 	description:
-		"Updates properties of any timeline element (video, image, graphic, text, sticker, audio, effect). Use list_timeline to discover elementId, then get_element to inspect current values. Only provide the properties you want to change. mask: { action: 'add', maskType } to add, { action: 'update', params: {...} } to modify, { action: 'remove' } to delete. Mask types: rectangle, ellipse, heart, diamond, star, split, cinematic-bars. Only video/image/graphic support masks. name: rename the element. opacity: 0-100. positionX/positionY: position offset. rotation: degrees. scaleX/scaleY: scale factor. blendMode: normal, darken, multiply, screen, etc. hidden: boolean. volume: 0-100 (video/audio only). muted: boolean (video/audio only).",
+		"Updates properties of any timeline element (video, image, graphic, text, sticker, audio, effect). Use list_timeline to discover elementId, then get_element to inspect current values. Only provide the properties you want to change. mask: { action: 'add', maskType } to add, { action: 'update', params: {...} } to modify, { action: 'remove' } to delete. Mask types: rectangle, ellipse, heart, diamond, star, split, cinematic-bars. Only video/image/graphic support masks. name: rename the element. trimStart/trimEnd: seconds to trim from the source start/end (slip trim without moving the clip). opacity: 0-100. positionX/positionY: position offset. rotation: degrees. scaleX/scaleY: scale factor. blendMode: normal, darken, multiply, screen, etc. hidden: boolean. volume: 0-100 (video/audio only). muted: boolean (video/audio only).",
 	parameters: [
 		{ key: "elementId", type: "string", required: true },
 		{ key: "name", type: "string", required: false },
 		{ key: "mask", type: "object", required: false },
+		{ key: "trimStart", type: "number", required: false },
+		{ key: "trimEnd", type: "number", required: false },
 		{ key: "opacity", type: "number", required: false },
 		{ key: "positionX", type: "number", required: false },
 		{ key: "positionY", type: "number", required: false },
@@ -236,4 +259,7 @@ export const providerToolSchemas: ToolSchema[] = [
 	updateEffectSchema,
 	updateClipSchema,
 	undoSchema,
+	redoSchema,
+	toggleTrackMuteSchema,
+	toggleTrackVisibilitySchema,
 ];

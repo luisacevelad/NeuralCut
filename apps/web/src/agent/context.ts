@@ -3,6 +3,8 @@ import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { buildContextFromEditorState } from "@/agent/context-mapper";
 import { BatchCommand } from "@/lib/commands";
 import { AddTrackCommand, InsertElementCommand } from "@/lib/commands/timeline";
+import { ToggleTrackMuteCommand } from "@/lib/commands/timeline/track/toggle-track-mute";
+import { ToggleTrackVisibilityCommand } from "@/lib/commands/timeline/track/toggle-track-visibility";
 import { DEFAULT_NEW_ELEMENT_DURATION } from "@/lib/timeline/creation";
 import {
 	buildElementFromMedia,
@@ -87,6 +89,64 @@ export const EditorContextAdapter = {
 		core.command.undo();
 		const remainingUndoDepth = core.command.canUndo() ? 1 : 0;
 		return { remainingUndoDepth };
+	},
+
+	redo(): { remainingRedoDepth: number } | { error: string } {
+		const core = EditorCore.getInstance();
+		if (!core.command.canRedo()) {
+			return { error: "Nothing to redo" };
+		}
+		core.command.redo();
+		const remainingRedoDepth = core.command.canRedo() ? 1 : 0;
+		return { remainingRedoDepth };
+	},
+
+	toggleTrackMute({
+		trackId,
+	}: {
+		trackId: string;
+	}): { trackId: string } | { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		const track = findTrackInSceneTracks({
+			tracks: activeScene.tracks,
+			trackId,
+		});
+		if (!track) {
+			return { error: `Track not found: ${trackId}` };
+		}
+
+		core.command.execute({ command: new ToggleTrackMuteCommand(trackId) });
+		return { trackId };
+	},
+
+	toggleTrackVisibility({
+		trackId,
+	}: {
+		trackId: string;
+	}): { trackId: string } | { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		const track = findTrackInSceneTracks({
+			tracks: activeScene.tracks,
+			trackId,
+		});
+		if (!track) {
+			return { error: `Track not found: ${trackId}` };
+		}
+
+		core.command.execute({
+			command: new ToggleTrackVisibilityCommand(trackId),
+		});
+		return { trackId };
 	},
 
 	duplicateElements({ elementIds }: { elementIds: string[] }):
@@ -761,6 +821,8 @@ export const EditorContextAdapter = {
 		elementId,
 		name,
 		mask,
+		trimStart,
+		trimEnd,
 		opacity,
 		positionX,
 		positionY,
@@ -779,6 +841,8 @@ export const EditorContextAdapter = {
 			maskType?: string;
 			params?: Record<string, number | string | boolean>;
 		};
+		trimStart?: number;
+		trimEnd?: number;
 		opacity?: number;
 		positionX?: number;
 		positionY?: number;
@@ -829,6 +893,29 @@ export const EditorContextAdapter = {
 			}
 			patch.muted = muted;
 			applied.muted = muted;
+		}
+
+		if (trimStart !== undefined || trimEnd !== undefined) {
+			if (
+				(trimStart !== undefined && typeof trimStart !== "number") ||
+				(trimEnd !== undefined && typeof trimEnd !== "number")
+			) {
+				return { error: "trimStart and trimEnd must be numbers (seconds)" };
+			}
+			if (trimStart !== undefined && trimStart < 0) {
+				return { error: "trimStart must be >= 0" };
+			}
+			if (trimEnd !== undefined && trimEnd < 0) {
+				return { error: "trimEnd must be >= 0" };
+			}
+			if (trimStart !== undefined) {
+				patch.trimStart = secondsToTicks(trimStart);
+				applied.trimStart = trimStart;
+			}
+			if (trimEnd !== undefined) {
+				patch.trimEnd = secondsToTicks(trimEnd);
+				applied.trimEnd = trimEnd;
+			}
 		}
 
 		if (opacity !== undefined) {

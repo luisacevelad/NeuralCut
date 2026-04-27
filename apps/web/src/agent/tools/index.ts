@@ -28,3 +28,6 @@ import "@/agent/tools/apply-effect.tool";
 import "@/agent/tools/update-effect.tool";
 import "@/agent/tools/update-clip.tool";
 import "@/agent/tools/undo.tool";
+import "@/agent/tools/redo.tool";
+import "@/agent/tools/toggle-track-mute.tool";
+import "@/agent/tools/toggle-track-visibility.tool";

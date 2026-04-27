@@ -21,6 +21,8 @@ const updateClipTool: ToolDefinition = {
 					params?: Record<string, number | string | boolean>;
 			  }
 			| undefined;
+		const trimStart = args.trimStart as number | undefined;
+		const trimEnd = args.trimEnd as number | undefined;
 		const opacity = args.opacity as number | undefined;
 		const positionX = args.positionX as number | undefined;
 		const positionY = args.positionY as number | undefined;
@@ -39,6 +41,8 @@ const updateClipTool: ToolDefinition = {
 		const hasUpdate =
 			name !== undefined ||
 			mask !== undefined ||
+			trimStart !== undefined ||
+			trimEnd !== undefined ||
 			opacity !== undefined ||
 			positionX !== undefined ||
 			positionY !== undefined ||
@@ -71,6 +75,8 @@ const updateClipTool: ToolDefinition = {
 			elementId,
 			name,
 			mask,
+			trimStart,
+			trimEnd,
 			opacity,
 			positionX,
 			positionY,

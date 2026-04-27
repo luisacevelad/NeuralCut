@@ -31,3 +31,8 @@ import "@/agent/tools/undo.tool";
 import "@/agent/tools/redo.tool";
 import "@/agent/tools/toggle-track-mute.tool";
 import "@/agent/tools/toggle-track-visibility.tool";
+import "@/agent/tools/list-keyframes.tool";
+import "@/agent/tools/upsert-keyframe.tool";
+import "@/agent/tools/remove-keyframe.tool";
+import "@/agent/tools/update-keyframe-curve.tool";
+import "@/agent/tools/list-animatable-properties.tool";

@@ -161,6 +161,31 @@ const TOOL_CALL_FORMATTERS: Record<
 			description: id ? `${targetType} ${String(id)}` : targetType,
 		};
 	},
+	list_keyframes: (args) => ({
+		label: "List Keyframes",
+		description: `for ${String(args.elementId ?? "element")}`,
+	}),
+	upsert_keyframe: (args) => {
+		const path = String(args.propertyPath ?? "?");
+		const time = formatSeconds(args.time);
+		const val = args.value ?? args.colorValue ?? "?";
+		return {
+			label: "Add Keyframe",
+			description: `${path} = ${String(val)} at ${time}`,
+		};
+	},
+	remove_keyframe: (args) => ({
+		label: "Remove Keyframe",
+		description: `${String(args.propertyPath ?? "?")} keyframe ${String(args.keyframeId ?? "")}`,
+	}),
+	update_keyframe_curve: (args) => ({
+		label: "Update Curve",
+		description: `${String(args.interpolation ?? "curve")} on ${String(args.keyframeId ?? "")}`,
+	}),
+	list_animatable_properties: (args) => ({
+		label: "Animatable Props",
+		description: `for ${String(args.elementId ?? "element")}`,
+	}),
 	list_timeline: () => ({
 		label: "List Timeline",
 		description: "Fetching timeline tracks",
@@ -330,6 +355,62 @@ const TOOL_RESULT_FORMATTERS: Record<
 		return {
 			label: "Transcript",
 			description: `${data.assetName ?? "audio"} · ${data.segmentCount ?? 0} segments`,
+		};
+	},
+	list_keyframes: (parsed) => {
+		const data = parsed as { keyframes?: unknown[] } | null;
+		if (!data) return null;
+		const count = data.keyframes?.length ?? 0;
+		return {
+			label: "Keyframes",
+			description: `${count} keyframe${count !== 1 ? "s" : ""}`,
+		};
+	},
+	upsert_keyframe: (parsed) => {
+		const data = parsed as {
+			success?: boolean;
+			propertyPath?: string;
+			time?: number;
+		} | null;
+		if (!data) return null;
+		return {
+			label: "Keyframe Set",
+			description: data.success
+				? `${data.propertyPath ?? "?"} at ${formatSeconds(data.time)}`
+				: "Failed",
+		};
+	},
+	remove_keyframe: (parsed) => {
+		const data = parsed as { success?: boolean } | null;
+		if (!data) return null;
+		return {
+			label: "Keyframe Removed",
+			description: data.success ? "Done" : "Failed",
+		};
+	},
+	update_keyframe_curve: (parsed) => {
+		const data = parsed as {
+			success?: boolean;
+			applied?: Record<string, unknown>;
+		} | null;
+		if (!data) return null;
+		return {
+			label: "Curve Updated",
+			description: data.success
+				? Object.keys(data.applied ?? {}).join(", ") || "applied"
+				: "Failed",
+		};
+	},
+	list_animatable_properties: (parsed) => {
+		const data = parsed as {
+			elementType?: string;
+			properties?: unknown[];
+		} | null;
+		if (!data) return null;
+		const count = data.properties?.length ?? 0;
+		return {
+			label: "Animatable",
+			description: `${data.elementType ?? "element"} · ${count} propert${count !== 1 ? "ies" : "y"}`,
 		};
 	},
 };

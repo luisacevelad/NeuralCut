@@ -31,6 +31,24 @@ import type { MaskType } from "@/lib/masks/types";
 import type { MaskableElement } from "@/lib/timeline";
 import { isMaskableElement } from "@/lib/timeline/element-utils";
 import type { BlendMode, Transform } from "@/lib/rendering";
+import { UpsertKeyframeCommand } from "@/lib/commands/timeline/element/keyframes/upsert-keyframe";
+import { RemoveKeyframeCommand } from "@/lib/commands/timeline/element/keyframes/remove-keyframe";
+import { UpdateScalarKeyframeCurveCommand } from "@/lib/commands/timeline/element/keyframes/update-scalar-keyframe-curve";
+import {
+	type AnimationInterpolation,
+	type ScalarCurveKeyframePatch,
+	ANIMATION_PROPERTY_PATHS,
+} from "@/lib/animation/types";
+import {
+	getElementKeyframes,
+	supportsAnimationProperty,
+	getElementBaseValueForProperty,
+	getKeyframeAtTime,
+} from "@/lib/animation";
+import {
+	isAnimationPropertyPath,
+	getAnimationPropertyDefinition,
+} from "@/lib/animation/property-registry";
 
 /**
  * Thin adapter: the ONLY file in agent/ that imports from core/.
@@ -795,6 +813,415 @@ export const EditorContextAdapter = {
 		};
 	},
 
+	listKeyframes({ elementId }: { elementId: string }):
+		| {
+				elementId: string;
+				keyframes: Array<{
+					propertyPath: string;
+					id: string;
+					time: number;
+					value: unknown;
+					interpolation: string;
+				}>;
+		  }
+		| { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		const [resolved] = findTimelineElementsWithTracksByIds({
+			tracks: activeScene.tracks,
+			elementIds: [elementId],
+		});
+		if (!resolved) {
+			return { error: `Element not found: ${elementId}` };
+		}
+
+		const element = resolved.element;
+		const rawKeyframes = getElementKeyframes({
+			animations: element.animations,
+		});
+
+		const keyframes = rawKeyframes.map((kf) => ({
+			propertyPath: kf.propertyPath,
+			id: kf.id,
+			time: ticksToSeconds(kf.time),
+			value: kf.value,
+			interpolation: kf.interpolation,
+		}));
+
+		return { elementId, keyframes };
+	},
+
+	upsertKeyframe({
+		elementId,
+		propertyPath,
+		time,
+		value,
+		interpolation,
+		keyframeId,
+	}: {
+		elementId: string;
+		propertyPath: string;
+		time: number;
+		value?: number;
+		interpolation?: AnimationInterpolation;
+		keyframeId?: string;
+	}):
+		| {
+				success: boolean;
+				elementId: string;
+				propertyPath: string;
+				keyframeId: string;
+				time: number;
+				value: unknown;
+				interpolation: string;
+		  }
+		| { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		if (!isAnimationPropertyPath(propertyPath)) {
+			return {
+				error: `Unknown property path: ${propertyPath}. Use list_animatable_properties to discover valid paths.`,
+			};
+		}
+
+		const [resolved] = findTimelineElementsWithTracksByIds({
+			tracks: activeScene.tracks,
+			elementIds: [elementId],
+		});
+		if (!resolved) {
+			return { error: `Element not found: ${elementId}` };
+		}
+
+		const element = resolved.element;
+		if (!supportsAnimationProperty({ element, propertyPath })) {
+			return {
+				error: `Element type '${element.type}' does not support animating '${propertyPath}'`,
+			};
+		}
+
+		if (value === undefined) {
+			return { error: "value is required" };
+		}
+
+		const timeTicks = secondsToTicks(time);
+		if (timeTicks < 0 || timeTicks > element.duration) {
+			return {
+				error: `Time ${time}s is outside element range (0 to ${ticksToSeconds(element.duration)}s)`,
+			};
+		}
+
+		core.command.execute({
+			command: new UpsertKeyframeCommand({
+				trackId: resolved.track.id,
+				elementId: element.id,
+				propertyPath,
+				time: timeTicks,
+				value,
+				interpolation,
+				keyframeId,
+			}),
+		});
+
+		const updatedScene = core.scenes.getActiveSceneOrNull();
+		const [updated] = updatedScene
+			? findTimelineElementsWithTracksByIds({
+					tracks: updatedScene.tracks,
+					elementIds: [elementId],
+				})
+			: [];
+		const updatedElement = updated?.element ?? element;
+
+		const resultKeyframe = getKeyframeAtTime({
+			animations: updatedElement.animations,
+			propertyPath,
+			time: timeTicks,
+		});
+
+		return {
+			success: true,
+			elementId,
+			propertyPath,
+			keyframeId: resultKeyframe?.id ?? keyframeId ?? "unknown",
+			time,
+			value: resultKeyframe?.value ?? value,
+			interpolation: resultKeyframe?.interpolation ?? interpolation ?? "linear",
+		};
+	},
+
+	upsertColorKeyframe({
+		elementId,
+		propertyPath,
+		time,
+		colorValue,
+		interpolation,
+		keyframeId,
+	}: {
+		elementId: string;
+		propertyPath: string;
+		time: number;
+		colorValue: string;
+		interpolation?: AnimationInterpolation;
+		keyframeId?: string;
+	}):
+		| {
+				success: boolean;
+				elementId: string;
+				propertyPath: string;
+				keyframeId: string;
+				time: number;
+				value: unknown;
+				interpolation: string;
+		  }
+		| { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		if (!isAnimationPropertyPath(propertyPath)) {
+			return {
+				error: `Unknown property path: ${propertyPath}. Use list_animatable_properties to discover valid paths.`,
+			};
+		}
+
+		const [resolved] = findTimelineElementsWithTracksByIds({
+			tracks: activeScene.tracks,
+			elementIds: [elementId],
+		});
+		if (!resolved) {
+			return { error: `Element not found: ${elementId}` };
+		}
+
+		const element = resolved.element;
+		if (!supportsAnimationProperty({ element, propertyPath })) {
+			return {
+				error: `Element type '${element.type}' does not support animating '${propertyPath}'`,
+			};
+		}
+
+		const timeTicks = secondsToTicks(time);
+		if (timeTicks < 0 || timeTicks > element.duration) {
+			return {
+				error: `Time ${time}s is outside element range (0 to ${ticksToSeconds(element.duration)}s)`,
+			};
+		}
+
+		core.command.execute({
+			command: new UpsertKeyframeCommand({
+				trackId: resolved.track.id,
+				elementId: element.id,
+				propertyPath,
+				time: timeTicks,
+				value: colorValue,
+				interpolation,
+				keyframeId,
+			}),
+		});
+
+		const updatedScene = core.scenes.getActiveSceneOrNull();
+		const [updated] = updatedScene
+			? findTimelineElementsWithTracksByIds({
+					tracks: updatedScene.tracks,
+					elementIds: [elementId],
+				})
+			: [];
+		const updatedElement = updated?.element ?? element;
+
+		const resultKeyframe = getKeyframeAtTime({
+			animations: updatedElement.animations,
+			propertyPath,
+			time: timeTicks,
+		});
+
+		return {
+			success: true,
+			elementId,
+			propertyPath,
+			keyframeId: resultKeyframe?.id ?? keyframeId ?? "unknown",
+			time,
+			value: resultKeyframe?.value ?? colorValue,
+			interpolation: resultKeyframe?.interpolation ?? interpolation ?? "linear",
+		};
+	},
+
+	removeKeyframe({
+		elementId,
+		propertyPath,
+		keyframeId,
+	}: {
+		elementId: string;
+		propertyPath: string;
+		keyframeId: string;
+	}): { success: boolean; removedKeyframeId: string } | { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		const [resolved] = findTimelineElementsWithTracksByIds({
+			tracks: activeScene.tracks,
+			elementIds: [elementId],
+		});
+		if (!resolved) {
+			return { error: `Element not found: ${elementId}` };
+		}
+
+		core.command.execute({
+			command: new RemoveKeyframeCommand({
+				trackId: resolved.track.id,
+				elementId: resolved.element.id,
+				propertyPath,
+				keyframeId,
+				valueAtPlayhead: null,
+			}),
+		});
+
+		return { success: true, removedKeyframeId: keyframeId };
+	},
+
+	updateKeyframeCurve({
+		elementId,
+		propertyPath,
+		keyframeId,
+		interpolation,
+		rightHandle,
+		leftHandle,
+		tangentMode,
+	}: {
+		elementId: string;
+		propertyPath: string;
+		keyframeId: string;
+		interpolation?: string;
+		rightHandle?: { dt: number; dv: number };
+		leftHandle?: { dt: number; dv: number };
+		tangentMode?: string;
+	}):
+		| {
+				success: boolean;
+				elementId: string;
+				keyframeId: string;
+				applied: Record<string, unknown>;
+		  }
+		| { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		const [resolved] = findTimelineElementsWithTracksByIds({
+			tracks: activeScene.tracks,
+			elementIds: [elementId],
+		});
+		if (!resolved) {
+			return { error: `Element not found: ${elementId}` };
+		}
+
+		const patch: ScalarCurveKeyframePatch = {};
+		if (interpolation === "linear") patch.segmentToNext = "linear";
+		else if (interpolation === "bezier") patch.segmentToNext = "bezier";
+		else if (interpolation === "step") patch.segmentToNext = "step";
+
+		if (rightHandle !== undefined) {
+			patch.rightHandle = { dt: rightHandle.dt, dv: rightHandle.dv };
+		} else if (interpolation && interpolation !== "bezier") {
+			patch.rightHandle = null;
+		}
+
+		if (leftHandle !== undefined) {
+			patch.leftHandle = { dt: leftHandle.dt, dv: leftHandle.dv };
+		} else if (interpolation && interpolation !== "bezier") {
+			patch.leftHandle = null;
+		}
+
+		if (tangentMode) {
+			if (!["auto", "aligned", "broken", "flat"].includes(tangentMode)) {
+				return {
+					error: `Invalid tangentMode: ${tangentMode}. Must be auto, aligned, broken, or flat.`,
+				};
+			}
+			patch.tangentMode =
+				tangentMode as ScalarCurveKeyframePatch["tangentMode"];
+		}
+
+		core.command.execute({
+			command: new UpdateScalarKeyframeCurveCommand({
+				trackId: resolved.track.id,
+				elementId: resolved.element.id,
+				propertyPath,
+				componentKey: "value",
+				keyframeId,
+				patch,
+			}),
+		});
+
+		const applied: Record<string, unknown> = {};
+		if (interpolation) applied.interpolation = interpolation;
+		if (rightHandle) applied.rightHandle = rightHandle;
+		if (leftHandle) applied.leftHandle = leftHandle;
+		if (tangentMode) applied.tangentMode = tangentMode;
+
+		return { success: true, elementId, keyframeId, applied };
+	},
+
+	listAnimatableProperties({ elementId }: { elementId: string }):
+		| {
+				elementId: string;
+				elementType: string;
+				properties: Array<{
+					path: string;
+					valueType: string;
+					currentValue: unknown;
+				}>;
+		  }
+		| { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		const [resolved] = findTimelineElementsWithTracksByIds({
+			tracks: activeScene.tracks,
+			elementIds: [elementId],
+		});
+		if (!resolved) {
+			return { error: `Element not found: ${elementId}` };
+		}
+
+		const element = resolved.element;
+		const properties = ANIMATION_PROPERTY_PATHS.filter((path) =>
+			supportsAnimationProperty({ element, propertyPath: path }),
+		).map((path) => {
+			const definition = getAnimationPropertyDefinition({ propertyPath: path });
+			const currentValue = getElementBaseValueForProperty({
+				element,
+				propertyPath: path,
+			});
+			return {
+				path,
+				valueType: definition.kind === "color" ? "color" : "number",
+				currentValue: currentValue !== null ? currentValue : null,
+			};
+		});
+
+		return {
+			elementId,
+			elementType: element.type,
+			properties,
+		};
+	},
+
 	getElement({
 		elementId,
 	}: {
@@ -1483,6 +1910,25 @@ function serializeElement(
 		trimEnd: ticksToSeconds(element.trimEnd),
 	};
 
+	const rawKeyframes = getElementKeyframes({
+		animations: element.animations,
+	});
+	const keyframes =
+		rawKeyframes.length > 0
+			? rawKeyframes.map((kf) => ({
+					propertyPath: kf.propertyPath,
+					id: kf.id,
+					time: ticksToSeconds(kf.time),
+					value: kf.value,
+					interpolation: kf.interpolation,
+				}))
+			: undefined;
+
+	const animations =
+		keyframes && keyframes.length > 0
+			? { keyframeCount: keyframes.length, keyframes }
+			: undefined;
+
 	switch (element.type) {
 		case "video":
 			return {
@@ -1496,6 +1942,7 @@ function serializeElement(
 				muted: element.muted ?? false,
 				masks: element.masks ?? [],
 				effects: element.effects ?? [],
+				animations,
 			};
 		case "image":
 			return {
@@ -1507,6 +1954,7 @@ function serializeElement(
 				hidden: element.hidden ?? false,
 				masks: element.masks ?? [],
 				effects: element.effects ?? [],
+				animations,
 			};
 		case "text":
 			return {
@@ -1526,6 +1974,7 @@ function serializeElement(
 				blendMode: element.blendMode ?? null,
 				hidden: element.hidden ?? false,
 				effects: element.effects ?? [],
+				animations,
 			};
 		case "sticker":
 			return {
@@ -1536,6 +1985,7 @@ function serializeElement(
 				blendMode: element.blendMode ?? null,
 				hidden: element.hidden ?? false,
 				effects: element.effects ?? [],
+				animations,
 			};
 		case "graphic":
 			return {
@@ -1548,6 +1998,7 @@ function serializeElement(
 				hidden: element.hidden ?? false,
 				masks: element.masks ?? [],
 				effects: element.effects ?? [],
+				animations,
 			};
 		case "audio":
 			return {
@@ -1556,6 +2007,7 @@ function serializeElement(
 				sourceType: element.sourceType,
 				volume: element.volume,
 				muted: element.muted ?? false,
+				animations,
 			};
 		case "effect":
 			return {

@@ -236,6 +236,61 @@ export const updateClipSchema: ToolSchema = {
 	],
 };
 
+export const listKeyframesSchema: ToolSchema = {
+	name: "list_keyframes",
+	description:
+		"Returns all keyframes for a timeline element, grouped by animated property. Each keyframe includes an id, time (seconds from element start), value, and interpolation type. Use this to inspect existing animations before modifying them. Use list_timeline to discover elementIds.",
+	parameters: [{ key: "elementId", type: "string", required: true }],
+};
+
+export const upsertKeyframeSchema: ToolSchema = {
+	name: "upsert_keyframe",
+	description:
+		"Adds or updates a keyframe on a timeline element's animated property. time is seconds from element start. For numeric properties (opacity, position, scale, rotation, volume, padding, cornerRadius), pass value as a number. For color properties (color, background.color), pass colorValue as a hex string like '#ff0000'. interpolation can be linear, hold, or bezier. Use list_animatable_properties to discover valid propertyPaths for an element. Use list_keyframes to get existing keyframeId for updates.",
+	parameters: [
+		{ key: "elementId", type: "string", required: true },
+		{ key: "propertyPath", type: "string", required: true },
+		{ key: "time", type: "number", required: true },
+		{ key: "value", type: "number", required: false },
+		{ key: "colorValue", type: "string", required: false },
+		{ key: "interpolation", type: "string", required: false },
+		{ key: "keyframeId", type: "string", required: false },
+	],
+};
+
+export const removeKeyframeSchema: ToolSchema = {
+	name: "remove_keyframe",
+	description:
+		"Removes a specific keyframe from a timeline element. Use list_keyframes to discover keyframeIds. When the last keyframe on a property is removed, the property reverts to its static value.",
+	parameters: [
+		{ key: "elementId", type: "string", required: true },
+		{ key: "propertyPath", type: "string", required: true },
+		{ key: "keyframeId", type: "string", required: true },
+	],
+};
+
+export const updateKeyframeCurveSchema: ToolSchema = {
+	name: "update_keyframe_curve",
+	description:
+		"Updates the curve/interpolation of an existing scalar keyframe. interpolation can be linear, bezier, or step. For bezier curves, optionally pass rightHandle and leftHandle as {dt, dv} offsets from the keyframe point. tangentMode can be auto, aligned, broken, or flat. Use list_keyframes to discover keyframeIds.",
+	parameters: [
+		{ key: "elementId", type: "string", required: true },
+		{ key: "propertyPath", type: "string", required: true },
+		{ key: "keyframeId", type: "string", required: true },
+		{ key: "interpolation", type: "string", required: false },
+		{ key: "rightHandle", type: "object", required: false },
+		{ key: "leftHandle", type: "object", required: false },
+		{ key: "tangentMode", type: "string", required: false },
+	],
+};
+
+export const listAnimatablePropertiesSchema: ToolSchema = {
+	name: "list_animatable_properties",
+	description:
+		"Returns the list of property paths that support animation for a given timeline element. Each property includes its path, value type (number or color), and current static value. Use this before calling upsert_keyframe to discover which properties can be animated.",
+	parameters: [{ key: "elementId", type: "string", required: true }],
+};
+
 /**
  * The exact list of schemas exposed to the LLM.
  * Excludes internal-only tools (transcribe_video, mock).
@@ -262,4 +317,9 @@ export const providerToolSchemas: ToolSchema[] = [
 	redoSchema,
 	toggleTrackMuteSchema,
 	toggleTrackVisibilitySchema,
+	listKeyframesSchema,
+	upsertKeyframeSchema,
+	removeKeyframeSchema,
+	updateKeyframeCurveSchema,
+	listAnimatablePropertiesSchema,
 ];

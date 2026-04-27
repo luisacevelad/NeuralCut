@@ -7,8 +7,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useChatStore } from "@/stores/chat-store";
+import { useAgentStore } from "@/stores/agent-store";
 import { MessageBubble } from "./message-bubble";
 import { ChatInput } from "./chat-input";
+import { ToolPermissionRequest } from "./tool-permission-request";
 import { run as orchestratorRun } from "@/agent/orchestrator";
 import { EditorContextAdapter } from "@/agent/context";
 
@@ -18,6 +20,7 @@ export function ChatPanel() {
 	const error = useChatStore((s) => s.error);
 	const sendMessage = useChatStore((s) => s.sendMessage);
 	const setError = useChatStore((s) => s.setError);
+	const pendingApproval = useAgentStore((s) => s.pendingApproval);
 
 	const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -76,6 +79,9 @@ export function ChatPanel() {
 									Thinking...
 								</span>
 							</div>
+						)}
+						{pendingApproval && (
+							<ToolPermissionRequest pending={pendingApproval} />
 						)}
 					</div>
 				</ScrollArea>

@@ -12,6 +12,27 @@ import { useAgentStore } from "@/stores/agent-store";
 
 const MAX_ITERATIONS = 20;
 
+const WRITE_TOOLS = new Set([
+	"split",
+	"delete_timeline_elements",
+	"move_timeline_elements",
+	"duplicate_elements",
+	"add_media_to_timeline",
+	"update_timeline_element_timing",
+	"add_text",
+	"update_text",
+	"apply_effect",
+	"update_effect",
+	"update_clip",
+	"undo",
+	"redo",
+	"toggle_track_mute",
+	"toggle_track_visibility",
+	"upsert_keyframe",
+	"remove_keyframe",
+	"update_keyframe_curve",
+]);
+
 interface APIResponse {
 	content: string;
 	toolCalls?: ToolCall[];
@@ -188,12 +209,25 @@ async function resolveToolCalls(
 	const results: ToolResult[] = [];
 
 	for (const tc of toolCalls) {
-		agentStore.setActiveTool(tc.name);
+		useAgentStore.getState().setActiveTool(tc.name);
+
+		const currentMode = useAgentStore.getState().permissionMode;
+		if (currentMode === "ask" && WRITE_TOOLS.has(tc.name)) {
+			const approved = await requestApproval(tc);
+			if (!approved) {
+				results.push({
+					toolCallId: tc.id,
+					name: tc.name,
+					result: null,
+					error: "User denied permission",
+				});
+				continue;
+			}
+		}
 
 		try {
 			const tool = toolRegistry.get(tc.name);
 
-			// Validate args BEFORE execution
 			const validationError = validateToolArgs(tool, tc.args);
 			if (validationError) {
 				results.push({
@@ -219,4 +253,11 @@ async function resolveToolCalls(
 
 	agentStore.setActiveTool(null);
 	return results;
+}
+
+function requestApproval(toolCall: ToolCall): Promise<boolean> {
+	return new Promise((resolve) => {
+		const agentStore = useAgentStore.getState();
+		agentStore.setPendingApproval({ toolCall, resolve });
+	});
 }

@@ -4,26 +4,38 @@ import { cn } from "@/utils/ui";
 import type { ChatMessage, ToolCall } from "@/agent/types";
 import { isTranscriptData, formatTimestamp } from "./transcript-utils";
 import type { TranscriptData } from "./transcript-utils";
-import { ToolCallCard } from "./tool-call-card";
-import { ToolResultCard } from "./tool-result-card";
+import {
+	ToolExecutionCard,
+	type ToolExecutionPair,
+} from "./tool-execution-card";
 
 interface MessageBubbleProps {
 	message: ChatMessage;
 	messages: ChatMessage[];
 }
 
-function findToolCallName(
-	messages: ChatMessage[],
-	toolCallId?: string,
-): string | null {
-	if (!toolCallId) return null;
+function buildToolCallPairs(messages: ChatMessage[]): ToolExecutionPair[] {
+	const pairs: ToolExecutionPair[] = [];
+	const resultIndex = new Map<string, string>();
+
 	for (const msg of messages) {
-		if (msg.role === "assistant" && msg.toolCalls) {
-			const match = msg.toolCalls.find((tc: ToolCall) => tc.id === toolCallId);
-			if (match) return match.name;
+		if (msg.role === "tool_result" && msg.toolCallId) {
+			resultIndex.set(msg.toolCallId, msg.content);
 		}
 	}
-	return null;
+
+	for (const msg of messages) {
+		if (msg.role === "assistant" && msg.toolCalls) {
+			for (const tc of msg.toolCalls) {
+				pairs.push({
+					toolCall: tc,
+					resultContent: resultIndex.get(tc.id),
+				});
+			}
+		}
+	}
+
+	return pairs;
 }
 
 function TranscriptCard({ data }: { data: TranscriptData }) {
@@ -53,11 +65,25 @@ function TranscriptCard({ data }: { data: TranscriptData }) {
 	);
 }
 
+function isToolResultAbsorbed(
+	message: ChatMessage,
+	allMessages: ChatMessage[],
+): boolean {
+	if (message.role !== "tool_result" || !message.toolCallId) return false;
+	return allMessages.some(
+		(m) =>
+			m.role === "assistant" &&
+			m.toolCalls?.some((tc: ToolCall) => tc.id === message.toolCallId),
+	);
+}
+
 export function MessageBubble({ message, messages }: MessageBubbleProps) {
 	const isUser = message.role === "user";
 
 	if (message.role === "tool_result") {
-		const toolName = findToolCallName(messages, message.toolCallId);
+		if (isToolResultAbsorbed(message, messages)) {
+			return null;
+		}
 
 		try {
 			const parsed = JSON.parse(message.content);
@@ -68,29 +94,27 @@ export function MessageBubble({ message, messages }: MessageBubbleProps) {
 					</div>
 				);
 			}
-		} catch {
-			// not JSON
-		}
+		} catch {}
 
-		if (toolName) {
-			return (
-				<div className="px-3 py-0.5">
-					<ToolResultCard name={toolName} content={message.content} />
-				</div>
-			);
-		}
-
-		return (
-			<div className="px-3 py-0.5">
-				<ToolResultCard name="Tool" content={message.content} />
-			</div>
-		);
+		return null;
 	}
 
 	const hasToolCalls =
 		message.role === "assistant" &&
 		message.toolCalls &&
 		message.toolCalls.length > 0;
+
+	const toolPairs = hasToolCalls
+		? message.toolCalls!.map((tc: ToolCall) => {
+				const result = messages.find(
+					(m) => m.role === "tool_result" && m.toolCallId === tc.id,
+				);
+				return {
+					toolCall: tc,
+					resultContent: result?.content,
+				};
+			})
+		: [];
 
 	return (
 		<div
@@ -102,10 +126,10 @@ export function MessageBubble({ message, messages }: MessageBubbleProps) {
 			{message.content && (
 				<p className="text-sm whitespace-pre-wrap">{message.content}</p>
 			)}
-			{hasToolCalls && (
+			{toolPairs.length > 0 && (
 				<div className="flex flex-col gap-1">
-					{message.toolCalls?.map((tc: ToolCall) => (
-						<ToolCallCard key={tc.id} toolCall={tc} />
+					{toolPairs.map((pair) => (
+						<ToolExecutionCard key={pair.toolCall.id} pair={pair} />
 					))}
 				</div>
 			)}

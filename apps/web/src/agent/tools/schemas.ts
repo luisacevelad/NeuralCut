@@ -135,6 +135,107 @@ export const updateTextSchema: ToolSchema = {
 	],
 };
 
+export const listEffectsSchema: ToolSchema = {
+	name: "list_effects",
+	description:
+		"Lists all available effects that can be applied to visual timeline elements. Returns each effect's id, name, and description of what it does. Use this to discover effects before calling get_effect for parameter details.",
+	parameters: [{ key: "query", type: "string", required: false }],
+};
+
+export const getEffectSchema: ToolSchema = {
+	name: "get_effect",
+	description:
+		"Returns detailed metadata for a specific effect, including all configurable parameters with their types, ranges, defaults, and descriptions. Use this after list_effects to understand how to configure an effect before calling apply_effect.",
+	parameters: [{ key: "effectType", type: "string", required: true }],
+};
+
+export const applyEffectSchema: ToolSchema = {
+	name: "apply_effect",
+	description:
+		"Adds an effect element to the timeline on an effect track, like dragging an effect from the effects panel. The effect covers the time range from start to end (in seconds). Use list_effects to discover available effects, get_effect to learn their parameters, then apply_effect with the desired params. Default parameter values are used when params are omitted.",
+	parameters: [
+		{ key: "effectType", type: "string", required: true },
+		{ key: "start", type: "number", required: true },
+		{ key: "end", type: "number", required: true },
+		{ key: "params", type: "object", required: false },
+	],
+};
+
+export const updateEffectSchema: ToolSchema = {
+	name: "update_effect",
+	description:
+		"Updates parameters of an existing effect element on the timeline. Use list_timeline to find the elementId of the effect, then pass the params you want to change. Only the provided parameters are updated; others keep their current values. Use get_effect to discover valid parameter keys and ranges.",
+	parameters: [
+		{ key: "elementId", type: "string", required: true },
+		{ key: "params", type: "object", required: true },
+	],
+};
+
+export const redoSchema: ToolSchema = {
+	name: "redo",
+	description:
+		"Redoes the last undone action. Only works after an undo. Returns whether there are more actions to redo.",
+	parameters: [],
+};
+
+export const toggleTrackMuteSchema: ToolSchema = {
+	name: "toggle_track_mute",
+	description:
+		"Toggles mute on a timeline track. Use list_timeline to discover trackIds. Only works on tracks that support audio (video and audio tracks). Returns the new muted state.",
+	parameters: [{ key: "trackId", type: "string", required: true }],
+};
+
+export const toggleTrackVisibilitySchema: ToolSchema = {
+	name: "toggle_track_visibility",
+	description:
+		"Toggles visibility on a timeline track. Hidden tracks are not rendered in the preview. Use list_timeline to discover trackIds. Returns the new hidden state.",
+	parameters: [{ key: "trackId", type: "string", required: true }],
+};
+
+export const undoSchema: ToolSchema = {
+	name: "undo",
+	description:
+		"Undoes the last editing action performed by any tool. Use this to revert mistakes. Returns the remaining undo stack depth. Consecutive calls undo earlier actions.",
+	parameters: [],
+};
+
+export const duplicateElementsSchema: ToolSchema = {
+	name: "duplicate_elements",
+	description:
+		"Duplicates one or more timeline elements. The copies are placed on new tracks above the originals. Use list_timeline to discover elementIds first.",
+	parameters: [{ key: "elementIds", type: "string[]", required: true }],
+};
+
+export const getElementSchema: ToolSchema = {
+	name: "get_element",
+	description:
+		"Returns full metadata for a single timeline element. Use list_timeline to discover elementIds, then get_element for deep inspection. Returns type-specific properties: video/image/graphic elements include transform, opacity, blendMode, masks, hidden, and applied effects. Text elements include content, font styles, background, transform. Audio elements include volume, muted. Effect elements include effectType and all parameter values.",
+	parameters: [{ key: "elementId", type: "string", required: true }],
+};
+
+export const updateClipSchema: ToolSchema = {
+	name: "update_clip",
+	description:
+		"Updates properties of any timeline element (video, image, graphic, text, sticker, audio, effect). Use list_timeline to discover elementId, then get_element to inspect current values. Only provide the properties you want to change. mask: { action: 'add', maskType } to add, { action: 'update', params: {...} } to modify, { action: 'remove' } to delete. Mask types: rectangle, ellipse, heart, diamond, star, split, cinematic-bars. Only video/image/graphic support masks. name: rename the element. trimStart/trimEnd: seconds to trim from the source start/end (slip trim without moving the clip). opacity: 0-100. positionX/positionY: position offset. rotation: degrees. scaleX/scaleY: scale factor. blendMode: normal, darken, multiply, screen, etc. hidden: boolean. volume: 0-100 (video/audio only). muted: boolean (video/audio only).",
+	parameters: [
+		{ key: "elementId", type: "string", required: true },
+		{ key: "name", type: "string", required: false },
+		{ key: "mask", type: "object", required: false },
+		{ key: "trimStart", type: "number", required: false },
+		{ key: "trimEnd", type: "number", required: false },
+		{ key: "opacity", type: "number", required: false },
+		{ key: "positionX", type: "number", required: false },
+		{ key: "positionY", type: "number", required: false },
+		{ key: "rotation", type: "number", required: false },
+		{ key: "scaleX", type: "number", required: false },
+		{ key: "scaleY", type: "number", required: false },
+		{ key: "blendMode", type: "string", required: false },
+		{ key: "hidden", type: "boolean", required: false },
+		{ key: "volume", type: "number", required: false },
+		{ key: "muted", type: "boolean", required: false },
+	],
+};
+
 /**
  * The exact list of schemas exposed to the LLM.
  * Excludes internal-only tools (transcribe_video, mock).
@@ -143,11 +244,22 @@ export const providerToolSchemas: ToolSchema[] = [
 	loadContextSchema,
 	listProjectAssetsSchema,
 	listTimelineSchema,
+	getElementSchema,
 	splitSchema,
 	deleteTimelineElementsSchema,
 	moveTimelineElementsSchema,
+	duplicateElementsSchema,
 	addMediaToTimelineSchema,
 	updateTimelineElementTimingSchema,
 	addTextSchema,
 	updateTextSchema,
+	listEffectsSchema,
+	getEffectSchema,
+	applyEffectSchema,
+	updateEffectSchema,
+	updateClipSchema,
+	undoSchema,
+	redoSchema,
+	toggleTrackMuteSchema,
+	toggleTrackVisibilitySchema,
 ];

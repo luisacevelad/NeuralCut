@@ -3,9 +3,12 @@ import { TICKS_PER_SECOND } from "@/lib/wasm";
 import { buildContextFromEditorState } from "@/agent/context-mapper";
 import { BatchCommand } from "@/lib/commands";
 import { AddTrackCommand, InsertElementCommand } from "@/lib/commands/timeline";
+import { ToggleTrackMuteCommand } from "@/lib/commands/timeline/track/toggle-track-mute";
+import { ToggleTrackVisibilityCommand } from "@/lib/commands/timeline/track/toggle-track-visibility";
 import { DEFAULT_NEW_ELEMENT_DURATION } from "@/lib/timeline/creation";
 import {
 	buildElementFromMedia,
+	buildEffectElement,
 	buildTextElement,
 } from "@/lib/timeline/element-utils";
 import { DEFAULTS } from "@/lib/timeline/defaults";
@@ -22,6 +25,12 @@ import type { UpdateTextArgs } from "@/agent/tools/update-text.tool";
 import { canPlaceTimeSpansOnTrack } from "@/lib/timeline/placement/overlap";
 import { validateElementTrackCompatibility } from "@/lib/timeline/placement";
 import { findTrackInSceneTracks } from "@/lib/timeline/track-element-update";
+import { effectsRegistry } from "@/lib/effects";
+import { masksRegistry, buildDefaultMaskInstance } from "@/lib/masks";
+import type { MaskType } from "@/lib/masks/types";
+import type { MaskableElement } from "@/lib/timeline";
+import { isMaskableElement } from "@/lib/timeline/element-utils";
+import type { BlendMode, Transform } from "@/lib/rendering";
 
 /**
  * Thin adapter: the ONLY file in agent/ that imports from core/.
@@ -70,6 +79,113 @@ export const EditorContextAdapter = {
 		const core = EditorCore.getInstance();
 		const asset = core.media.getAssets().find((a) => a.id === assetId);
 		return asset?.hasAudio;
+	},
+
+	undo(): { remainingUndoDepth: number } | { error: string } {
+		const core = EditorCore.getInstance();
+		if (!core.command.canUndo()) {
+			return { error: "Nothing to undo" };
+		}
+		core.command.undo();
+		const remainingUndoDepth = core.command.canUndo() ? 1 : 0;
+		return { remainingUndoDepth };
+	},
+
+	redo(): { remainingRedoDepth: number } | { error: string } {
+		const core = EditorCore.getInstance();
+		if (!core.command.canRedo()) {
+			return { error: "Nothing to redo" };
+		}
+		core.command.redo();
+		const remainingRedoDepth = core.command.canRedo() ? 1 : 0;
+		return { remainingRedoDepth };
+	},
+
+	toggleTrackMute({
+		trackId,
+	}: {
+		trackId: string;
+	}): { trackId: string } | { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		const track = findTrackInSceneTracks({
+			tracks: activeScene.tracks,
+			trackId,
+		});
+		if (!track) {
+			return { error: `Track not found: ${trackId}` };
+		}
+
+		core.command.execute({ command: new ToggleTrackMuteCommand(trackId) });
+		return { trackId };
+	},
+
+	toggleTrackVisibility({
+		trackId,
+	}: {
+		trackId: string;
+	}): { trackId: string } | { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		const track = findTrackInSceneTracks({
+			tracks: activeScene.tracks,
+			trackId,
+		});
+		if (!track) {
+			return { error: `Track not found: ${trackId}` };
+		}
+
+		core.command.execute({
+			command: new ToggleTrackVisibilityCommand(trackId),
+		});
+		return { trackId };
+	},
+
+	duplicateElements({ elementIds }: { elementIds: string[] }):
+		| {
+				success: boolean;
+				duplicated: Array<{ elementId: string; trackId: string }>;
+		  }
+		| { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		if (!hasTimelineContent(activeScene.tracks)) {
+			return { error: "No timeline content" };
+		}
+
+		const requestedIds = [...new Set(elementIds)];
+		const elements = findTimelineElementsWithTracksByIds({
+			tracks: activeScene.tracks,
+			elementIds: requestedIds,
+		});
+		const foundIds = new Set(elements.map(({ element }) => element.id));
+		const missingIds = requestedIds.filter((id) => !foundIds.has(id));
+
+		if (missingIds.length > 0) {
+			return {
+				error: `Timeline elements not found: ${missingIds.join(", ")}`,
+			};
+		}
+
+		const refs = elements.map(({ element, track }) => ({
+			trackId: track.id,
+			elementId: element.id,
+		}));
+
+		const duplicated = core.timeline.duplicateElements({ elements: refs });
+		return { success: true, duplicated };
 	},
 
 	splitTimeline({
@@ -545,10 +661,422 @@ export const EditorContextAdapter = {
 			skipped,
 		};
 	},
+
+	addEffectElement({
+		effectType,
+		start,
+		end,
+		params,
+	}: {
+		effectType: string;
+		start: number;
+		end: number;
+		params?: Record<string, number | string | boolean>;
+	}):
+		| {
+				elementId: string;
+				trackId: string;
+				appliedParams: Record<string, number | string | boolean>;
+		  }
+		| { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		if (!effectsRegistry.has(effectType)) {
+			return { error: `Effect not found: ${effectType}` };
+		}
+
+		const definition = effectsRegistry.get(effectType);
+
+		if (params) {
+			const validationError = validateEffectParams(definition.params, params);
+			if (validationError) {
+				return { error: validationError };
+			}
+		}
+
+		const startTimeTicks = secondsToTicks(start);
+		const durationTicks = secondsToTicks(end) - startTimeTicks;
+		if (durationTicks <= 0) {
+			return { error: "Invalid time range" };
+		}
+
+		const element = buildEffectElement({
+			effectType,
+			startTime: startTimeTicks,
+			duration: durationTicks,
+		});
+
+		if (params && Object.keys(params).length > 0) {
+			element.params = { ...element.params, ...params };
+		}
+
+		const insertCommand = new InsertElementCommand({
+			element,
+			placement: { mode: "auto", trackType: "effect" },
+		});
+		core.command.execute({ command: insertCommand });
+
+		const trackId = insertCommand.getTrackId();
+		if (!trackId) {
+			return { error: "Failed to place effect element" };
+		}
+
+		return {
+			elementId: insertCommand.getElementId(),
+			trackId,
+			appliedParams: element.params,
+		};
+	},
+
+	updateEffectElement({
+		elementId,
+		params,
+	}: {
+		elementId: string;
+		params: Record<string, number | string | boolean>;
+	}):
+		| {
+				success: boolean;
+				elementId: string;
+				appliedParams: Record<string, number | string | boolean>;
+		  }
+		| { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		const [resolved] = findTimelineElementsWithTracksByIds({
+			tracks: activeScene.tracks,
+			elementIds: [elementId],
+		});
+		if (!resolved) {
+			return { error: `Timeline element not found: ${elementId}` };
+		}
+		if (resolved.element.type !== "effect") {
+			return { error: "Element is not an effect" };
+		}
+
+		const effectElement =
+			resolved.element as import("@/lib/timeline/types").EffectElement;
+		const definition = effectsRegistry.get(effectElement.effectType);
+		if (!definition) {
+			return { error: `Effect not found: ${effectElement.effectType}` };
+		}
+
+		const validationError = validateEffectParams(definition.params, params);
+		if (validationError) {
+			return { error: validationError };
+		}
+
+		const mergedParams = { ...effectElement.params, ...params };
+
+		core.timeline.updateElements({
+			updates: [
+				{
+					trackId: resolved.track.id,
+					elementId,
+					patch: { params: mergedParams } as Partial<
+						import("@/lib/timeline/types").TimelineElement
+					>,
+				},
+			],
+		});
+
+		return {
+			success: true,
+			elementId,
+			appliedParams: mergedParams,
+		};
+	},
+
+	getElement({
+		elementId,
+	}: {
+		elementId: string;
+	}): Record<string, unknown> | { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		const [resolved] = findTimelineElementsWithTracksByIds({
+			tracks: activeScene.tracks,
+			elementIds: [elementId],
+		});
+		if (!resolved) {
+			return { error: `Element not found: ${elementId}` };
+		}
+
+		return serializeElement(resolved.element, resolved.track.id);
+	},
+
+	updateClip({
+		elementId,
+		name,
+		mask,
+		trimStart,
+		trimEnd,
+		opacity,
+		positionX,
+		positionY,
+		rotation,
+		scaleX,
+		scaleY,
+		blendMode,
+		hidden,
+		volume,
+		muted,
+	}: {
+		elementId: string;
+		name?: string;
+		mask?: {
+			action: "add" | "update" | "remove";
+			maskType?: string;
+			params?: Record<string, number | string | boolean>;
+		};
+		trimStart?: number;
+		trimEnd?: number;
+		opacity?: number;
+		positionX?: number;
+		positionY?: number;
+		rotation?: number;
+		scaleX?: number;
+		scaleY?: number;
+		blendMode?: string;
+		hidden?: boolean;
+		volume?: number;
+		muted?: boolean;
+	}):
+		| { success: boolean; elementId: string; applied: Record<string, unknown> }
+		| { error: string } {
+		const core = EditorCore.getInstance();
+		const activeScene = core.scenes.getActiveSceneOrNull();
+		if (!activeScene) {
+			return { error: "No active timeline" };
+		}
+
+		const [resolved] = findTimelineElementsWithTracksByIds({
+			tracks: activeScene.tracks,
+			elementIds: [elementId],
+		});
+		if (!resolved) {
+			return { error: `Timeline element not found: ${elementId}` };
+		}
+
+		const { element } = resolved;
+		const patch: Record<string, unknown> = {};
+		const applied: Record<string, unknown> = {};
+
+		if (name !== undefined) {
+			if (typeof name !== "string" || !name.trim()) {
+				return { error: "name must be a non-empty string" };
+			}
+			patch.name = name;
+			applied.name = name;
+		}
+
+		if (muted !== undefined) {
+			if (typeof muted !== "boolean") {
+				return { error: "muted must be a boolean" };
+			}
+			if (element.type !== "video" && element.type !== "audio") {
+				return {
+					error: `Element type '${element.type}' does not support muted`,
+				};
+			}
+			patch.muted = muted;
+			applied.muted = muted;
+		}
+
+		if (trimStart !== undefined || trimEnd !== undefined) {
+			if (
+				(trimStart !== undefined && typeof trimStart !== "number") ||
+				(trimEnd !== undefined && typeof trimEnd !== "number")
+			) {
+				return { error: "trimStart and trimEnd must be numbers (seconds)" };
+			}
+			if (trimStart !== undefined && trimStart < 0) {
+				return { error: "trimStart must be >= 0" };
+			}
+			if (trimEnd !== undefined && trimEnd < 0) {
+				return { error: "trimEnd must be >= 0" };
+			}
+			if (trimStart !== undefined) {
+				patch.trimStart = secondsToTicks(trimStart);
+				applied.trimStart = trimStart;
+			}
+			if (trimEnd !== undefined) {
+				patch.trimEnd = secondsToTicks(trimEnd);
+				applied.trimEnd = trimEnd;
+			}
+		}
+
+		if (opacity !== undefined) {
+			if (typeof opacity !== "number" || opacity < 0 || opacity > 100) {
+				return { error: "opacity must be a number between 0 and 100" };
+			}
+			if (!hasProperty(element, "opacity")) {
+				return {
+					error: `Element type '${element.type}' does not support opacity`,
+				};
+			}
+			patch.opacity = opacity;
+			applied.opacity = opacity;
+		}
+
+		if (hidden !== undefined) {
+			if (typeof hidden !== "boolean") {
+				return { error: "hidden must be a boolean" };
+			}
+			patch.hidden = hidden;
+			applied.hidden = hidden;
+		}
+
+		if (blendMode !== undefined) {
+			if (typeof blendMode !== "string") {
+				return { error: "blendMode must be a string" };
+			}
+			if (!hasProperty(element, "blendMode")) {
+				return {
+					error: `Element type '${element.type}' does not support blendMode`,
+				};
+			}
+			patch.blendMode = blendMode as BlendMode;
+			applied.blendMode = blendMode;
+		}
+
+		if (volume !== undefined) {
+			if (typeof volume !== "number" || volume < 0 || volume > 100) {
+				return { error: "volume must be a number between 0 and 100" };
+			}
+			if (element.type !== "video" && element.type !== "audio") {
+				return {
+					error: `Element type '${element.type}' does not support volume`,
+				};
+			}
+			patch.volume = volume;
+			applied.volume = volume;
+		}
+
+		if (
+			positionX !== undefined ||
+			positionY !== undefined ||
+			rotation !== undefined ||
+			scaleX !== undefined ||
+			scaleY !== undefined
+		) {
+			if (!hasProperty(element, "transform")) {
+				return {
+					error: `Element type '${element.type}' does not support transform properties`,
+				};
+			}
+			const currentTransform = (element as { transform: Transform }).transform;
+			const nextTransform: Transform = {
+				scaleX: scaleX ?? currentTransform.scaleX,
+				scaleY: scaleY ?? currentTransform.scaleY,
+				position: {
+					x: positionX ?? currentTransform.position.x,
+					y: positionY ?? currentTransform.position.y,
+				},
+				rotate: rotation ?? currentTransform.rotate,
+			};
+			patch.transform = nextTransform;
+			applied.transform = nextTransform;
+		}
+
+		if (mask !== undefined) {
+			if (!isMaskableElement(element)) {
+				return {
+					error: `Element type '${element.type}' does not support masks. Only video, image, and graphic elements support masks.`,
+				};
+			}
+
+			const maskable = element as MaskableElement;
+			const currentMasks = maskable.masks ?? [];
+
+			if (mask.action === "add") {
+				if (!mask.maskType || typeof mask.maskType !== "string") {
+					return { error: "mask.maskType is required when action is 'add'" };
+				}
+				if (!masksRegistry.has(mask.maskType as MaskType)) {
+					return {
+						error: `Unknown mask type: ${mask.maskType}. Available: split, cinematic-bars, rectangle, ellipse, heart, diamond, star`,
+					};
+				}
+
+				const newMask = buildDefaultMaskInstance({
+					maskType: mask.maskType as MaskType,
+				});
+				if (mask.params) {
+					newMask.params = { ...newMask.params, ...mask.params };
+				}
+				patch.masks = [...currentMasks, newMask];
+				applied.mask = {
+					id: newMask.id,
+					type: newMask.type,
+					params: newMask.params,
+				};
+			} else if (mask.action === "update") {
+				if (currentMasks.length === 0) {
+					return {
+						error: `Element has no mask to update. Use action 'add' first.`,
+					};
+				}
+				if (!mask.params || typeof mask.params !== "object") {
+					return { error: "mask.params is required when action is 'update'" };
+				}
+
+				const existingMask = currentMasks[0];
+				const updatedMasks = currentMasks.map((m, i) =>
+					i === 0 ? { ...m, params: { ...m.params, ...mask.params } } : m,
+				);
+				patch.masks = updatedMasks;
+				applied.mask = {
+					type: existingMask.type,
+					params: updatedMasks[0].params,
+				};
+			} else if (mask.action === "remove") {
+				if (currentMasks.length === 0) {
+					return { error: "Element has no mask to remove" };
+				}
+				patch.masks = [];
+				applied.mask = null;
+			}
+		}
+
+		if (Object.keys(patch).length === 0) {
+			return {
+				error: "No properties to update. Provide at least one property.",
+			};
+		}
+
+		core.timeline.updateElements({
+			updates: [
+				{
+					trackId: resolved.track.id,
+					elementId,
+					patch: patch as Partial<TimelineElement>,
+				},
+			],
+		});
+
+		return { success: true, elementId, applied };
+	},
 };
 
 function secondsToTicks(seconds: number): number {
 	return Math.round(seconds * TICKS_PER_SECOND);
+}
+
+function hasProperty(obj: unknown, prop: string): boolean {
+	return typeof obj === "object" && obj !== null && prop in obj;
 }
 
 function ticksToSeconds(ticks: number): number {
@@ -894,4 +1422,148 @@ function buildTextPatch(
 	return patch as Partial<TimelineElement>;
 }
 
+function validateEffectParams(
+	paramDefs: import("@/lib/params").ParamDefinition[],
+	params: Record<string, number | string | boolean>,
+): string | null {
+	for (const [key, value] of Object.entries(params)) {
+		const def = paramDefs.find((p) => p.key === key);
+		if (!def) {
+			return `Unknown parameter: ${key}`;
+		}
+
+		if (def.type === "number") {
+			if (typeof value !== "number") {
+				return `Parameter '${key}' must be a number`;
+			}
+			if (def.min !== undefined && value < def.min) {
+				return `Parameter '${key}' must be >= ${def.min}`;
+			}
+			if (def.max !== undefined && value > def.max) {
+				return `Parameter '${key}' must be <= ${def.max}`;
+			}
+		}
+
+		if (def.type === "boolean" && typeof value !== "boolean") {
+			return `Parameter '${key}' must be a boolean`;
+		}
+
+		if (def.type === "color" && typeof value !== "string") {
+			return `Parameter '${key}' must be a string (hex color)`;
+		}
+
+		if (def.type === "select") {
+			if (typeof value !== "string") {
+				return `Parameter '${key}' must be a string`;
+			}
+			const validValues = def.options.map((o) => o.value);
+			if (!validValues.includes(value)) {
+				return `Parameter '${key}' must be one of: ${validValues.join(", ")}`;
+			}
+		}
+	}
+	return null;
+}
+
 export { buildSystemPrompt } from "@/agent/system-prompt";
+
+function serializeElement(
+	element: TimelineElement,
+	trackId: string,
+): Record<string, unknown> {
+	const base = {
+		elementId: element.id,
+		trackId,
+		type: element.type,
+		name: element.name,
+		start: ticksToSeconds(element.startTime),
+		end: ticksToSeconds(element.startTime + element.duration),
+		duration: ticksToSeconds(element.duration),
+		trimStart: ticksToSeconds(element.trimStart),
+		trimEnd: ticksToSeconds(element.trimEnd),
+	};
+
+	switch (element.type) {
+		case "video":
+			return {
+				...base,
+				assetId: element.mediaId,
+				transform: element.transform,
+				opacity: element.opacity,
+				blendMode: element.blendMode ?? null,
+				hidden: element.hidden ?? false,
+				volume: element.volume ?? 100,
+				muted: element.muted ?? false,
+				masks: element.masks ?? [],
+				effects: element.effects ?? [],
+			};
+		case "image":
+			return {
+				...base,
+				assetId: element.mediaId,
+				transform: element.transform,
+				opacity: element.opacity,
+				blendMode: element.blendMode ?? null,
+				hidden: element.hidden ?? false,
+				masks: element.masks ?? [],
+				effects: element.effects ?? [],
+			};
+		case "text":
+			return {
+				...base,
+				content: element.content,
+				fontSize: element.fontSize,
+				fontFamily: element.fontFamily,
+				color: element.color,
+				fontWeight: element.fontWeight,
+				fontStyle: element.fontStyle,
+				textAlign: element.textAlign,
+				letterSpacing: element.letterSpacing ?? null,
+				lineHeight: element.lineHeight ?? null,
+				background: element.background,
+				transform: element.transform,
+				opacity: element.opacity,
+				blendMode: element.blendMode ?? null,
+				hidden: element.hidden ?? false,
+				effects: element.effects ?? [],
+			};
+		case "sticker":
+			return {
+				...base,
+				stickerId: element.stickerId,
+				transform: element.transform,
+				opacity: element.opacity,
+				blendMode: element.blendMode ?? null,
+				hidden: element.hidden ?? false,
+				effects: element.effects ?? [],
+			};
+		case "graphic":
+			return {
+				...base,
+				definitionId: element.definitionId,
+				params: element.params,
+				transform: element.transform,
+				opacity: element.opacity,
+				blendMode: element.blendMode ?? null,
+				hidden: element.hidden ?? false,
+				masks: element.masks ?? [],
+				effects: element.effects ?? [],
+			};
+		case "audio":
+			return {
+				...base,
+				assetId: element.sourceType === "upload" ? element.mediaId : null,
+				sourceType: element.sourceType,
+				volume: element.volume,
+				muted: element.muted ?? false,
+			};
+		case "effect":
+			return {
+				...base,
+				effectType: element.effectType,
+				params: element.params,
+			};
+		default:
+			return base;
+	}
+}

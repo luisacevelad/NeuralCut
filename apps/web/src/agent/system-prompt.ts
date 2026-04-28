@@ -45,6 +45,7 @@ export function buildSystemPrompt(
 			"Only claim edits that were actually performed by tool calls in this conversation. Do not say you added, removed, cleaned, or updated text/subtitles unless the relevant add_text, update_text, delete_timeline_elements, or update_timeline_element_timing tool call succeeded.",
 			"When the user asks to add titles, hooks, labels, captions, subtitles, or visible text, call add_text. Do not add text proactively for unrelated edit requests such as cutting silence unless the user asks for text.",
 			"When you need to perform an action matching one of these tools, call the appropriate tool. For all other requests, respond directly in plain text.",
+			"SKILLS: You have editing skills available — pre-built recipe workflows for common editing patterns. When the user asks for a complex edit (viral video, pitch, specific style, etc.), call list_skills to discover relevant skills, then call load_skill with the matching skillId to get full step-by-step instructions. Follow those instructions precisely using the standard editing tools. If the user's request doesn't match any skill, proceed with your own editing approach.",
 		);
 	}
 

@@ -36,3 +36,5 @@ import "@/agent/tools/upsert-keyframe.tool";
 import "@/agent/tools/remove-keyframe.tool";
 import "@/agent/tools/update-keyframe-curve.tool";
 import "@/agent/tools/list-animatable-properties.tool";
+import "@/agent/skills/list-skills.tool";
+import "@/agent/skills/load-skill.tool";

@@ -291,6 +291,20 @@ export const listAnimatablePropertiesSchema: ToolSchema = {
 	parameters: [{ key: "elementId", type: "string", required: true }],
 };
 
+export const listSkillsSchema: ToolSchema = {
+	name: "list_skills",
+	description:
+		"Lists available editing skill recipes — pre-built workflows for common editing patterns like viral shorts, pitch videos, and more. Each skill contains a structured recipe with specific tool sequences, timing, and styling rules. Returns skill id, name, and short description. Use this to discover relevant skills, then call load_skill to get full instructions and apply them.",
+	parameters: [{ key: "query", type: "string", required: false }],
+};
+
+export const loadSkillSchema: ToolSchema = {
+	name: "load_skill",
+	description:
+		"Loads the full instructions for a specific skill by its id. After loading, follow the skill's instructions to accomplish the user's request using the standard editing tools (split, add_text, apply_effect, upsert_keyframe, etc.). Each skill contains a complete recipe with sections, timing rules, text styles, effect parameters, and a quality checklist. Always call list_skills first to discover available skills.",
+	parameters: [{ key: "skillId", type: "string", required: true }],
+};
+
 /**
  * The exact list of schemas exposed to the LLM.
  * Excludes internal-only tools (transcribe_video, mock).
@@ -322,4 +336,6 @@ export const providerToolSchemas: ToolSchema[] = [
 	removeKeyframeSchema,
 	updateKeyframeCurveSchema,
 	listAnimatablePropertiesSchema,
+	listSkillsSchema,
+	loadSkillSchema,
 ];

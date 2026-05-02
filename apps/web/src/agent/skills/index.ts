@@ -12,3 +12,4 @@ import "@/agent/skills/builtin/remove-silences.skill";
 import "@/agent/skills/builtin/talking-head.skill";
 import "@/agent/skills/builtin/short-form.skill";
 import "@/agent/skills/builtin/b-roll-narrative.skill";
+import "@/agent/skills/builtin/corporate.skill";

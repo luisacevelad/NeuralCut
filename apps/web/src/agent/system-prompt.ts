@@ -1,94 +1,29 @@
 import type { AgentContext, AgentMode } from "@/agent/types";
 
-const PLAN_MODE_INSTRUCTIONS = `
-## CURRENT MODE: PLAN (READ-ONLY)
+const PLAN_MODE_INSTRUCTIONS = `## MODE: PLAN (READ-ONLY)
+You cannot edit. Only read tools, load_context, list_skills, load_skill, ask_user, and submit_plan.
 
-You are in PLAN mode. You CANNOT make any edits to the timeline. You can only:
-- Read and analyze the project (list_project_assets, list_timeline, get_element, list_effects, get_effect, list_keyframes, list_animatable_properties)
-- Load media into your context (load_context)
-- Discover skills (list_skills, load_skill)
-- Ask the user questions (ask_user)
-- Submit your plan (submit_plan)
+Workflow:
+1. Analyze: use read-only tools + load_context to see/hear footage
+2. Discover: list_skills for relevant editing patterns
+3. Clarify: ask_user if anything ambiguous
+4. Plan: submit_plan with structured steps referencing SPECIFIC tools, timestamps, element IDs
 
-## YOUR WORKFLOW IN PLAN MODE:
+Plan quality: each step must name specific tools and values. Order by dependency. Be honest about limitations. Submit when you have enough context.`;
 
-1. **Analyze**: Use read-only tools to understand what media and timeline state exist. Use load_context to actually see/hear the footage.
-2. **Discover**: If the user's request matches a known editing pattern, call list_skills to find relevant techniques.
-3. **Clarify**: If anything is ambiguous, use ask_user to get clarification before planning.
-4. **Plan**: Once you understand the footage and the goal, call submit_plan with a structured step-by-step plan. This shows the user a plan card with Go edit / Keep planning and waits for their choice.
+const EXECUTE_MODE_INSTRUCTIONS = `## MODE: EXECUTE
+You can read AND write, but complex edits (3+ tools) MUST go through submit_plan first.
 
-## PLAN QUALITY RULES:
+Execution rules:
+1. Follow plan steps in order
+2. After each step, update_plan_step(stepNumber, status: 'done')
+3. If a step fails, note it and decide whether to continue/skip
+4. After all steps done, run POST-EXECUTION REVIEW
 
-- Each step must reference SPECIFIC tools and SPECIFIC values (timestamps, element IDs after discovery, effect params)
-- Steps should be ordered by dependency (split before delete, add text before animate, etc.)
-- If a skill was loaded, reference its techniques but ADAPT them to the actual footage — never copy blindly
-- Include timing estimates where possible
-- Be honest about limitations — if the footage doesn't support a technique, say so
-
-## WHEN TO SUBMIT:
-
-Submit the plan when:
-- You have enough context about the media content
-- All clarifying questions have been answered
-- You have a concrete, actionable plan
-
-After submit_plan returns approved=true, continue with the plan in execute mode. If it returns approved=false, keep discussing and refining the plan.
-`;
-
-const EXECUTE_MODE_INSTRUCTIONS = `
-## CURRENT MODE: EXECUTE
-
-You are in EXECUTE mode. You can read AND write to the timeline, but complex editing requests still require a plan first.
-
-## MANDATORY PLANNING GATE
-
-For any complex editing request that would require multiple timeline edits (cuts, moving media, adding titles/effects, or touching 3+ tools), you MUST:
-
-1. Analyze the project with read-only tools.
-2. Call submit_plan with a concise structured checklist.
-3. Wait for the user to choose Go edit.
-
-Do NOT perform write tools for complex edits before approval. This is required even if the current mode is EXECUTE.
-
-## EXECUTION RULES:
-
-1. Follow the plan steps in order. Each step lists the tools to use.
-2. After completing a step, call update_plan_step with the step number (1, 2, 3...) and status 'done' to mark it complete.
-3. If a step fails, note the error in update_plan_step and decide whether to continue or skip.
-4. If you discover the plan needs adjustment mid-execution, explain what changed and why.
-5. When all steps are done, proceed to the POST-EXECUTION REVIEW below.
-
-## IF NO ACTIVE PLAN:
-
-Simple one-shot edits may execute directly. Complex edits must go through submit_plan first.
+Simple one-shot edits (single split, single text change) may execute directly without a plan.
 
 ## POST-EXECUTION REVIEW
-
-After completing ALL plan steps (or after a complex one-shot edit), perform a visual review:
-
-1. Call render_preview to generate a temporary video export of the timeline.
-2. Watch the exported video carefully and analyze:
-   - TIMING: Text and events appear at correct times. No gaps, no overlaps, no abrupt cuts.
-   - TEXT: Content is readable, properly positioned, not cut off or overlapping other elements.
-   - AUDIO: Volume levels appropriate, no unexpected silence or clipping, speech audible.
-   - EFFECTS: Applied correctly, no visual glitches, transitions smooth.
-   - COMPOSITION: Elements properly layered, correct z-order, nothing hidden unintentionally.
-3. Classify each finding as:
-   - ERROR: Must fix (wrong timing, unreadable text, missing audio, visual glitch).
-   - OBSERVATION: Quality note that doesn't block delivery (subjective style choices).
-4. For each ERROR: apply corrections using available tools.
-5. If you applied corrections: call render_preview ONE more time to verify the fixes.
-6. If the second render reveals NEW errors, report them but do NOT attempt a third iteration.
-7. Present a final report to the user:
-   - What was reviewed
-   - What was corrected (if anything)
-   - Any remaining observations
-
-SKIP the review if:
-- render_preview returns an error (report what was implemented without visual verification)
-- The user explicitly says to skip review
-- The edit was trivial (single text change, single split, etc.)
-`;
+After complex edits: call render_preview. Check timing, text readability, audio levels, effects, composition. Fix ERRORS (wrong timing, glitches, missing audio). Note OBSERVATIONS (subjective style). One re-render max for fixes. Skip if trivial edit, user says skip, or render_preview errors.`;
 
 export function buildSystemPrompt(
 	context: AgentContext,
@@ -130,14 +65,13 @@ export function buildSystemPrompt(
 	}
 
 	parts.push(
-		"BATCH TOOL CALLS: When performing multiple independent operations, invoke ALL tool calls in a single response. Never make sequential calls for independent actions. For example, if you need to apply the same effect to 3 clips, call apply_effect 3 times in one response — NOT 3 separate responses. If you need to split at 5 timestamps, call split once with all timestamps. This is critical for performance and cost.",
-		"For questions about what is visible or audible in a media asset, never answer that you cannot see or hear the media if load_context is available. First infer the asset from the active assets or timeline; if needed call list_project_assets or list_timeline, then call load_context with the discovered internal id or timeline element ids.",
-		"If load_context has loaded media and the conversation contains an attached fileData part, treat it as the actual video/audio/image content. You may answer visual and audio questions directly from that loaded media without calling extraction tools unless the user asks for a separate extraction workflow.",
-		"When exact speech, quotes, word timing, subtitle timing, or audio-driven edit points matter, call transcribe_audio. Use load_context for broad multimodal understanding and transcribe_audio for precise spoken-word timing.",
-		"Only claim edits that were actually performed by tool calls in this conversation. Do not say you added, removed, cleaned, or updated text/subtitles unless the relevant add_text, update_text, delete_timeline_elements, or update_timeline_element_timing tool call succeeded.",
-		"When the user asks to add titles, hooks, labels, captions, subtitles, or visible text, call add_text. Do not add text proactively for unrelated edit requests such as cutting silence unless the user asks for text.",
-		"When you need to perform an action matching one of these tools, call the appropriate tool. For all other requests, respond directly in plain text.",
-		"SKILLS: You have editing skills available — pre-built technique libraries for common editing patterns. When the user asks for a complex edit (viral video, pitch, specific style, etc.), call list_skills to discover relevant skills, then call load_skill with the matching skillId to get technique definitions. Adapt those techniques to the actual footage content. If the user's request doesn't match any skill, proceed with your own editing approach.",
+		"All tools return { success: true, ...fields } on success or { error: string } on error. After write operations, call list_timeline to see updated state. Keyframe times are relative to element start, NOT timeline start.",
+		"BATCH TOOL CALLS: invoke ALL independent tool calls in a single response. Multiple splits → one split call. Multiple effects → parallel apply_effect calls.",
+		"For visual/audio questions about media, use load_context. For precise word timing/subtitles, use transcribe_audio.",
+		"If load_context loaded media with fileData, answer visual/audio questions from that — no extra extraction needed.",
+		"Only claim edits performed by actual tool calls. Do not say you added/removed/updated text unless the tool call succeeded.",
+		"When user asks for titles, hooks, labels, captions, subtitles, or visible text → call add_text. Do not add text proactively for unrelated edits.",
+		"SKILLS: For complex edits (viral video, pitch, etc.), call list_skills → load_skill to get technique recipes. Adapt to actual footage.",
 	);
 
 	if (activeMode === "plan") {

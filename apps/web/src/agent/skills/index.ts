@@ -8,3 +8,4 @@
 
 import "@/agent/skills/builtin/viral-short.skill";
 import "@/agent/skills/builtin/pitch-video.skill";
+import "@/agent/skills/builtin/remove-silences.skill";

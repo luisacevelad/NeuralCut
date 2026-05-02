@@ -2,13 +2,13 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { AgentContext } from "@/agent/types";
 import { toolRegistry } from "@/agent/tools/registry";
 
+let callIndex = 0;
 const mockAddText = mock(
 	(_args: {
 		text: string;
 		start: number;
 		end: number;
 		position: string;
-		style?: string;
 		color?: string;
 		fontSize?: number;
 		fontFamily?: string;
@@ -20,7 +20,7 @@ const mockAddText = mock(
 		positionY?: number;
 		background?: { enabled: boolean; color?: string; cornerRadius?: number; padding?: number };
 	}) => ({
-		elementId: "text-1",
+		elementId: `text-${++callIndex}`,
 		trackId: "text-track-1",
 	}),
 );
@@ -48,6 +48,7 @@ const context: AgentContext = {
 describe("add_text tool", () => {
 	beforeEach(() => {
 		mockAddText.mockClear();
+		callIndex = 0;
 	});
 
 	test("is registered in the tool registry", () => {
@@ -62,7 +63,6 @@ describe("add_text tool", () => {
 				start: 1,
 				end: 4,
 				position: "bottom",
-				style: "subtitle",
 			},
 			context,
 		);
@@ -72,27 +72,11 @@ describe("add_text tool", () => {
 			start: 1,
 			end: 4,
 			position: "bottom",
-			style: "subtitle",
 		});
 		expect(result).toEqual({ elementId: "text-1", trackId: "text-track-1" });
 	});
 
-	test("omits style when not provided", async () => {
-		const tool = toolRegistry.get("add_text");
-		await tool.execute(
-			{ text: "Hello", start: 1, end: 4, position: "center" },
-			context,
-		);
-
-		expect(mockAddText).toHaveBeenCalledWith({
-			text: "Hello",
-			start: 1,
-			end: 4,
-			position: "center",
-		});
-	});
-
-	test("passes style overrides to the adapter", async () => {
+	test("passes overrides to the adapter", async () => {
 		const tool = toolRegistry.get("add_text");
 		await tool.execute(
 			{
@@ -100,7 +84,6 @@ describe("add_text tool", () => {
 				start: 0,
 				end: 3,
 				position: "center",
-				style: "hook",
 				color: "#FF0000",
 				fontSize: 10,
 				fontFamily: "Inter",
@@ -120,7 +103,6 @@ describe("add_text tool", () => {
 			start: 0,
 			end: 3,
 			position: "center",
-			style: "hook",
 			color: "#FF0000",
 			fontSize: 10,
 			fontFamily: "Inter",
@@ -155,12 +137,6 @@ describe("add_text tool", () => {
 				context,
 			),
 		).toEqual({ error: "Invalid text position" });
-		expect(
-			await tool.execute(
-				{ text: "Hello", start: 0, end: 1, position: "center", style: "big" },
-				context,
-			),
-		).toEqual({ error: "Invalid text style" });
 		expect(mockAddText).not.toHaveBeenCalled();
 	});
 
@@ -202,6 +178,105 @@ describe("add_text tool", () => {
 			),
 		).toEqual({ error: "Invalid background" });
 
+		expect(mockAddText).not.toHaveBeenCalled();
+	});
+
+	test("batch mode: adds multiple texts with a single call", async () => {
+		const tool = toolRegistry.get("add_text");
+		const result = await tool.execute(
+			{
+				texts: [
+					{ text: "First", start: 0, end: 2, position: "top" },
+					{ text: "Second", start: 2, end: 4, position: "bottom" },
+					{ text: "Third", start: 4, end: 6, position: "center" },
+				],
+			},
+			context,
+		);
+
+		expect(mockAddText).toHaveBeenCalledTimes(3);
+		expect(mockAddText).toHaveBeenNthCalledWith(1, {
+			text: "First",
+			start: 0,
+			end: 2,
+			position: "top",
+		});
+		expect(mockAddText).toHaveBeenNthCalledWith(2, {
+			text: "Second",
+			start: 2,
+			end: 4,
+			position: "bottom",
+		});
+		expect(mockAddText).toHaveBeenNthCalledWith(3, {
+			text: "Third",
+			start: 4,
+			end: 6,
+			position: "center",
+		});
+		expect(result).toEqual([
+			{ elementId: "text-1", trackId: "text-track-1" },
+			{ elementId: "text-2", trackId: "text-track-1" },
+			{ elementId: "text-3", trackId: "text-track-1" },
+		]);
+	});
+
+	test("batch mode: each item can have different overrides", async () => {
+		const tool = toolRegistry.get("add_text");
+		await tool.execute(
+			{
+				texts: [
+					{ text: "Red", start: 0, end: 1, position: "top", color: "#FF0000", fontSize: 10 },
+					{ text: "Blue", start: 1, end: 2, position: "bottom", color: "#0000FF", fontWeight: "bold" },
+				],
+			},
+			context,
+		);
+
+		expect(mockAddText).toHaveBeenNthCalledWith(1, {
+			text: "Red",
+			start: 0,
+			end: 1,
+			position: "top",
+			color: "#FF0000",
+			fontSize: 10,
+		});
+		expect(mockAddText).toHaveBeenNthCalledWith(2, {
+			text: "Blue",
+			start: 1,
+			end: 2,
+			position: "bottom",
+			color: "#0000FF",
+			fontWeight: "bold",
+		});
+	});
+
+	test("batch mode: validates each item independently", async () => {
+		const tool = toolRegistry.get("add_text");
+
+		expect(
+			await tool.execute(
+				{
+					texts: [
+						{ text: "Valid", start: 0, end: 1, position: "center" },
+						{ text: "", start: 1, end: 2, position: "center" },
+					],
+				},
+				context,
+			),
+		).toEqual({ error: "Text is required" });
+
+		expect(mockAddText).toHaveBeenCalledTimes(1);
+	});
+
+	test("batch mode: rejects non-object items", async () => {
+		const tool = toolRegistry.get("add_text");
+
+		expect(
+			await tool.execute(
+				{ texts: ["not an object" as unknown] },
+				context,
+			),
+		).toEqual({ error: "Each item in texts must be an object" });
 		expect(mockAddText).not.toHaveBeenCalled();
 	});
 });

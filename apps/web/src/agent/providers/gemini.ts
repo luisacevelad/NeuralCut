@@ -267,7 +267,19 @@ function toGeminiParameterSchema(param: ToolParameter): Schema {
 	if (type === "number") return { type: SchemaType.NUMBER, ...common };
 	if (type === "boolean") return { type: SchemaType.BOOLEAN, ...common };
 	if (type === "object") {
-		return { type: SchemaType.OBJECT, properties: {}, ...common };
+		const props: FunctionDeclarationSchema["properties"] = {};
+		if (param.properties) {
+			for (const p of param.properties) {
+				props[p.key] = toGeminiParameterSchema(p);
+			}
+		}
+		const required = param.properties?.filter((p) => p.required).map((p) => p.key);
+		return {
+			type: SchemaType.OBJECT,
+			properties: props,
+			...(required && required.length > 0 && { required }),
+			...common,
+		};
 	}
 	if (type === "number[]") {
 		return {

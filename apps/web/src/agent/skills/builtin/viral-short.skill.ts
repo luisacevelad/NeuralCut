@@ -39,13 +39,14 @@ This is the most critical part. If the viewer scrolls past 3 seconds, the video 
 1. Identify the most visually striking or surprising moment in the footage
 2. If the raw video starts slow, call split at 3 seconds from the best moment, then delete_timeline_elements for everything before it, then move_timeline_elements so the hook starts at 0
 3. Add hook text with add_text:
-   - text: A punchy, curiosity-driving phrase (max 6 words). Examples: "Wait for it...", "Nobody talks about this", "This changed everything"
-   - style: "hook" (bold, large font)
-   - position: "center"
-   - start: 0
-   - end: 2.5 (do NOT exceed 3 seconds)
-   - color: "#FFFFFF"
-   - background: { enabled: true, color: "#000000", cornerRadius: 8, padding: 12 }
+    - text: A punchy, curiosity-driving phrase (max 6 words). Examples: "Wait for it...", "Nobody talks about this", "This changed everything"
+    - fontSize: 56 (bold, large font for hooks)
+    - fontWeight: "bold"
+    - position: "center"
+    - start: 0
+    - end: 2.5 (do NOT exceed 3 seconds)
+    - color: "#FFFFFF"
+    - background: { enabled: true, color: "#000000", cornerRadius: 8, padding: 12 }
 
 ### SECTION 2: THE CONTENT (3s to end-3s)
 This is the meat. Keep it FAST and TIGHT.
@@ -56,11 +57,14 @@ This is the meat. Keep it FAST and TIGHT.
 - Aim for average shot length of 3-5 seconds. If a clip is longer than 6 seconds without visual change, cut it
 
 **Step 2: Add retention captions**
-- For each spoken segment, add caption text at the bottom:
-  - style: "subtitle"
+- Use generate_captions to automatically create word-timed captions for the spoken content. This tool handles timing and grouping automatically.
+- Captions should be 4-5 words max per element, positioned at the bottom, no background.
+- If you need manual control, use add_text with:
+  - fontSize: 32
+  - fontWeight: "bold"
   - position: "bottom"
   - color: "#FFFFFF"
-  - background: { enabled: true, color: "#000000", cornerRadius: 6, padding: 8 }
+  - background: { enabled: false }
   - Each caption should be 2-3 seconds long, max 5 words per card
   - If a sentence is longer, split it across multiple add_text calls with sequential timing
 
@@ -85,13 +89,14 @@ End with a call-to-action that drives engagement.
 **Steps:**
 1. Split the video 2.5 seconds before the end
 2. Add CTA text with add_text:
-   - text: "Follow for more" or "Like if this helped" or topic-relevant CTA
-   - style: "hook"
-   - position: "center"
-   - start: (end - 2.5)
-   - end: (video end)
-   - color: "#FFFFFF"
-   - background: { enabled: true, color: "#000000", cornerRadius: 8, padding: 12 }
+    - text: "Follow for more" or "Like if this helped" or topic-relevant CTA
+    - fontSize: 56
+    - fontWeight: "bold"
+    - position: "center"
+    - start: (end - 2.5)
+    - end: (video end)
+    - color: "#FFFFFF"
+    - background: { enabled: true, color: "#000000", cornerRadius: 8, padding: 12 }
 3. Add a final zoom pulse via upsert_keyframe:
    - propertyPath: "transform.scaleX" — go from 1.0 to 1.08 over the CTA duration
    - Same for "transform.scaleY"
@@ -107,10 +112,10 @@ End with a call-to-action that drives engagement.
 
 ## TEXT STYLE GUIDE
 
-- Hook text: style "hook", center, white on black rounded background
-- Captions: style "subtitle", bottom, white on semi-transparent black
-- CTA text: style "hook", center, white on black
-- NEVER use plain text without background for any on-screen text
+- Hook text: large fontSize (56+), bold fontWeight, center, white on black rounded background
+- Captions: use generate_captions for automatic word-timed captions, bottom, no background. If manual: fontSize 32, bold, white
+- CTA text: large fontSize (56+), bold fontWeight, center, white on black background
+- NEVER use plain text without background for hook or CTA text
 - Font weight must always be "bold" for all text elements
 - NEVER add more than 6 words per text element
 
@@ -137,10 +142,10 @@ The zoom should be imperceptible to the conscious eye but felt by the viewer. To
 ## QUALITY CHECKLIST
 
 Before finishing, verify:
-- [ ] Hook text is present at 0-2.5s with bold style and background
+- [ ] Hook text is present at 0-2.5s with bold font and background
 - [ ] Total duration is under 60 seconds
 - [ ] At least 2 retention zooms exist on the main content
-- [ ] Captions are present for spoken content (subtitle style, bottom)
+- [ ] Captions are present for spoken content (bottom, 4-5 words max, no background)
 - [ ] CTA text is present in the last 2-3 seconds
 - [ ] No gaps exist between timeline elements
 - [ ] No single text element exceeds 6 words

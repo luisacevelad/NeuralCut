@@ -99,7 +99,7 @@ Cover any visible jump cuts with relevant B-roll (product shots, slides, support
 
 ### Step 5: Add structure through text
 Map the section breaks you identified in Step 2 to title card moments. For each major section transition:
-- Add a brief text element (1.5–2.5s) that names the section (style: 'label', position: 'top' or 'center' as appropriate)
+- Add a brief text element (1.5–2.5s) that names the section using add_text with appropriate fontSize and fontWeight (position: 'top' or 'center' as appropriate)
 - This gives the viewer a clear signal that a new topic is beginning
 
 For speaker identification (if this is an interview or presentation with a named presenter): add a lower third text element in the first appearance of each speaker (name, title). Display it for 3–4 seconds, then let it disappear. Don't show it the entire time the person is on screen.
@@ -127,7 +127,7 @@ At the outro: if no branded outro clip is available, fade to black with the musi
 
 **update_clip for logo overlay** — Use positionX/positionY to place the logo in a corner, scaleX/scaleY to size it appropriately, and opacity to prevent it from competing with content. Always call get_element after placement to verify the values are applied correctly.
 
-**add_text for lower thirds** — Lower thirds (name + title cards) should appear for 3–4 seconds in the speaker's first appearance. Style: 'label', positioned at the bottom with positionY adjusted to sit in the lower third of the frame (positionY around 30–35). A background with moderate padding reads well against any footage.
+**add_text for lower thirds** — Lower thirds (name + title cards) should appear for 3–4 seconds in the speaker's first appearance. Use add_text with a medium fontSize and bold fontWeight, positioned at the bottom with positionY adjusted to sit in the lower third of the frame (positionY around 30–35). A background with moderate padding reads well against any footage.
 
 **apply_effect sparingly** — Corporate content doesn't benefit from effects. If you use anything, a subtle vignette on the intro/outro section can add polish. Sharpen can help if the footage is soft. Nothing more — effects draw attention to themselves and undermine the professional feel.
 
@@ -143,7 +143,7 @@ At the outro: if no branded outro clip is available, fade to black with the musi
 
 ## Gotchas
 
-- Never use the 'hook' text style for corporate content — it reads as social media and undermines professional credibility. Use 'label' for section headers, 'subtitle' for captions, and 'plain' for clean minimalist text.
+- For on-screen text, choose appropriate fontSize and fontWeight for the context: large bold text for section headers and emphasis, medium weight for lower thirds, clean readable sizing for captions. Avoid flashy or overly large text — corporate content should feel understated and professional.
 - Logo overlays must not cover important content areas. Check the footage first — if the speaker's face or the product demonstration occupies the corner where you'd place the logo, move the logo to a different corner or suppress it for those sections.
 - Music choice matters — if the user hasn't uploaded music, don't add music from nowhere. Ask the user what tone they want before adding a background track.
 - Corporate audiences are often watching on desktop, not mobile. Don't over-optimize for vertical or mobile layout. Keep text sizes readable on a monitor at a normal viewing distance.

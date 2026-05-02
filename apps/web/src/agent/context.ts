@@ -559,7 +559,6 @@ export const EditorContextAdapter = {
 		start,
 		end,
 		position,
-		style = "plain",
 		color,
 		fontSize,
 		fontFamily,
@@ -575,7 +574,6 @@ export const EditorContextAdapter = {
 		start: number;
 		end: number;
 		position: "top" | "center" | "bottom";
-		style?: "plain" | "subtitle" | "hook" | "label";
 	} & TextStyleOverrides):
 		| { elementId: string; trackId: string }
 		| { error: string } {
@@ -591,7 +589,6 @@ export const EditorContextAdapter = {
 			return { error: "Invalid time range" };
 		}
 
-		const preset = getTextStylePreset(style);
 		const resolvedPosition = getTextPosition(position);
 		const overridePosition =
 			positionX !== undefined || positionY !== undefined
@@ -601,11 +598,10 @@ export const EditorContextAdapter = {
 					}
 				: resolvedPosition;
 
-		const resolvedBackground = resolveBackground(preset.background, background);
+		const resolvedBackground = resolveBackground(undefined, background);
 
 		const element = buildTextElement({
 			raw: {
-				...preset,
 				...(color !== undefined && { color }),
 				...(fontSize !== undefined && { fontSize }),
 				...(fontFamily !== undefined && { fontFamily }),
@@ -1698,45 +1694,6 @@ function resolveBackground(
 			paddingY: override.padding,
 		}),
 	};
-}
-
-function getTextStylePreset(style: "plain" | "subtitle" | "hook" | "label") {
-	const noBackground = {
-		...DEFAULTS.text.element.background,
-		enabled: false,
-		color: "transparent",
-	};
-
-	if (style === "subtitle") {
-		return {
-			fontSize: 5,
-			fontWeight: "bold" as const,
-			background: {
-				...DEFAULTS.text.element.background,
-				enabled: true,
-				color: "#000000",
-			},
-		};
-	}
-	if (style === "hook") {
-		return {
-			fontSize: 8,
-			fontWeight: "bold" as const,
-			background: noBackground,
-		};
-	}
-	if (style === "label") {
-		return {
-			fontSize: 5,
-			fontWeight: "bold" as const,
-			background: {
-				...DEFAULTS.text.element.background,
-				enabled: true,
-				color: "#000000",
-			},
-		};
-	}
-	return { fontSize: 6, background: noBackground };
 }
 
 function isAssetCompatibleWithRequestedTrack({

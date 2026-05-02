@@ -46,6 +46,16 @@ export interface ChatMessage {
 	toolCalls?: ToolCall[];
 	toolCallId?: string;
 	timestamp: number;
+	sessionId?: string;
+}
+
+export interface ChatSessionMeta {
+	id: string;
+	projectId: string;
+	title: string;
+	messageCount: number;
+	lastMessageAt: number;
+	createdAt: number;
 }
 
 export interface ToolCall {
@@ -120,6 +130,7 @@ export type ToolParameter = {
 	description?: string;
 	enum?: string[];
 	items?: ToolParameter;
+	properties?: ToolParameter[];
 };
 
 export interface ToolDefinition {

@@ -107,39 +107,48 @@ function toOpenAIFunctions(tools: ToolSchema[]): OpenAIFunctionTool[] {
 	}));
 }
 
-function toOpenAIParameterSchema(param: ToolParameter): {
+type OpenAISchema = {
 	type: string;
 	description?: string;
 	enum?: string[];
-	items?: { type: string; description?: string; enum?: string[] };
-} {
+	items?: OpenAISchema;
+	properties?: Record<string, OpenAISchema>;
+	required?: string[];
+};
+
+function toOpenAIParameterSchema(param: ToolParameter): OpenAISchema {
 	const { type } = param;
 	const common = {
 		...(param.description && { description: param.description }),
 		...(param.enum && { enum: param.enum }),
 	};
+	if (type === "number") return { type: "number", ...common };
+	if (type === "boolean") return { type: "boolean", ...common };
 	if (type === "number[]") return { type: "array", items: { type: "number" } };
 	if (type === "string[]") return { type: "array", items: { type: "string" } };
+	if (type === "object") {
+		const props: Record<string, OpenAISchema> = {};
+		if (param.properties) {
+			for (const p of param.properties) {
+				props[p.key] = toOpenAIParameterSchema(p);
+			}
+		}
+		const required = param.properties?.filter((p) => p.required).map((p) => p.key);
+		return {
+			type: "object",
+			properties: props,
+			...(required && required.length > 0 && { required }),
+			...common,
+		};
+	}
 	if (type === "array" && param.items) {
 		return {
 			type: "array",
 			...common,
-			items: toOpenAIArrayItemSchema(param.items),
+			items: toOpenAIParameterSchema(param.items),
 		};
 	}
-	return { type, ...common };
-}
-
-function toOpenAIArrayItemSchema(param: ToolParameter): {
-	type: string;
-	description?: string;
-	enum?: string[];
-} {
-	return {
-		type: param.type,
-		...(param.description && { description: param.description }),
-		...(param.enum && { enum: param.enum }),
-	};
+	return { type: "string", ...common };
 }
 
 // ---------------------------------------------------------------------------

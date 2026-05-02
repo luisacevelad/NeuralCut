@@ -117,6 +117,15 @@ const TOOL_CALL_FORMATTERS: Record<
 		};
 	},
 	add_text: (args) => {
+		if (Array.isArray(args.texts)) {
+			const count = args.texts.length;
+			const first = args.texts[0] as Record<string, unknown> | undefined;
+			const preview = first ? String(first.text ?? "text") : "";
+			return {
+				label: "Add Text",
+				description: `${count} texts · ${preview}${count > 1 ? "..." : ""}`,
+			};
+		}
 		const parts: string[] = [];
 		if (args.color) parts.push(String(args.color));
 		if (args.fontSize) parts.push(`size ${args.fontSize}`);

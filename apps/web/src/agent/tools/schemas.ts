@@ -1,4 +1,4 @@
-import type { ToolSchema } from "@/agent/types";
+import type { ToolParameter, ToolSchema } from "@/agent/types";
 
 /**
  * Single source of truth for agent tool schemas.
@@ -187,53 +187,62 @@ export const updateTimelineElementTimingSchema: ToolSchema = {
 	],
 };
 
+const textItemProperties: ToolParameter[] = [
+	{ key: "text", type: "string", required: true, description: "Text content." },
+	{ key: "start", type: "number", required: true, description: "Start in seconds." },
+	{ key: "end", type: "number", required: true, description: "End in seconds." },
+	{
+		key: "position",
+		type: "string",
+		required: true,
+		enum: ["top", "center", "bottom"],
+		description: "Vertical preset.",
+	},
+	{ key: "color", type: "string", required: false, description: "Hex color." },
+	{ key: "fontSize", type: "number", required: false, description: "Font size." },
+	{ key: "fontFamily", type: "string", required: false, description: "Font family." },
+	{
+		key: "fontWeight",
+		type: "string",
+		required: false,
+		enum: ["normal", "bold"],
+	},
+	{
+		key: "fontStyle",
+		type: "string",
+		required: false,
+		enum: ["normal", "italic"],
+	},
+	{
+		key: "textAlign",
+		type: "string",
+		required: false,
+		enum: ["left", "center", "right"],
+	},
+	{ key: "letterSpacing", type: "number", required: false, description: "Letter spacing." },
+	{ key: "positionX", type: "number", required: false, description: "X position (-50 to 50)." },
+	{ key: "positionY", type: "number", required: false, description: "Y position (-50 to 50)." },
+	{ key: "background", type: "object", required: false, description: "{ enabled, color?, cornerRadius?, padding? }" },
+];
+
 export const addTextSchema: ToolSchema = {
 	name: "add_text",
 	description:
-		"Adds text to timeline. Use style+position presets, then override with individual params.",
+		"Adds text to timeline. Single: pass text, start, end, position. Batch: pass 'texts' array with multiple text objects, each fully independent (different styles, positions, etc). Prefer batch for 2+ text elements.",
 	parameters: [
-		{ key: "text", type: "string", required: true, description: "Text content." },
-		{ key: "start", type: "number", required: true, description: "Start in seconds." },
-		{ key: "end", type: "number", required: true, description: "End in seconds." },
 		{
-			key: "position",
-			type: "string",
-			required: true,
-			enum: ["top", "center", "bottom"],
-			description: "Vertical preset.",
-		},
-		{
-			key: "style",
-			type: "string",
+			key: "texts",
+			type: "array",
 			required: false,
-			enum: ["plain", "subtitle", "hook", "label"],
-			description: "Style preset.",
+			description:
+				"Batch mode: array of text objects to add at once. Each item is fully independent.",
+			items: {
+				key: "item",
+				type: "object",
+				properties: textItemProperties,
+			},
 		},
-		{ key: "color", type: "string", required: false, description: "Hex color." },
-		{ key: "fontSize", type: "number", required: false, description: "Font size." },
-		{ key: "fontFamily", type: "string", required: false, description: "Font family." },
-		{
-			key: "fontWeight",
-			type: "string",
-			required: false,
-			enum: ["normal", "bold"],
-		},
-		{
-			key: "fontStyle",
-			type: "string",
-			required: false,
-			enum: ["normal", "italic"],
-		},
-		{
-			key: "textAlign",
-			type: "string",
-			required: false,
-			enum: ["left", "center", "right"],
-		},
-		{ key: "letterSpacing", type: "number", required: false, description: "Letter spacing." },
-		{ key: "positionX", type: "number", required: false, description: "X position (-50 to 50)." },
-		{ key: "positionY", type: "number", required: false, description: "Y position (-50 to 50)." },
-		{ key: "background", type: "object", required: false, description: "{ enabled, color?, cornerRadius?, padding? }" },
+		...textItemProperties,
 	],
 };
 

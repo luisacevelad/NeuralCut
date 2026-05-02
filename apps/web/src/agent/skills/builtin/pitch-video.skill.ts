@@ -37,21 +37,23 @@ Professional cold open that immediately establishes credibility.
 **Steps:**
 1. If the raw footage has a natural opening, use it. If not, find the most professional-looking segment
 2. Add opening title text with add_text:
-   - text: The project/product/company name (ask the user if not clear from context)
-   - style: "hook"
-   - position: "center"
-   - start: 0.5
-   - end: 3.5
-   - color: "#FFFFFF"
-   - background: { enabled: true, color: "#1a1a2e", cornerRadius: 10, padding: 16 }
+    - text: The project/product/company name (ask the user if not clear from context)
+    - fontSize: 48
+    - fontWeight: "bold"
+    - position: "center"
+    - start: 0.5
+    - end: 3.5
+    - color: "#FFFFFF"
+    - background: { enabled: true, color: "#1a1a2e", cornerRadius: 10, padding: 16 }
 3. Add a tagline or one-liner below:
-   - text: One sentence that captures the value proposition
-   - style: "label"
-   - position: "bottom"
-   - start: 1
-   - end: 4
-   - color: "#E0E0E0"
-   - background: { enabled: false }
+    - text: One sentence that captures the value proposition
+    - fontSize: 28
+    - fontWeight: "normal"
+    - position: "bottom"
+    - start: 1
+    - end: 4
+    - color: "#E0E0E0"
+    - background: { enabled: false }
 
 ### ACT 2: THE PROBLEM (5s - 20s)
 Clearly articulate the pain point. This builds empathy and urgency.
@@ -60,19 +62,21 @@ Clearly articulate the pain point. This builds empathy and urgency.
 1. Select footage that shows the problem or the user speaking about it
 2. Split at appropriate boundaries to isolate this segment (5s to 20s)
 3. Add a "THE PROBLEM" section header:
-   - text: "THE PROBLEM" (or user's preferred phrasing)
-   - style: "label"
-   - position: "top"
-   - start: 5
-   - end: 7
-   - color: "#FF6B6B"
-   - background: { enabled: true, color: "#1a1a2e", cornerRadius: 6, padding: 10 }
+    - text: "THE PROBLEM" (or user's preferred phrasing)
+    - fontSize: 36
+    - fontWeight: "bold"
+    - position: "top"
+    - start: 5
+    - end: 7
+    - color: "#FF6B6B"
+    - background: { enabled: true, color: "#1a1a2e", cornerRadius: 6, padding: 10 }
 4. Add supporting text cards that highlight key pain points (1 card per 3-4 seconds):
-   - Each card: max 8 words, one key statistic or pain point per card
-   - style: "subtitle"
-   - position: "bottom"
-   - color: "#FFFFFF"
-   - background: { enabled: true, color: "rgba(0,0,0,0.7)", cornerRadius: 6, padding: 10 }
+    - Each card: max 8 words, one key statistic or pain point per card
+    - fontSize: 28
+    - fontWeight: "bold"
+    - position: "bottom"
+    - color: "#FFFFFF"
+    - background: { enabled: true, color: "rgba(0,0,0,0.7)", cornerRadius: 6, padding: 10 }
 
 ### ACT 3: THE SOLUTION (20s - 40s)
 Present the product/solution with clarity and confidence.
@@ -80,19 +84,21 @@ Present the product/solution with clarity and confidence.
 **Steps:**
 1. Transition to solution footage (split at 20s boundary)
 2. Add a "THE SOLUTION" section header:
-   - text: "THE SOLUTION" (or "INTRODUCING [product name]")
-   - style: "hook"
-   - position: "center"
-   - start: 20
-   - end: 23
-   - color: "#FFFFFF"
-   - background: { enabled: true, color: "#0f3460", cornerRadius: 10, padding: 14 }
+    - text: "THE SOLUTION" (or "INTRODUCING [product name]")
+    - fontSize: 48
+    - fontWeight: "bold"
+    - position: "center"
+    - start: 20
+    - end: 23
+    - color: "#FFFFFF"
+    - background: { enabled: true, color: "#0f3460", cornerRadius: 10, padding: 14 }
 3. Add 2-3 benefit text cards (one every 5-7 seconds):
-   - Each card states ONE clear benefit, max 8 words
-   - style: "label"
-   - position: "bottom"
-   - color: "#FFFFFF"
-   - background: { enabled: true, color: "rgba(15,52,96,0.85)", cornerRadius: 6, padding: 10 }
+    - Each card states ONE clear benefit, max 8 words
+    - fontSize: 32
+    - fontWeight: "bold"
+    - position: "bottom"
+    - color: "#FFFFFF"
+    - background: { enabled: true, color: "rgba(15,52,96,0.85)", cornerRadius: 6, padding: 10 }
 4. For each benefit card, add a subtle scale animation via upsert_keyframe:
    - propertyPath: "transform.scaleX"
    - time 0: value 0.95, interpolation "bezier"
@@ -106,10 +112,11 @@ Social proof and data build trust.
 **Steps:**
 1. Add 1-2 text cards with impressive metrics (user should provide these, or infer from context):
    - Examples: "10x faster", "50% cost reduction", "Used by 10,000+ teams"
-   - style: "hook"
-   - position: "center"
-   - color: "#4ECDC4"
-   - background: { enabled: true, color: "#1a1a2e", cornerRadius: 10, padding: 14 }
+    - fontSize: 48
+    - fontWeight: "bold"
+    - position: "center"
+    - color: "#4ECDC4"
+    - background: { enabled: true, color: "#1a1a2e", cornerRadius: 10, padding: 14 }
    - Each metric card: 3-4 seconds
 2. Add scale-up animation on these cards via upsert_keyframe:
    - propertyPath: "transform.scaleX"
@@ -126,16 +133,18 @@ End with a clear, confident call-to-action.
 1. Split 5 seconds before the end
 2. Add CTA text:
    - text: "Let's talk" or "Book a demo" or "Invest in [name]"
-   - style: "hook"
-   - position: "center"
-   - start: (end - 4.5)
-   - end: (end - 0.5)
-   - color: "#FFFFFF"
-   - background: { enabled: true, color: "#0f3460", cornerRadius: 10, padding: 14 }
+    - fontSize: 48
+    - fontWeight: "bold"
+    - position: "center"
+    - start: (end - 4.5)
+    - end: (end - 0.5)
+    - color: "#FFFFFF"
+    - background: { enabled: true, color: "#0f3460", cornerRadius: 10, padding: 14 }
 3. Add contact info text below:
-   - text: Website URL or email (ask user if not provided)
-   - style: "plain"
-   - position: "bottom"
+    - text: Website URL or email (ask user if not provided)
+    - fontSize: 24
+    - fontWeight: "normal"
+    - position: "bottom"
    - start: (end - 4)
    - end: (end - 0.5)
    - color: "#CCCCCC"
@@ -156,9 +165,10 @@ End with a clear, confident call-to-action.
 
 This is a PITCH. Clean, confident, professional. No gimmicks.
 
-- Section headers ("THE PROBLEM", "THE SOLUTION"): style "label", position "top" or "center", dark navy background (#1a1a2e or #0f3460)
-- Benefit/statistic cards: style "label" or "hook" (for emphasis), position "bottom" or "center"
-- CTA: style "hook", center, confident navy background
+- Section headers ("THE PROBLEM", "THE SOLUTION"): fontSize 36-48, bold fontWeight, position "top" or "center", dark navy background (#1a1a2e or #0f3460)
+- Benefit/statistic cards: fontSize 28-32, bold fontWeight, position "bottom" or "center"
+- CTA: fontSize 48, bold fontWeight, center, confident navy background
+- Supporting/subtitle text: fontSize 24-28, normal fontWeight
 - Color palette:
   - Primary text: #FFFFFF (white)
   - Emphasis text: #4ECDC4 (teal) for key numbers

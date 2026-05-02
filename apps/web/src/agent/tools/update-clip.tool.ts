@@ -2,17 +2,18 @@ import type { AgentContext, ToolDefinition } from "@/agent/types";
 import { toolRegistry } from "@/agent/tools/registry";
 import { updateClipSchema } from "@/agent/tools/schemas";
 import { EditorContextAdapter } from "@/agent/context";
+import { resolveElement } from "@/agent/ref-resolver";
 
 const updateClipTool: ToolDefinition = {
 	...updateClipSchema,
 	execute: async (
 		args: Record<string, unknown>,
-		_context: AgentContext,
+		context: AgentContext,
 	): Promise<
 		| { success: boolean; elementId: string; applied: Record<string, unknown> }
 		| { error: string }
 	> => {
-		const elementId = args.elementId;
+		const target = args.target ?? args.elementId;
 		const name = args.name as string | undefined;
 		const mask = args.mask as
 			| {
@@ -34,9 +35,14 @@ const updateClipTool: ToolDefinition = {
 		const volume = args.volume as number | undefined;
 		const muted = args.muted as boolean | undefined;
 
-		if (typeof elementId !== "string" || !elementId.trim()) {
-			return { error: "Invalid elementId" };
+		if (typeof target !== "string" || !target.trim()) {
+			return { error: "Pass target (element ref like 'clip-1') or elementId." };
 		}
+
+		const resolved = resolveElement(target, context);
+		if ("error" in resolved) return resolved;
+
+		const elementId = resolved.elementId;
 
 		const hasUpdate =
 			name !== undefined ||

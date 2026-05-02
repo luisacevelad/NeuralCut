@@ -6,6 +6,7 @@ import type {
 import { EditorContextAdapter } from "@/agent/context";
 import { toolRegistry } from "@/agent/tools/registry";
 import { loadContextSchema } from "@/agent/tools/schemas";
+import { resolveAsset, resolveElement } from "@/agent/ref-resolver";
 
 type LoadContextTargetType = "asset" | "timeline_element";
 
@@ -93,10 +94,13 @@ async function loadAssetContext(
 	context: AgentContext,
 	element?: TimelineElementRef,
 ): Promise<LoadContextResult | { error: string }> {
-	const assetId = args.assetId ?? args.id ?? element?.assetId;
-	if (!assetId) {
-		return { error: "Asset id is required" };
+	const rawId = args.assetId ?? args.id ?? element?.assetId;
+	if (!rawId) {
+		return { error: "Asset id or name is required" };
 	}
+
+	const assetLookup = resolveAsset(rawId, context);
+	const assetId = "error" in assetLookup ? rawId : assetLookup.assetId;
 
 	const asset = context.mediaAssets.find(
 		(mediaAsset) => mediaAsset.id === assetId,
@@ -147,26 +151,27 @@ async function loadTimelineElementContext(
 	args: LoadContextArgs,
 	context: AgentContext,
 ): Promise<LoadContextResult | { error: string }> {
-	const elementId = args.elementId ?? args.id;
-
-	if (!elementId) {
-		return { error: "elementId (or id) is required for timeline_element target" };
+	const rawTarget = args.elementId ?? args.id;
+	if (!rawTarget) {
+		return { error: "elementId (or id) or element ref is required for timeline_element target" };
 	}
 
-	let resolved: ReturnType<typeof findTimelineElement> = null;
+	const resolved = resolveElement(rawTarget, context);
+	if ("error" in resolved) return resolved;
 
-	if (args.trackId) {
-		resolved = findTimelineElement(context.timelineTracks, args.trackId, elementId);
-	} else {
-		resolved = findTimelineElementAcrossTracks(context.timelineTracks, elementId);
-	}
+	const elementId = resolved.elementId;
+	const trackId = resolved.trackId;
 
-	if (!resolved) {
+	const found = findTimelineElement(
+		context.timelineTracks,
+		trackId,
+		elementId,
+	);
+	if (!found) {
 		return { error: "Timeline element not found" };
 	}
 
-	const { track, element } = resolved;
-	const trackId = track.trackId;
+	const element = found.element;
 
 	if (element.content !== undefined) {
 		const cacheKey = `${trackId}:${elementId}`;

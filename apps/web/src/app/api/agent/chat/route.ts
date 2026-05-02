@@ -43,6 +43,8 @@ const chatRequestSchema = z.object({
 			.array(
 				z.object({
 					trackId: z.string(),
+					trackRef: z.string(),
+					trackLabel: z.string(),
 					type: z.enum(["main", "overlay", "audio", "text", "effect"]),
 					position: z.number(),
 					visualLayer: z.number().nullable(),
@@ -51,10 +53,16 @@ const chatRequestSchema = z.object({
 					elements: z.array(
 						z.object({
 							elementId: z.string(),
+							ref: z.string(),
 							type: z.string(),
 							assetId: z.string().optional(),
+							assetName: z.string().optional(),
 							name: z.string().optional(),
 							content: z.string().optional(),
+							duration: z.number(),
+							hasMask: z.boolean().optional(),
+							hasEffects: z.boolean().optional(),
+							isHidden: z.boolean().optional(),
 							start: z.number(),
 							end: z.number(),
 						}),

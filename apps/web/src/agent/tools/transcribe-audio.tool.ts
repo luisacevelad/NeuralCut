@@ -5,6 +5,7 @@ import { transcribeAudioSchema } from "@/agent/tools/schemas";
 import { decodeAudioToFloat32 } from "@/lib/media/audio";
 import { extractAssetAudio } from "@/lib/media/mediabunny";
 import type { TranscriptionLanguage } from "@/lib/transcription/types";
+import { resolveAsset } from "@/agent/ref-resolver";
 
 type TimingGranularity = "word";
 
@@ -188,53 +189,19 @@ function resolveTargetAsset({
 	if (!assetId) {
 		if (mediaCandidates.length > 1) {
 			return {
-				error: `Multiple video/audio assets found: ${mediaCandidates.map((asset) => asset.name).join(", ")}. Specify which one with assetId.`,
+				error: `Multiple video/audio assets found: ${mediaCandidates.map((asset) => asset.name).join(", ")}. Specify which one with assetId or name.`,
 			};
 		}
 		return { asset: mediaCandidates[0] };
 	}
 
-	const target = resolveAssetByIdOrName({ assetId, mediaCandidates });
-	if ("error" in target) return target;
-	return { asset: target.asset };
-}
-
-function resolveAssetByIdOrName({
-	assetId,
-	mediaCandidates,
-}: {
-	assetId: string;
-	mediaCandidates: AgentContext["mediaAssets"];
-}): { asset: AgentContext["mediaAssets"][number] } | { error: string } {
-	const idMatch = mediaCandidates.find((asset) => asset.id === assetId);
-	if (idMatch) return { asset: idMatch };
-
-	const exactNameMatches = mediaCandidates.filter(
-		(asset) => asset.name === assetId,
-	);
-	if (exactNameMatches.length === 1) return { asset: exactNameMatches[0] };
-	if (exactNameMatches.length > 1) {
-		return {
-			error: `Ambiguous asset name "${assetId}" matches multiple assets (${exactNameMatches.map((asset) => asset.name).join(", ")}). Specify the internal id: ${exactNameMatches.map((asset) => asset.id).join(", ")}.`,
-		};
+	const result = resolveAsset(assetId, context);
+	if ("error" in result) return result;
+	const match = mediaCandidates.find((a) => a.id === result.assetId);
+	if (!match) {
+		return { error: `Asset "${result.assetName}" is not a video/audio asset.` };
 	}
-
-	const lower = assetId.toLowerCase();
-	const caseInsensitiveMatches = mediaCandidates.filter(
-		(asset) => asset.name.toLowerCase() === lower,
-	);
-	if (caseInsensitiveMatches.length === 1) {
-		return { asset: caseInsensitiveMatches[0] };
-	}
-	if (caseInsensitiveMatches.length > 1) {
-		return {
-			error: `Ambiguous asset name "${assetId}" matches multiple assets (${caseInsensitiveMatches.map((asset) => asset.name).join(", ")}). Specify the internal id: ${caseInsensitiveMatches.map((asset) => asset.id).join(", ")}.`,
-		};
-	}
-
-	return {
-		error: `No asset found with id or name "${assetId}". Available ids: [${mediaCandidates.map((asset) => asset.id).join(", ")}]. Available names: [${mediaCandidates.map((asset) => asset.name).join(", ")}].`,
-	};
+	return { asset: match };
 }
 
 toolRegistry.register(transcribeAudioSchema.name, transcribeAudioTool);

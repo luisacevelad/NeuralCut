@@ -12,6 +12,8 @@ function makeContext(overrides: Partial<AgentContext> = {}): AgentContext {
 		timelineTracks: [
 			{
 				trackId: "main-track",
+				trackRef: "main-1",
+				trackLabel: "Main 1",
 				type: "main",
 				position: 0,
 				visualLayer: 0,
@@ -20,9 +22,11 @@ function makeContext(overrides: Partial<AgentContext> = {}): AgentContext {
 				elements: [
 					{
 						elementId: "clip-1",
+						ref: "clip-1",
 						type: "video",
 						assetId: "m1",
 						name: "Intro",
+						duration: 10,
 						start: 0,
 						end: 10,
 					},
@@ -47,6 +51,8 @@ describe("list_timeline tool", () => {
 			tracks: [
 				{
 					trackId: "main-track",
+					trackRef: "main-1",
+					trackLabel: "Main 1",
 					type: "main",
 					position: 0,
 					visualLayer: 0,
@@ -55,9 +61,11 @@ describe("list_timeline tool", () => {
 					elements: [
 						{
 							elementId: "clip-1",
+							ref: "clip-1",
 							type: "video",
 							assetId: "m1",
 							name: "Intro",
+							duration: 10,
 							start: 0,
 							end: 10,
 						},

@@ -1,3 +1,6 @@
+import type { AgentContext } from "@/agent/types";
+import { resolveElement } from "@/agent/ref-resolver";
+
 export function resolveElementIds(raw: unknown): string[] | null {
 	if (Array.isArray(raw)) {
 		const ids = raw.filter(
@@ -15,4 +18,22 @@ export function resolveElementIds(raw: unknown): string[] | null {
 	}
 
 	return null;
+}
+
+export function resolveTargetsToElementIds(
+	targets: unknown,
+	context: AgentContext,
+): { elementIds: string[] } | { error: string } {
+	const rawIds = resolveElementIds(targets);
+	if (!rawIds) {
+		return { error: "targets must be a non-empty array of element refs (e.g. 'clip-1', 'text-3') or element IDs." };
+	}
+
+	const elementIds: string[] = [];
+	for (const target of rawIds) {
+		const result = resolveElement(target, context);
+		if ("error" in result) return result;
+		elementIds.push(result.elementId);
+	}
+	return { elementIds };
 }

@@ -14,23 +14,53 @@ import type { ToolSchema } from "@/agent/types";
 export const loadContextSchema: ToolSchema = {
 	name: "load_context",
 	description:
-		"Loads Gemini multimodal context for a project asset or timeline element. For media: targetType='asset' with assetId. For timeline elements (text, clips): targetType='timeline_element' with elementId — trackId is optional, the element will be found across all tracks automatically.",
+		"Loads Gemini multimodal context for a project asset or timeline element. Prefer human-readable targets from list_timeline/list_project_assets: asset names like 'intro.mov' or element refs like 'clip-1'/'text-3'. For media: targetType='asset' with assetId or id. For timeline elements: targetType='timeline_element' with elementId or id. trackId is not needed.",
 	parameters: [
-		{ key: "targetType", type: "string", required: true },
-		{ key: "id", type: "string", required: false },
-		{ key: "assetId", type: "string", required: false },
-		{ key: "trackId", type: "string", required: false },
-		{ key: "elementId", type: "string", required: false },
+		{
+			key: "targetType",
+			type: "string",
+			required: true,
+			description: "What to load: project asset media context or timeline element context.",
+			enum: ["asset", "timeline_element"],
+		},
+		{
+			key: "id",
+			type: "string",
+			required: false,
+			description: "Asset name/id or element ref/id. Prefer list_timeline refs like 'clip-1' and asset names like 'intro.mov'.",
+		},
+		{
+			key: "assetId",
+			type: "string",
+			required: false,
+			description: "Asset id or asset name. Prefer asset names unless an ambiguity error asks for an id.",
+		},
+		{
+			key: "elementId",
+			type: "string",
+			required: false,
+			description: "Timeline element id or human ref from list_timeline, e.g. 'clip-1' or 'text-3'.",
+		},
 	],
 };
 
 export const transcribeAudioSchema: ToolSchema = {
 	name: "transcribe_audio",
 	description:
-		"Transcribes a video or audio asset with precise word-level timing. Returns full text, per-word start/end times, confidence scores, and utterance segments. Use this when you need exact spoken words, timestamps for subtitles, or silence detection. Pass assetId to target a specific asset, or omit to auto-select the first video/audio asset.",
+		"Transcribes a video or audio asset with precise word-level timing. Returns full text, per-word start/end times, confidence scores, and utterance segments. Use this when you need exact spoken words, timestamps for subtitles, or silence detection. Pass assetId as an asset name or id, or omit it only when there is one video/audio asset.",
 	parameters: [
-		{ key: "assetId", type: "string", required: false },
-		{ key: "language", type: "string", required: false },
+		{
+			key: "assetId",
+			type: "string",
+			required: false,
+			description: "Asset name or id. Prefer names from list_project_assets, e.g. 'interview.wav'.",
+		},
+		{
+			key: "language",
+			type: "string",
+			required: false,
+			description: "Optional spoken language hint. Use 'auto' or omit when unknown.",
+		},
 	],
 };
 
@@ -61,18 +91,57 @@ export const splitSchema: ToolSchema = {
 export const deleteTimelineElementsSchema: ToolSchema = {
 	name: "delete_timeline_elements",
 	description:
-		"Deletes one or more timeline elements by elementId. Use list_timeline first to discover exact elementIds. To delete a time range, split at the range boundaries first, then delete the isolated elementIds.",
-	parameters: [{ key: "elementIds", type: "string[]", required: true }],
+		"Deletes one or more timeline elements. Prefer targets with human refs from list_timeline, e.g. ['clip-1', 'text-3']. To delete a time range, split at the range boundaries first, then delete the isolated refs.",
+	parameters: [
+		{
+			key: "targets",
+			type: "array",
+			required: true,
+			aliases: ["elementIds"],
+			description: "Element refs or ids to delete. Prefer refs like 'clip-1' or 'text-3'.",
+			items: { key: "target", type: "string", required: true },
+		},
+		{
+			key: "elementIds",
+			type: "string[]",
+			required: false,
+			description: "Legacy fallback. Prefer targets.",
+		},
+	],
 };
 
 export const moveTimelineElementsSchema: ToolSchema = {
 	name: "move_timeline_elements",
 	description:
-		"Moves one or more existing timeline elements to a new timeline start time in seconds. For multiple elements, the earliest selected element is moved to start and the others preserve their relative offsets. Optionally pass targetTrackId to move them to another compatible track.",
+		"Moves one or more existing timeline elements to a new timeline start time in seconds. Prefer targets with refs from list_timeline. For multiple elements, the earliest selected element is moved to start and the others preserve their relative offsets. Optionally pass targetTrackRef to move them to another compatible track.",
 	parameters: [
-		{ key: "elementIds", type: "string[]", required: true },
-		{ key: "start", type: "number", required: true },
-		{ key: "targetTrackId", type: "string", required: false },
+		{
+			key: "targets",
+			type: "array",
+			required: true,
+			aliases: ["elementIds"],
+			description: "Element refs or ids to move. Prefer refs like 'clip-1' or 'text-3'.",
+			items: { key: "target", type: "string", required: true },
+		},
+		{ key: "start", type: "number", required: true, description: "New timeline start in seconds." },
+		{
+			key: "targetTrackRef",
+			type: "string",
+			required: false,
+			description: "Target track ref/id/label from list_timeline, e.g. 'main-1' or 'overlay-1'.",
+		},
+		{
+			key: "elementIds",
+			type: "string[]",
+			required: false,
+			description: "Legacy fallback. Prefer targets.",
+		},
+		{
+			key: "targetTrackId",
+			type: "string",
+			required: false,
+			description: "Legacy fallback. Prefer targetTrackRef.",
+		},
 	],
 };
 
@@ -108,14 +177,14 @@ export const addTextSchema: ToolSchema = {
 		{ key: "text", type: "string", required: true },
 		{ key: "start", type: "number", required: true },
 		{ key: "end", type: "number", required: true },
-		{ key: "position", type: "string", required: true },
-		{ key: "style", type: "string", required: false },
+		{ key: "position", type: "string", required: true, enum: ["top", "center", "bottom"] },
+		{ key: "style", type: "string", required: false, enum: ["plain", "subtitle", "hook", "label"] },
 		{ key: "color", type: "string", required: false },
 		{ key: "fontSize", type: "number", required: false },
 		{ key: "fontFamily", type: "string", required: false },
-		{ key: "fontWeight", type: "string", required: false },
-		{ key: "fontStyle", type: "string", required: false },
-		{ key: "textAlign", type: "string", required: false },
+		{ key: "fontWeight", type: "string", required: false, enum: ["normal", "bold"] },
+		{ key: "fontStyle", type: "string", required: false, enum: ["normal", "italic"] },
+		{ key: "textAlign", type: "string", required: false, enum: ["left", "center", "right"] },
 		{ key: "letterSpacing", type: "number", required: false },
 		{ key: "positionX", type: "number", required: false },
 		{ key: "positionY", type: "number", required: false },
@@ -126,18 +195,24 @@ export const addTextSchema: ToolSchema = {
 export const updateTextSchema: ToolSchema = {
 	name: "update_text",
 	description:
-		"Updates visual properties of existing text elements. Pass elementIds (from list_timeline) and any properties to change. All listed elements receive the same overrides — use for bulk styling. Non-text elements in the list are skipped.",
+		"Updates visual properties of existing text elements. Prefer targets with refs from list_timeline, e.g. ['text-1']. All listed elements receive the same overrides — use for bulk styling. Non-text elements in the list are skipped.",
 	parameters: [
-		// "array" (not "string[]") so the orchestrator validator stays
-		// tolerant of CSV-string fallback handled by resolveElementIds.
-		{ key: "elementIds", type: "array", required: true },
+		{
+			key: "targets",
+			type: "array",
+			required: true,
+			aliases: ["elementIds"],
+			description: "Text element refs or ids. Prefer refs like 'text-1'.",
+			items: { key: "target", type: "string", required: true },
+		},
+		{ key: "elementIds", type: "array", required: false, description: "Legacy fallback. Prefer targets." },
 		{ key: "content", type: "string", required: false },
 		{ key: "color", type: "string", required: false },
 		{ key: "fontSize", type: "number", required: false },
 		{ key: "fontFamily", type: "string", required: false },
-		{ key: "fontWeight", type: "string", required: false },
-		{ key: "fontStyle", type: "string", required: false },
-		{ key: "textAlign", type: "string", required: false },
+		{ key: "fontWeight", type: "string", required: false, enum: ["normal", "bold"] },
+		{ key: "fontStyle", type: "string", required: false, enum: ["normal", "italic"] },
+		{ key: "textAlign", type: "string", required: false, enum: ["left", "center", "right"] },
 		{ key: "letterSpacing", type: "number", required: false },
 		{ key: "positionX", type: "number", required: false },
 		{ key: "positionY", type: "number", required: false },
@@ -219,16 +294,42 @@ export const duplicateElementsSchema: ToolSchema = {
 export const getElementSchema: ToolSchema = {
 	name: "get_element",
 	description:
-		"Returns full metadata for a single timeline element. Use list_timeline to discover elementIds, then get_element for deep inspection. Returns type-specific properties: video/image/graphic elements include transform, opacity, blendMode, masks, hidden, and applied effects. Text elements include content, font styles, background, transform. Audio elements include volume, muted. Effect elements include effectType and all parameter values.",
-	parameters: [{ key: "elementId", type: "string", required: true }],
+		"Returns full metadata for a single timeline element. Prefer target with a human ref from list_timeline, e.g. 'clip-1' or 'text-3'. Returns type-specific properties: video/image/graphic elements include transform, opacity, blendMode, masks, hidden, and applied effects. Text elements include content, font styles, background, transform. Audio elements include volume, muted. Effect elements include effectType and all parameter values.",
+	parameters: [
+		{
+			key: "target",
+			type: "string",
+			required: true,
+			aliases: ["elementId"],
+			description: "Timeline element ref or id. Prefer refs from list_timeline like 'clip-1'.",
+		},
+		{
+			key: "elementId",
+			type: "string",
+			required: false,
+			description: "Legacy fallback. Prefer target.",
+		},
+	],
 };
 
 export const updateClipSchema: ToolSchema = {
 	name: "update_clip",
 	description:
-		"Updates properties of any timeline element (video, image, graphic, text, sticker, audio, effect). Use list_timeline to discover elementId, then get_element to inspect current values. Only provide the properties you want to change. mask: { action: 'add', maskType } to add, { action: 'update', params: {...} } to modify, { action: 'remove' } to delete. Mask types: rectangle, ellipse, heart, diamond, star, split, cinematic-bars. Only video/image/graphic support masks. name: rename the element. trimStart/trimEnd: seconds to trim from the source start/end (slip trim without moving the clip). opacity: 0-100. positionX/positionY: position offset. rotation: degrees. scaleX/scaleY: scale factor. blendMode: normal, darken, multiply, screen, etc. hidden: boolean. volume: 0-100 (video/audio only). muted: boolean (video/audio only).",
+		"Updates properties of any timeline element (video, image, graphic, text, sticker, audio, effect). Prefer target with a human ref from list_timeline, then get_element to inspect current values. Only provide the properties you want to change. mask: { action: 'add', maskType } to add, { action: 'update', params: {...} } to modify, { action: 'remove' } to delete. Mask types: rectangle, ellipse, heart, diamond, star, split, cinematic-bars. Only video/image/graphic support masks. name: rename the element. trimStart/trimEnd: seconds to trim from the source start/end (slip trim without moving the clip). opacity: 0-100. positionX/positionY: position offset. rotation: degrees. scaleX/scaleY: scale factor. blendMode: normal, darken, multiply, screen, etc. hidden: boolean. volume: 0-100 (video/audio only). muted: boolean (video/audio only).",
 	parameters: [
-		{ key: "elementId", type: "string", required: true },
+		{
+			key: "target",
+			type: "string",
+			required: true,
+			aliases: ["elementId"],
+			description: "Timeline element ref or id. Prefer refs from list_timeline like 'clip-1'.",
+		},
+		{
+			key: "elementId",
+			type: "string",
+			required: false,
+			description: "Legacy fallback. Prefer target.",
+		},
 		{ key: "name", type: "string", required: false },
 		{ key: "mask", type: "object", required: false },
 		{ key: "trimStart", type: "number", required: false },
@@ -239,7 +340,12 @@ export const updateClipSchema: ToolSchema = {
 		{ key: "rotation", type: "number", required: false },
 		{ key: "scaleX", type: "number", required: false },
 		{ key: "scaleY", type: "number", required: false },
-		{ key: "blendMode", type: "string", required: false },
+		{
+			key: "blendMode",
+			type: "string",
+			required: false,
+			enum: ["normal", "darken", "multiply", "screen", "overlay", "lighten"],
+		},
 		{ key: "hidden", type: "boolean", required: false },
 		{ key: "volume", type: "number", required: false },
 		{ key: "muted", type: "boolean", required: false },
@@ -350,7 +456,7 @@ export const updatePlanStepSchema: ToolSchema = {
 	parameters: [
 		{ key: "step", type: "number", required: false },
 		{ key: "stepId", type: "string", required: false },
-		{ key: "status", type: "string", required: true },
+		{ key: "status", type: "string", required: true, enum: ["pending", "in_progress", "done", "skipped"] },
 		{ key: "result", type: "string", required: false },
 	],
 };

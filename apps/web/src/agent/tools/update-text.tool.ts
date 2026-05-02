@@ -1,7 +1,7 @@
 import { EditorContextAdapter } from "@/agent/context";
 import type { AgentContext, ToolDefinition } from "@/agent/types";
 import { toolRegistry } from "@/agent/tools/registry";
-import { resolveElementIds } from "@/agent/tools/resolve-element-ids";
+import { resolveTargetsToElementIds } from "@/agent/tools/resolve-element-ids";
 import { updateTextSchema } from "@/agent/tools/schemas";
 
 export type UpdateTextArgs = {
@@ -43,17 +43,13 @@ const updateTextTool: ToolDefinition = {
 	...updateTextSchema,
 	execute: async (
 		args: Record<string, unknown>,
-		_context: AgentContext,
+		context: AgentContext,
 	): Promise<UpdateTextResult | { error: string }> => {
-		const { elementIds, content, background } = args;
+		const { content, background } = args;
 
-		const resolvedIds = resolveElementIds(elementIds);
-		if (resolvedIds === null) {
-			return {
-				error:
-					'elementIds must be a non-empty JSON array of strings, e.g. ["id1","id2"]',
-			};
-		}
+		const raw = args.targets ?? args.elementIds;
+		const resolvedIds = resolveTargetsToElementIds(raw, context);
+		if ("error" in resolvedIds) return resolvedIds;
 
 		if (
 			content !== undefined &&
@@ -125,7 +121,7 @@ const updateTextTool: ToolDefinition = {
 			overrides.background = background as UpdateTextArgs["background"];
 
 		return EditorContextAdapter.updateText({
-			elementIds: resolvedIds,
+			elementIds: resolvedIds.elementIds,
 			...overrides,
 		});
 	},

@@ -1,11 +1,7 @@
 import type { AgentContext, AgentTimelineTrack } from "@/agent/types";
 
-/**
- * Pure data-mapping function extracted from EditorContextAdapter.
- * WASM-free — testable in bun:test without loading EditorCore.
- *
- * Takes pre-extracted editor state and maps it to an AgentContext POJO.
- */
+type AssetLookup = Map<string, { name: string }>;
+
 export function buildContextFromEditorState(params: {
 	project: { metadata: { id: string } } | null;
 	activeScene: ActiveSceneInput | null;
@@ -14,6 +10,10 @@ export function buildContextFromEditorState(params: {
 	ticksPerSecond: number;
 }): AgentContext {
 	const usedMediaIds = collectUsedMediaIds(params.activeScene);
+	const assetLookup = new Map<string, { name: string }>();
+	for (const a of params.assets) {
+		assetLookup.set(a.id, { name: a.name });
+	}
 
 	return {
 		projectId: params.project?.metadata.id ?? null,
@@ -28,6 +28,7 @@ export function buildContextFromEditorState(params: {
 		timelineTracks: buildTimelineTracks(
 			params.activeScene,
 			params.ticksPerSecond,
+			assetLookup,
 		),
 		playbackTimeMs: Math.round(
 			(params.currentTimeTicks / params.ticksPerSecond) * 1000,
@@ -53,6 +54,7 @@ type TrackInput = {
 function buildTimelineTracks(
 	scene: ActiveSceneInput | null,
 	ticksPerSecond: number,
+	assetLookup: AssetLookup,
 ): AgentTimelineTrack[] | undefined {
 	if (!scene?.tracks) {
 		return undefined;
@@ -61,11 +63,14 @@ function buildTimelineTracks(
 	const tracks: AgentTimelineTrack[] = [];
 	const overlayTracks = scene.tracks.overlay ?? [];
 	let position = 0;
+	const counters: Record<string, number> = {};
 
 	for (let index = 0; index < overlayTracks.length; index++) {
 		const track = overlayTracks[index];
+		const trackType = mapOverlayTrackType(track.type);
+		const trackRef = nextRef(counters, trackType);
 		tracks.push(
-			toTimelineTrack(track, mapOverlayTrackType(track.type), ticksPerSecond, {
+			toTimelineTrack(track, trackType, trackRef, ticksPerSecond, assetLookup, counters, {
 				position: position++,
 				visualLayer: overlayTracks.length - index,
 				isVisualLayer: true,
@@ -75,8 +80,9 @@ function buildTimelineTracks(
 	}
 
 	if (scene.tracks.main) {
+		const trackRef = nextRef(counters, "main");
 		tracks.push(
-			toTimelineTrack(scene.tracks.main, "main", ticksPerSecond, {
+			toTimelineTrack(scene.tracks.main, "main", trackRef, ticksPerSecond, assetLookup, counters, {
 				position: position++,
 				visualLayer: 0,
 				isVisualLayer: true,
@@ -86,8 +92,9 @@ function buildTimelineTracks(
 	}
 
 	for (const track of scene.tracks.audio ?? []) {
+		const trackRef = nextRef(counters, "audio");
 		tracks.push(
-			toTimelineTrack(track, "audio", ticksPerSecond, {
+			toTimelineTrack(track, "audio", trackRef, ticksPerSecond, assetLookup, counters, {
 				position: position++,
 				visualLayer: null,
 				isVisualLayer: false,
@@ -99,34 +106,80 @@ function buildTimelineTracks(
 	return tracks;
 }
 
+function nextRef(counters: Record<string, number>, prefix: string): string {
+	const n = (counters[prefix] ?? 0) + 1;
+	counters[prefix] = n;
+	return `${prefix}-${n}`;
+}
+
 function toTimelineTrack(
 	track: TrackInput,
 	type: AgentTimelineTrack["type"],
+	trackRef: string,
 	ticksPerSecond: number,
+	assetLookup: AssetLookup,
+	counters: Record<string, number>,
 	stacking: Pick<
 		AgentTimelineTrack,
 		"position" | "visualLayer" | "isVisualLayer" | "stacking"
 	>,
 ): AgentTimelineTrack {
+	const elementCounters: Record<string, number> = {};
+	const trackLabel = buildTrackLabel(type, stacking.stacking);
+
 	return {
 		trackId: track.id ?? "",
+		trackRef,
+		trackLabel,
 		type,
 		...stacking,
 		elements: (track.elements ?? [])
 			.filter(hasTimelineElementShape)
-			.map((element) => ({
-				elementId: element.id,
-				type: element.type,
-				...(hasMediaId(element) ? { assetId: element.mediaId } : {}),
-				...(element.name ? { name: element.name } : {}),
-				...(hasTextContent(element) ? { content: element.content } : {}),
-				...(hasNonEmptyArray(element, "masks") ? { hasMask: true } : {}),
-				...(hasNonEmptyArray(element, "effects") ? { hasEffects: true } : {}),
-				...(element.hidden === true ? { isHidden: true } : {}),
-				start: toSeconds(element.startTime, ticksPerSecond),
-				end: toSeconds(element.startTime + element.duration, ticksPerSecond),
-			})),
+			.map((element) => {
+				const start = toSeconds(element.startTime, ticksPerSecond);
+				const end = toSeconds(element.startTime + element.duration, ticksPerSecond);
+				const duration = end - start;
+				const assetId = hasMediaId(element) ? element.mediaId : undefined;
+				const assetName = assetId ? assetLookup.get(assetId)?.name : undefined;
+				const elementType = mapElementType(element.type, assetId !== undefined);
+				const ref = nextRef(elementCounters, elementType);
+
+				return {
+					elementId: element.id,
+					ref,
+					type: element.type,
+					...(assetId ? { assetId } : {}),
+					...(assetName ? { assetName } : {}),
+					...(element.name ? { name: element.name } : {}),
+					...(hasTextContent(element) ? { content: element.content } : {}),
+					duration: Math.round(duration * 1000) / 1000,
+					...(hasNonEmptyArray(element, "masks") ? { hasMask: true } : {}),
+					...(hasNonEmptyArray(element, "effects") ? { hasEffects: true } : {}),
+					...(element.hidden === true ? { isHidden: true } : {}),
+					start: Math.round(start * 1000) / 1000,
+					end: Math.round(end * 1000) / 1000,
+				};
+			}),
 	};
+}
+
+function buildTrackLabel(
+	type: AgentTimelineTrack["type"],
+	stacking: AgentTimelineTrack["stacking"],
+): string {
+	if (type === "text") return "Text";
+	if (type === "effect") return "Effects";
+	if (type === "audio") return "Audio";
+	if (stacking === "main") return "Main";
+	if (stacking === "top") return "Overlay (top)";
+	return "Overlay";
+}
+
+function mapElementType(rawType: string, hasAsset: boolean): string {
+	if (rawType === "text" || rawType === "caption") return "text";
+	if (rawType === "effect") return "effect";
+	if (hasAsset) return "clip";
+	return "element";
 }
 
 function toSeconds(ticks: number, ticksPerSecond: number): number {

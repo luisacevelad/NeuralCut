@@ -79,6 +79,8 @@ export interface AgentContext {
 
 export type AgentTimelineTrack = {
 	trackId: string;
+	trackRef: string;
+	trackLabel: string;
 	type: "main" | "overlay" | "audio" | "text" | "effect";
 	/** Timeline row position, top-to-bottom. 0 is the top visible row. */
 	position: number;
@@ -88,10 +90,13 @@ export type AgentTimelineTrack = {
 	stacking: "top" | "above_main" | "main" | "audio";
 	elements: Array<{
 		elementId: string;
+		ref: string;
 		type: string;
 		assetId?: string;
+		assetName?: string;
 		name?: string;
 		content?: string;
+		duration: number;
 		hasMask?: boolean;
 		hasEffects?: boolean;
 		isHidden?: boolean;
@@ -102,10 +107,20 @@ export type AgentTimelineTrack = {
 	}>;
 };
 
+export type ToolParameter = {
+	key: string;
+	type: string;
+	required: boolean;
+	aliases?: string[];
+	description?: string;
+	enum?: string[];
+	items?: ToolParameter;
+};
+
 export interface ToolDefinition {
 	name: string;
 	description: string;
-	parameters: Array<{ key: string; type: string; required: boolean }>;
+	parameters: ToolParameter[];
 	execute: (
 		args: Record<string, unknown>,
 		context: AgentContext,
@@ -120,5 +135,5 @@ export interface ToolDefinition {
 export interface ToolSchema {
 	name: string;
 	description: string;
-	parameters: Array<{ key: string; type: string; required: boolean }>;
+	parameters: ToolParameter[];
 }

@@ -30,6 +30,8 @@ function makeContext(overrides: Partial<AgentContext> = {}): AgentContext {
 		timelineTracks: [
 			{
 				trackId: "text-track",
+				trackRef: "text-1",
+				trackLabel: "Text 1",
 				type: "text",
 				position: 0,
 				visualLayer: 1,
@@ -38,9 +40,11 @@ function makeContext(overrides: Partial<AgentContext> = {}): AgentContext {
 				elements: [
 					{
 						elementId: "caption-1",
+						ref: "text-1",
 						type: "text",
 						name: "Caption",
 						content: "Hello Gemini",
+						duration: 2,
 						start: 1,
 						end: 3,
 					},
@@ -48,6 +52,8 @@ function makeContext(overrides: Partial<AgentContext> = {}): AgentContext {
 			},
 			{
 				trackId: "main-track",
+				trackRef: "main-1",
+				trackLabel: "Main 1",
 				type: "main",
 				position: 1,
 				visualLayer: 0,
@@ -56,9 +62,11 @@ function makeContext(overrides: Partial<AgentContext> = {}): AgentContext {
 				elements: [
 					{
 						elementId: "clip-1",
+						ref: "clip-1",
 						type: "video",
 						assetId: "asset-video",
 						name: "Intro clip",
+						duration: 10,
 						start: 5,
 						end: 15,
 					},
@@ -168,7 +176,7 @@ describe("load_context tool", () => {
 		mockResolveAssetFile.mockReturnValue(file);
 
 		const uploaded: { mimeType: FormDataEntryValue | null } = { mimeType: null };
-		globalThis.fetch = mock((_, init) => {
+		globalThis.fetch = mock((_: RequestInfo | URL, init?: RequestInit) => {
 			uploaded.mimeType =
 				init?.body instanceof FormData ? init.body.get("mimeType") : null;
 			return Promise.resolve(
@@ -233,6 +241,8 @@ describe("load_context tool", () => {
 				timelineTracks: [
 					{
 						trackId: "main-track",
+						trackRef: "main-1",
+						trackLabel: "Main 1",
 						type: "main",
 						position: 0,
 						visualLayer: 0,
@@ -241,8 +251,10 @@ describe("load_context tool", () => {
 						elements: [
 							{
 								elementId: "clip-1",
+								ref: "clip-1",
 								type: "video",
 								assetId: "asset-video-2",
+								duration: 10,
 								start: 5,
 								end: 15,
 							},

@@ -1,5 +1,10 @@
 import OpenAI from "openai";
-import type { ChatMessage, ToolCall, ToolSchema } from "@/agent/types";
+import type {
+	ChatMessage,
+	ToolCall,
+	ToolParameter,
+	ToolSchema,
+} from "@/agent/types";
 import type {
 	ProviderAdapter,
 	ProviderConfig,
@@ -17,7 +22,15 @@ interface OpenAIFunctionTool {
 		description: string;
 		parameters: {
 			type: "object";
-			properties: Record<string, { type: string; items?: { type: string } }>;
+			properties: Record<
+				string,
+				{
+					type: string;
+					description?: string;
+					enum?: string[];
+					items?: { type: string; description?: string; enum?: string[] };
+				}
+			>;
 			required?: string[];
 		};
 	};
@@ -83,7 +96,7 @@ function toOpenAIFunctions(tools: ToolSchema[]): OpenAIFunctionTool[] {
 			parameters: {
 				type: "object" as const,
 				properties: Object.fromEntries(
-					tool.parameters.map((p) => [p.key, toOpenAIParameterSchema(p.type)]),
+					tool.parameters.map((p) => [p.key, toOpenAIParameterSchema(p)]),
 				),
 				...(tool.parameters.some((p) => p.required) && {
 					required: tool.parameters.filter((p) => p.required).map((p) => p.key),
@@ -93,13 +106,39 @@ function toOpenAIFunctions(tools: ToolSchema[]): OpenAIFunctionTool[] {
 	}));
 }
 
-function toOpenAIParameterSchema(type: string): {
+function toOpenAIParameterSchema(param: ToolParameter): {
 	type: string;
-	items?: { type: string };
+	description?: string;
+	enum?: string[];
+	items?: { type: string; description?: string; enum?: string[] };
 } {
+	const { type } = param;
+	const common = {
+		...(param.description && { description: param.description }),
+		...(param.enum && { enum: param.enum }),
+	};
 	if (type === "number[]") return { type: "array", items: { type: "number" } };
 	if (type === "string[]") return { type: "array", items: { type: "string" } };
-	return { type };
+	if (type === "array" && param.items) {
+		return {
+			type: "array",
+			...common,
+			items: toOpenAIArrayItemSchema(param.items),
+		};
+	}
+	return { type, ...common };
+}
+
+function toOpenAIArrayItemSchema(param: ToolParameter): {
+	type: string;
+	description?: string;
+	enum?: string[];
+} {
+	return {
+		type: param.type,
+		...(param.description && { description: param.description }),
+		...(param.enum && { enum: param.enum }),
+	};
 }
 
 // ---------------------------------------------------------------------------

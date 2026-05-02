@@ -7,7 +7,12 @@ import {
 	type Schema,
 	SchemaType,
 } from "@google/generative-ai";
-import type { ChatMessage, ToolCall, ToolSchema } from "@/agent/types";
+import type {
+	ChatMessage,
+	ToolCall,
+	ToolParameter,
+	ToolSchema,
+} from "@/agent/types";
 import type {
 	ProviderAdapter,
 	ProviderConfig,
@@ -232,7 +237,7 @@ export function toGeminiTools(tools: ToolSchema[]): FunctionDeclaration[] {
 		const properties: FunctionDeclarationSchema["properties"] = {};
 
 		for (const param of tool.parameters) {
-			properties[param.key] = toGeminiParameterSchema(param.type);
+			properties[param.key] = toGeminiParameterSchema(param);
 		}
 
 		const requiredParams = tool.parameters
@@ -251,18 +256,41 @@ export function toGeminiTools(tools: ToolSchema[]): FunctionDeclaration[] {
 	});
 }
 
-function toGeminiParameterSchema(type: string): Schema {
-	if (type === "number") return { type: SchemaType.NUMBER };
-	if (type === "boolean") return { type: SchemaType.BOOLEAN };
-	if (type === "object") return { type: SchemaType.OBJECT, properties: {} };
+function toGeminiParameterSchema(param: ToolParameter): Schema {
+	const common = {
+		...(param.description && { description: param.description }),
+		...(param.enum && { enum: param.enum }),
+	};
+	const { type } = param;
+
+	if (type === "number") return { type: SchemaType.NUMBER, ...common };
+	if (type === "boolean") return { type: SchemaType.BOOLEAN, ...common };
+	if (type === "object") {
+		return { type: SchemaType.OBJECT, properties: {}, ...common };
+	}
 	if (type === "number[]") {
-		return { type: SchemaType.ARRAY, items: { type: SchemaType.NUMBER } };
+		return {
+			type: SchemaType.ARRAY,
+			items: { type: SchemaType.NUMBER },
+			...common,
+		};
 	}
 	if (type === "string[]") {
-		return { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } };
+		return {
+			type: SchemaType.ARRAY,
+			items: { type: SchemaType.STRING },
+			...common,
+		};
+	}
+	if (type === "array" && param.items) {
+		return {
+			type: SchemaType.ARRAY,
+			items: toGeminiParameterSchema(param.items),
+			...common,
+		};
 	}
 
-	return { type: SchemaType.STRING };
+	return { type: SchemaType.STRING, ...common } as Schema;
 }
 
 /**

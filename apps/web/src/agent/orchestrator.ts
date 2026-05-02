@@ -172,10 +172,14 @@ function validateToolArgs(
 		if (!param.required) continue;
 
 		const value = args[param.key];
+		const hasAlias = param.aliases?.some(
+			(alias) => args[alias] !== undefined && args[alias] !== null,
+		);
 
-		if (value === undefined || value === null) {
+		if ((value === undefined || value === null) && !hasAlias) {
 			return `Missing required argument: ${param.key}`;
 		}
+		if (value === undefined || value === null) continue;
 
 		const actualType = typeof value;
 		if (param.type === "string" && actualType !== "string") {

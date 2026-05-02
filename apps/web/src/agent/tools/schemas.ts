@@ -90,8 +90,23 @@ export const listTimelineSchema: ToolSchema = {
 export const splitSchema: ToolSchema = {
 	name: "split",
 	description:
-		"Splits timeline elements at one or more requested timeline times in seconds without deleting, trimming, or moving content. Use one time for a single cut, or multiple times to isolate ranges before separate edit/delete operations.",
-	parameters: [{ key: "times", type: "number[]", required: true }],
+		"Splits timeline elements at one or more requested timeline times in seconds without deleting, trimming, or moving content. Use one time for a single cut, or multiple times to isolate ranges before separate edit/delete operations. When no target is specified, all elements intersecting the given times are split. Pass a target to restrict the split to a specific element.",
+	parameters: [
+		{
+			key: "times",
+			type: "number[]",
+			required: true,
+			description:
+				"Timeline times in seconds where splits should occur. Multiple times create multiple cuts.",
+		},
+		{
+			key: "target",
+			type: "string",
+			required: false,
+			description:
+				"Optional element ref or id to restrict the split to. Prefer refs from list_timeline like 'clip-1'. When omitted, all elements at the given times are split.",
+		},
+	],
 };
 
 export const deleteTimelineElementsSchema: ToolSchema = {

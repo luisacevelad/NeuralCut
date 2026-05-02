@@ -7,7 +7,10 @@ export class SplitCommand extends Command {
 	private savedState: SceneTracks | null = null;
 	private affectedElements: string[] = [];
 
-	constructor(private readonly times: number[]) {
+	constructor(
+		private readonly times: number[],
+		private readonly elementId?: string,
+	) {
 		super();
 	}
 
@@ -23,7 +26,12 @@ export class SplitCommand extends Command {
 
 		for (const time of uniqueSortedTimes(this.times)) {
 			const tracks = editor.scenes.getActiveScene().tracks;
-			const targets = findElementsIntersectingTime({ tracks, time });
+			let targets = findElementsIntersectingTime({ tracks, time });
+
+			if (this.elementId) {
+				targets = targets.filter((t) => t.elementId === this.elementId);
+			}
+
 			for (const target of targets) {
 				affectedElements.add(target.elementId);
 			}

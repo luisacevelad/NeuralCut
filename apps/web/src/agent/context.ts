@@ -249,8 +249,10 @@ export const EditorContextAdapter = {
 
 	splitTimeline({
 		times,
+		elementId,
 	}: {
 		times: number[];
+		elementId?: string;
 	}): { success: boolean; affectedElements: string[] } | { error: string } {
 		const core = EditorCore.getInstance();
 		const activeScene = core.scenes.getActiveSceneOrNull();
@@ -264,6 +266,7 @@ export const EditorContextAdapter = {
 
 		const affectedElements = core.timeline.split({
 			times: times.map((time) => secondsToTicks(time)),
+			elementId,
 		});
 		return { success: true, affectedElements };
 	},

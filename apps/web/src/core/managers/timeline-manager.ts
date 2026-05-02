@@ -199,8 +199,8 @@ export class TimelineManager {
 		return command.getRightSideElements();
 	}
 
-	split({ times }: { times: number[] }): string[] {
-		const command = new SplitCommand(times);
+	split({ times, elementId }: { times: number[]; elementId?: string }): string[] {
+		const command = new SplitCommand(times, elementId);
 		this.editor.command.execute({ command });
 		return command.getAffectedElements();
 	}

@@ -337,6 +337,16 @@ export function fromGeminiResponse(
 		result.toolCalls = toolCalls;
 	}
 
+	if (response.response.usageMetadata) {
+		const meta = response.response.usageMetadata;
+		result.usage = {
+			promptTokens: meta.promptTokenCount ?? 0,
+			completionTokens: meta.candidatesTokenCount ?? 0,
+			totalTokens: meta.totalTokenCount ?? 0,
+			cachedTokens: meta.cachedContentTokenCount ?? 0,
+		};
+	}
+
 	return result;
 }
 

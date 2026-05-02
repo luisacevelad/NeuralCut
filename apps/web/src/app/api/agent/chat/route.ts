@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
 
 	const config: ProviderConfig = { provider, apiKey, model, baseUrl };
 
-	const systemPrompt = buildSystemPrompt(context, providerToolSchemas, mode);
+	const systemPrompt = buildSystemPrompt(context, mode);
 
 	// Delegate to provider adapter
 	try {
@@ -136,6 +136,7 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({
 			content: response.content,
 			...(response.toolCalls && { toolCalls: response.toolCalls }),
+			...(response.usage && { usage: response.usage }),
 		});
 	} catch (error) {
 		const status = (error as { status?: number }).status;

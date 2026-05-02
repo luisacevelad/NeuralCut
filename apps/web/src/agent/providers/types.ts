@@ -15,9 +15,17 @@ export interface ProviderConfig {
  * Canonical response shape — every adapter returns this.
  * The route passes this straight through to the client.
  */
+export interface TokenUsage {
+	promptTokens: number;
+	completionTokens: number;
+	totalTokens: number;
+	cachedTokens?: number;
+}
+
 export interface ProviderResponse {
 	content: string;
 	toolCalls?: ToolCall[];
+	usage?: TokenUsage;
 }
 
 /**

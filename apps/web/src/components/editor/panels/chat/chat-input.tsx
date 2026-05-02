@@ -10,9 +10,9 @@ import {
 	Edit02Icon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 import { useAgentStore, type PermissionMode } from "@/stores/agent-store";
 import { cn } from "@/utils/ui";
+import { PlanProgressStrip } from "./plan-progress-strip";
 
 interface ChatInputProps {
 	onSend: (content: string) => void;
@@ -28,6 +28,8 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 	const mode = useAgentStore((s) => s.mode);
 	const setMode = useAgentStore((s) => s.setMode);
 	const pendingTransition = useAgentStore((s) => s.pendingModeTransition);
+	const tokenUsage = useAgentStore((s) => s.tokenUsage);
+	const cancelRun = useAgentStore((s) => s.cancelRun);
 	const isPlanMode = mode === "plan";
 	const toggleMode = useCallback(() => {
 		setMode(isPlanMode ? "execute" : "plan");
@@ -90,10 +92,18 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 					/>
 					{isPlanMode ? "Plan mode" : "Edit mode"}
 				</button>
-				<span className="text-muted-foreground text-[10px]">
-					Press Shift to switch
-				</span>
+				<div className="flex items-center gap-2">
+					{tokenUsage.lastPromptTokens > 0 && (
+						<span className="text-muted-foreground text-[10px] tabular-nums">
+							{formatTokens(tokenUsage.lastPromptTokens)} ctx
+						</span>
+					)}
+					<span className="text-muted-foreground text-[10px]">
+						Press Shift to switch
+					</span>
+				</div>
 			</div>
+			<PlanProgressStrip />
 			<div className="flex items-end gap-2">
 				<textarea
 					value={value}
@@ -126,17 +136,56 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 				<Button
 					variant="secondary"
 					size="icon"
-					onClick={handleSend}
-					disabled={disabled || !value.trim() || !!pendingTransition}
-					aria-label="Send message"
+					onClick={disabled ? cancelRun : handleSend}
+					disabled={!disabled && (!value.trim() || !!pendingTransition)}
+					aria-label={disabled ? "Cancel request" : "Send message"}
+					className="relative"
 				>
-					{disabled ? (
-						<Spinner className="size-4" />
-					) : (
-						<HugeiconsIcon icon={Sent02Icon} className="size-4" />
-					)}
+					{disabled ? <CancelButtonIcon /> : <HugeiconsIcon icon={Sent02Icon} className="size-4" />}
 				</Button>
 			</div>
 		</div>
+	);
+}
+
+function formatTokens(n: number): string {
+	if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+	if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+	return String(n);
+}
+
+function CancelButtonIcon() {
+	return (
+		<span className="relative flex size-4 items-center justify-center">
+			<svg
+				className="absolute size-full animate-spin"
+				viewBox="0 0 24 24"
+				fill="none"
+				role="img"
+				aria-hidden="true"
+			>
+				<circle
+					cx="12"
+					cy="12"
+					r="10"
+					stroke="currentColor"
+					strokeWidth="2.5"
+					strokeLinecap="round"
+					className="text-muted-foreground/30"
+				/>
+				<circle
+					cx="12"
+					cy="12"
+					r="10"
+					stroke="currentColor"
+					strokeWidth="2.5"
+					strokeLinecap="round"
+					strokeDasharray="62.83"
+					strokeDashoffset="47"
+					className="text-foreground"
+				/>
+			</svg>
+			<span className="bg-foreground/80 size-1.5 rounded-[1px]" />
+		</span>
 	);
 }

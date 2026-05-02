@@ -370,14 +370,22 @@ export const applyEffectSchema: ToolSchema = {
 export const updateEffectSchema: ToolSchema = {
 	name: "update_effect",
 	description:
-		"Updates parameters of an existing effect element on the timeline. Use list_timeline to find the elementId of the effect, then pass the params you want to change. Only the provided parameters are updated; others keep their current values. Use get_effect to discover valid parameter keys and ranges.",
+		"Updates parameters of effect elements on the timeline. Supports batch: pass targets as an array to apply the same parameter changes to multiple effects at once. Use list_timeline to find elementIds, then pass the params you want to change. Only the provided parameters are updated; others keep their current values. Use get_effect to discover valid parameter keys and ranges.",
 	parameters: [
-		{ key: "elementId", type: "string", required: true, description: "Effect element id from list_timeline." },
+		{
+			key: "targets",
+			type: "array",
+			required: true,
+			aliases: ["elementIds", "elementId"],
+			description:
+				"Effect element refs or ids from list_timeline. Pass an array to batch-update multiple effects.",
+			items: { key: "target", type: "string", required: true },
+		},
 		{ key: "params", type: "object", required: true, description: "Parameters to update as key-value pairs. At least one parameter required." },
 	],
 	returns:
-		"On success: { success: true, elementId, appliedParams: Record<string, number|string|boolean> }. appliedParams shows all parameter values after the merge. On error: { error: string }.",
-	notes: "Only the provided parameters are updated; others keep their current values. The element must be an effect type. Use get_effect to discover valid parameter keys and ranges. Use list_timeline to find the effect elementId.",
+		"On success: { success: true, updated: Array<{elementId, appliedParams}>, skipped: string[] }. Batch: updated contains per-element results, skipped lists any that failed. On error: { error: string }.",
+	notes: "Supports batch: pass targets as an array to apply the same params to multiple effects. Only the provided parameters are updated; others keep their current values. The elements must be effect types. Use get_effect to discover valid parameter keys and ranges. Use list_timeline to find the effect elementIds.",
 };
 
 export const redoSchema: ToolSchema = {
@@ -458,21 +466,16 @@ export const getElementSchema: ToolSchema = {
 export const updateClipSchema: ToolSchema = {
 	name: "update_clip",
 	description:
-		"Updates properties of any timeline element (video, image, graphic, text, sticker, audio, effect). Prefer target with a human ref from list_timeline, then get_element to inspect current values. Only provide the properties you want to change. mask: { action: 'add', maskType } to add, { action: 'update', params: {...} } to modify, { action: 'remove' } to delete. Mask types: rectangle, ellipse, heart, diamond, star, split, cinematic-bars. Only video/image/graphic support masks. name: rename the element. trimStart/trimEnd: seconds to trim from the source start/end (slip trim without moving the clip). opacity: 0-100. positionX/positionY: position offset. rotation: degrees. scaleX/scaleY: scale factor. blendMode: normal, darken, multiply, screen, overlay, lighten. hidden: boolean. volume: 0-100 (video/audio only). muted: boolean (video/audio only).",
+		"Updates properties of timeline elements. Supports batch: pass targets as an array to apply the same changes to multiple elements at once. Prefer target with a human ref from list_timeline, then get_element to inspect current values. Only provide the properties you want to change. mask: { action: 'add', maskType } to add, { action: 'update', params: {...} } to modify, { action: 'remove' } to delete. Mask types: rectangle, ellipse, heart, diamond, star, split, cinematic-bars. Only video/image/graphic support masks. name: rename the element. trimStart/trimEnd: seconds to trim from the source start/end (slip trim without moving the clip). opacity: 0-100. positionX/positionY: position offset. rotation: degrees. scaleX/scaleY: scale factor. blendMode: normal, darken, multiply, screen, overlay, lighten. hidden: boolean. volume: 0-100 (video/audio only). muted: boolean (video/audio only).",
 	parameters: [
 		{
-			key: "target",
-			type: "string",
+			key: "targets",
+			type: "array",
 			required: true,
-			aliases: ["elementId"],
+			aliases: ["target", "elementIds", "elementId"],
 			description:
-				"Timeline element ref or id. Prefer refs from list_timeline like 'clip-1'.",
-		},
-		{
-			key: "elementId",
-			type: "string",
-			required: false,
-			description: "Legacy fallback. Prefer target.",
+				"Element refs or ids. Prefer refs from list_timeline like 'clip-1'. Pass an array to batch-update multiple elements with the same property changes.",
+			items: { key: "target", type: "string", required: true },
 		},
 		{ key: "name", type: "string", required: false, description: "New element name. Must be non-empty." },
 		{ key: "mask", type: "object", required: false, description: "Mask action: { action: 'add', maskType: 'rectangle'|'ellipse'|'heart'|'diamond'|'star'|'split'|'cinematic-bars' } or { action: 'update', params: {...} } or { action: 'remove' }. Video/image/graphic only." },
@@ -496,8 +499,8 @@ export const updateClipSchema: ToolSchema = {
 		{ key: "muted", type: "boolean", required: false, description: "Mute/unmute. Video/audio elements only." },
 	],
 	returns:
-		"On success: { success: true, elementId, applied: Record<string, unknown> }. The applied object contains only the properties that were actually updated. On error: { error: string }.",
-	notes: "At least one property must be provided. Supports ref resolution via target parameter. Some properties are type-restricted: masks only on video/image/graphic, volume/muted only on video/audio, transform only on elements with transform support. trimStart/trimEnd are slip trims — they change what portion of the source is visible without moving the clip on the timeline.",
+		"On success: { success: true, updated: Array<{elementId, applied}>, skipped: string[] }. Batch: updated contains per-element results, skipped lists any that failed. On error: { error: string }.",
+	notes: "Supports batch: pass targets as an array to apply the same changes to multiple elements. At least one property must be provided. Supports ref resolution via target parameter. Some properties are type-restricted: masks only on video/image/graphic, volume/muted only on video/audio, transform only on elements with transform support. trimStart/trimEnd are slip trims — they change what portion of the source is visible without moving the clip on the timeline.",
 };
 
 export const listKeyframesSchema: ToolSchema = {

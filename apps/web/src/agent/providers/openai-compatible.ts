@@ -208,6 +208,31 @@ export class OpenAICompatibleAdapter implements ProviderAdapter {
 				}));
 		}
 
-		return { content, ...(toolCalls && { toolCalls }) };
+		return {
+			content,
+			...(toolCalls && { toolCalls }),
+			...(response.usage && {
+				usage: {
+					promptTokens: response.usage.prompt_tokens,
+					completionTokens: response.usage.completion_tokens,
+					totalTokens: response.usage.total_tokens,
+					cachedTokens:
+						(response.usage as Record<string, unknown>)
+							.prompt_tokens_details &&
+						Array.isArray(
+							(response.usage as Record<string, unknown>).prompt_tokens_details,
+						)
+							? (
+									(
+										(response.usage as Record<string, unknown>)
+											.prompt_tokens_details as Array<Record<string, unknown>>
+									).find((d) => d.cached_tokens) as
+										| { cached_tokens?: number }
+										| undefined
+								)?.cached_tokens ?? 0
+							: 0,
+				},
+			}),
+		};
 	}
 }

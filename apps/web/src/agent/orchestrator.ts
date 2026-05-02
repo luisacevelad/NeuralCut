@@ -40,6 +40,12 @@ const EXECUTE_ONLY_TOOLS = new Set(["update_plan_step"]);
 interface APIResponse {
 	content: string;
 	toolCalls?: ToolCall[];
+	usage?: {
+		promptTokens: number;
+		completionTokens: number;
+		totalTokens: number;
+		cachedTokens?: number;
+	};
 }
 
 export async function run(
@@ -52,6 +58,7 @@ export async function run(
 	agentStore.setContext(context);
 	agentStore.setStatus("sending");
 
+	const signal = agentStore.startRun();
 	const workingMessages = [...messages];
 
 	try {
@@ -60,6 +67,7 @@ export async function run(
 		let currentContext = context;
 
 		while (iterations < MAX_ITERATIONS) {
+			if (signal.aborted) break;
 			iterations++;
 
 			const liveMode = useAgentStore.getState().mode;
@@ -73,6 +81,7 @@ export async function run(
 					messages: workingMessages,
 					context: currentContext,
 				}),
+				signal,
 			});
 
 			if (!response.ok) {
@@ -87,6 +96,10 @@ export async function run(
 			}
 
 			const data: APIResponse = await response.json();
+
+			if (data.usage) {
+				agentStore.addTokenUsage(data.usage);
+			}
 
 			if (!data.toolCalls || data.toolCalls.length === 0) {
 				if (!data.content || data.content.trim().length === 0) {
@@ -115,6 +128,7 @@ export async function run(
 			});
 
 			const resolved = await resolveToolCalls(data.toolCalls, currentContext);
+			if (signal.aborted) break;
 			const toolResults = resolved.results;
 			currentContext = resolved.context;
 
@@ -153,11 +167,20 @@ export async function run(
 		agentStore.setStatus("idle");
 		chatStore.setLoading(false);
 	} catch (error) {
+		if (signal.aborted) {
+			agentStore.setStatus("idle");
+			chatStore.setLoading(false);
+			return;
+		}
 		const message =
 			error instanceof Error ? error.message : "Unknown orchestrator error";
 		console.error("[orchestrator] Error:", message);
 		chatStore.setError(message);
 		agentStore.setStatus("error");
+	} finally {
+		if (agentStore.abortController === useAgentStore.getState().abortController) {
+			useAgentStore.setState({ abortController: null });
+		}
 	}
 }
 

@@ -1,10 +1,5 @@
 import type { AgentContext, AgentMode } from "@/agent/types";
 
-export interface ToolSummary {
-	name: string;
-	description: string;
-}
-
 const PLAN_MODE_INSTRUCTIONS = `
 ## CURRENT MODE: PLAN (READ-ONLY)
 
@@ -97,7 +92,6 @@ SKIP the review if:
 
 export function buildSystemPrompt(
 	context: AgentContext,
-	tools?: ToolSummary[],
 	mode?: AgentMode,
 ): string {
 	const activeMode = mode ?? context.mode ?? "execute";
@@ -135,21 +129,16 @@ export function buildSystemPrompt(
 		);
 	}
 
-	if (tools && tools.length > 0) {
-		const toolList = tools
-			.map((t) => `- ${t.name}: ${t.description}`)
-			.join("\n");
-		parts.push(
-			`Available tools:\n${toolList}`,
-			"For questions about what is visible or audible in a media asset, never answer that you cannot see or hear the media if load_context is available. First infer the asset from the active assets or timeline; if needed call list_project_assets or list_timeline, then call load_context with the discovered internal id or timeline element ids.",
-			"If load_context has loaded media and the conversation contains an attached fileData part, treat it as the actual video/audio/image content. You may answer visual and audio questions directly from that loaded media without calling extraction tools unless the user asks for a separate extraction workflow.",
-			"When exact speech, quotes, word timing, subtitle timing, or audio-driven edit points matter, call transcribe_audio. Use load_context for broad multimodal understanding and transcribe_audio for precise spoken-word timing.",
-			"Only claim edits that were actually performed by tool calls in this conversation. Do not say you added, removed, cleaned, or updated text/subtitles unless the relevant add_text, update_text, delete_timeline_elements, or update_timeline_element_timing tool call succeeded.",
-			"When the user asks to add titles, hooks, labels, captions, subtitles, or visible text, call add_text. Do not add text proactively for unrelated edit requests such as cutting silence unless the user asks for text.",
-			"When you need to perform an action matching one of these tools, call the appropriate tool. For all other requests, respond directly in plain text.",
-			"SKILLS: You have editing skills available — pre-built technique libraries for common editing patterns. When the user asks for a complex edit (viral video, pitch, specific style, etc.), call list_skills to discover relevant skills, then call load_skill with the matching skillId to get technique definitions. Adapt those techniques to the actual footage content. If the user's request doesn't match any skill, proceed with your own editing approach.",
-		);
-	}
+	parts.push(
+		"BATCH TOOL CALLS: When performing multiple independent operations, invoke ALL tool calls in a single response. Never make sequential calls for independent actions. For example, if you need to apply the same effect to 3 clips, call apply_effect 3 times in one response — NOT 3 separate responses. If you need to split at 5 timestamps, call split once with all timestamps. This is critical for performance and cost.",
+		"For questions about what is visible or audible in a media asset, never answer that you cannot see or hear the media if load_context is available. First infer the asset from the active assets or timeline; if needed call list_project_assets or list_timeline, then call load_context with the discovered internal id or timeline element ids.",
+		"If load_context has loaded media and the conversation contains an attached fileData part, treat it as the actual video/audio/image content. You may answer visual and audio questions directly from that loaded media without calling extraction tools unless the user asks for a separate extraction workflow.",
+		"When exact speech, quotes, word timing, subtitle timing, or audio-driven edit points matter, call transcribe_audio. Use load_context for broad multimodal understanding and transcribe_audio for precise spoken-word timing.",
+		"Only claim edits that were actually performed by tool calls in this conversation. Do not say you added, removed, cleaned, or updated text/subtitles unless the relevant add_text, update_text, delete_timeline_elements, or update_timeline_element_timing tool call succeeded.",
+		"When the user asks to add titles, hooks, labels, captions, subtitles, or visible text, call add_text. Do not add text proactively for unrelated edit requests such as cutting silence unless the user asks for text.",
+		"When you need to perform an action matching one of these tools, call the appropriate tool. For all other requests, respond directly in plain text.",
+		"SKILLS: You have editing skills available — pre-built technique libraries for common editing patterns. When the user asks for a complex edit (viral video, pitch, specific style, etc.), call list_skills to discover relevant skills, then call load_skill with the matching skillId to get technique definitions. Adapt those techniques to the actual footage content. If the user's request doesn't match any skill, proceed with your own editing approach.",
+	);
 
 	if (activeMode === "plan") {
 		parts.push(PLAN_MODE_INSTRUCTIONS);

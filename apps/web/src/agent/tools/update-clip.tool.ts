@@ -2,18 +2,27 @@ import type { AgentContext, ToolDefinition } from "@/agent/types";
 import { toolRegistry } from "@/agent/tools/registry";
 import { updateClipSchema } from "@/agent/tools/schemas";
 import { EditorContextAdapter } from "@/agent/context";
-import { resolveElement } from "@/agent/ref-resolver";
+import { resolveTargetsToElementIds } from "@/agent/tools/resolve-element-ids";
 
 const updateClipTool: ToolDefinition = {
 	...updateClipSchema,
 	execute: async (
 		args: Record<string, unknown>,
 		context: AgentContext,
-	): Promise<
-		| { success: boolean; elementId: string; applied: Record<string, unknown> }
-		| { error: string }
-	> => {
-		const target = args.target ?? args.elementId;
+	):
+		| Promise<
+				| {
+						success: boolean;
+						updated: Array<{
+							elementId: string;
+							applied: Record<string, unknown>;
+						}>;
+						skipped: string[];
+				  }
+				| { error: string }
+		  >
+		| { error: string } => {
+		const raw = args.targets ?? args.target ?? args.elementIds ?? args.elementId;
 		const name = args.name as string | undefined;
 		const mask = args.mask as
 			| {
@@ -34,15 +43,6 @@ const updateClipTool: ToolDefinition = {
 		const hidden = args.hidden as boolean | undefined;
 		const volume = args.volume as number | undefined;
 		const muted = args.muted as boolean | undefined;
-
-		if (typeof target !== "string" || !target.trim()) {
-			return { error: "Pass target (element ref like 'clip-1') or elementId." };
-		}
-
-		const resolved = resolveElement(target, context);
-		if ("error" in resolved) return resolved;
-
-		const elementId = resolved.elementId;
 
 		const hasUpdate =
 			name !== undefined ||
@@ -77,23 +77,45 @@ const updateClipTool: ToolDefinition = {
 			return { error: "mask.action must be 'add', 'update', or 'remove'" };
 		}
 
-		return EditorContextAdapter.updateClip({
-			elementId,
-			name,
-			mask,
-			trimStart,
-			trimEnd,
-			opacity,
-			positionX,
-			positionY,
-			rotation,
-			scaleX,
-			scaleY,
-			blendMode,
-			hidden,
-			volume,
-			muted,
-		});
+		const resolved = resolveTargetsToElementIds(raw, context);
+		if ("error" in resolved) return resolved;
+
+		const updated: Array<{
+			elementId: string;
+			applied: Record<string, unknown>;
+		}> = [];
+		const skipped: string[] = [];
+
+		for (const elementId of resolved.elementIds) {
+			const result = EditorContextAdapter.updateClip({
+				elementId,
+				name,
+				mask,
+				trimStart,
+				trimEnd,
+				opacity,
+				positionX,
+				positionY,
+				rotation,
+				scaleX,
+				scaleY,
+				blendMode,
+				hidden,
+				volume,
+				muted,
+			});
+			if ("error" in result) {
+				skipped.push(elementId);
+			} else {
+				updated.push({ elementId, applied: result.applied });
+			}
+		}
+
+		if (updated.length === 0) {
+			return { error: "All targets failed to update" };
+		}
+
+		return { success: true, updated, skipped };
 	},
 };
 

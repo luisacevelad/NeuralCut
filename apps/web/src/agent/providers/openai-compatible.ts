@@ -5,6 +5,7 @@ import type {
 	ToolParameter,
 	ToolSchema,
 } from "@/agent/types";
+import { buildProviderDescription } from "@/agent/tools/schemas";
 import type {
 	ProviderAdapter,
 	ProviderConfig,
@@ -92,7 +93,7 @@ function toOpenAIFunctions(tools: ToolSchema[]): OpenAIFunctionTool[] {
 		type: "function" as const,
 		function: {
 			name: tool.name,
-			description: tool.description,
+			description: buildProviderDescription(tool),
 			parameters: {
 				type: "object" as const,
 				properties: Object.fromEntries(

@@ -13,6 +13,7 @@ import type {
 	ToolParameter,
 	ToolSchema,
 } from "@/agent/types";
+import { buildProviderDescription } from "@/agent/tools/schemas";
 import type {
 	ProviderAdapter,
 	ProviderConfig,
@@ -246,7 +247,7 @@ export function toGeminiTools(tools: ToolSchema[]): FunctionDeclaration[] {
 
 		return {
 			name: tool.name,
-			description: tool.description,
+			description: buildProviderDescription(tool),
 			parameters: {
 				type: SchemaType.OBJECT,
 				properties,

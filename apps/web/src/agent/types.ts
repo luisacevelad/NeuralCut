@@ -141,4 +141,6 @@ export interface ToolSchema {
 	name: string;
 	description: string;
 	parameters: ToolParameter[];
+	returns?: string;
+	notes?: string;
 }

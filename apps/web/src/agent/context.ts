@@ -6,6 +6,7 @@ import { AddTrackCommand, InsertElementCommand } from "@/lib/commands/timeline";
 import { ToggleTrackMuteCommand } from "@/lib/commands/timeline/track/toggle-track-mute";
 import { ToggleTrackVisibilityCommand } from "@/lib/commands/timeline/track/toggle-track-visibility";
 import { DEFAULT_NEW_ELEMENT_DURATION } from "@/lib/timeline/creation";
+import type { ExportResult } from "@/lib/export";
 import {
 	buildElementFromMedia,
 	buildEffectElement,
@@ -74,7 +75,7 @@ export const EditorContextAdapter = {
 	 * Returns null when no matching asset exists.
 	 * This is the ONLY sanctioned path for tools to obtain a File from EditorCore.
 	 */
-	resolveAssetFile(assetId?: string): File | null {
+		resolveAssetFile(assetId?: string): File | null {
 		const core = EditorCore.getInstance();
 		const assets = core.media.getAssets();
 
@@ -87,6 +88,46 @@ export const EditorContextAdapter = {
 			(a) => a.type === "video" || a.type === "audio",
 		);
 		return firstMediaAsset?.file ?? null;
+	},
+
+	async exportPreview(): Promise<
+		| { buffer: ArrayBuffer; duration: number }
+		| { error: string }
+	> {
+		const core = EditorCore.getInstance();
+		const activeProject = core.project.getActiveOrNull();
+		if (!activeProject) {
+			return { error: "No active project" };
+		}
+
+		const durationTicks = core.timeline.getTotalDuration();
+		if (durationTicks === 0) {
+			return { error: "Timeline is empty" };
+		}
+
+		const duration = durationTicks / TICKS_PER_SECOND;
+
+		const result: ExportResult = await core.renderer.exportProject({
+			options: {
+				format: "mp4",
+				quality: "low",
+				includeAudio: true,
+			},
+		});
+
+		if (!result.success) {
+			return {
+				error: result.error ?? result.cancelled
+					? "Export was cancelled"
+					: "Export failed",
+			};
+		}
+
+		if (!result.buffer) {
+			return { error: "Export produced no output" };
+		}
+
+		return { buffer: result.buffer, duration };
 	},
 
 	/**

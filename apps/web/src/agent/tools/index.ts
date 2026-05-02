@@ -43,3 +43,4 @@ import "@/agent/tools/submit-plan.tool";
 import "@/agent/tools/ask-user.tool";
 import "@/agent/tools/request-plan-approval.tool";
 import "@/agent/tools/update-plan-step.tool";
+import "@/agent/tools/render-preview.tool";

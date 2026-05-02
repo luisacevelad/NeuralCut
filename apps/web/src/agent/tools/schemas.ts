@@ -20,26 +20,30 @@ export const loadContextSchema: ToolSchema = {
 			key: "targetType",
 			type: "string",
 			required: true,
-			description: "What to load: project asset media context or timeline element context.",
+			description:
+				"What to load: project asset media context or timeline element context.",
 			enum: ["asset", "timeline_element"],
 		},
 		{
 			key: "id",
 			type: "string",
 			required: false,
-			description: "Asset name/id or element ref/id. Prefer list_timeline refs like 'clip-1' and asset names like 'intro.mov'.",
+			description:
+				"Asset name/id or element ref/id. Prefer list_timeline refs like 'clip-1' and asset names like 'intro.mov'.",
 		},
 		{
 			key: "assetId",
 			type: "string",
 			required: false,
-			description: "Asset id or asset name. Prefer asset names unless an ambiguity error asks for an id.",
+			description:
+				"Asset id or asset name. Prefer asset names unless an ambiguity error asks for an id.",
 		},
 		{
 			key: "elementId",
 			type: "string",
 			required: false,
-			description: "Timeline element id or human ref from list_timeline, e.g. 'clip-1' or 'text-3'.",
+			description:
+				"Timeline element id or human ref from list_timeline, e.g. 'clip-1' or 'text-3'.",
 		},
 	],
 };
@@ -53,13 +57,15 @@ export const transcribeAudioSchema: ToolSchema = {
 			key: "assetId",
 			type: "string",
 			required: false,
-			description: "Asset name or id. Prefer names from list_project_assets, e.g. 'interview.wav'.",
+			description:
+				"Asset name or id. Prefer names from list_project_assets, e.g. 'interview.wav'.",
 		},
 		{
 			key: "language",
 			type: "string",
 			required: false,
-			description: "Optional spoken language hint. Use 'auto' or omit when unknown.",
+			description:
+				"Optional spoken language hint. Use 'auto' or omit when unknown.",
 		},
 	],
 };
@@ -98,7 +104,8 @@ export const deleteTimelineElementsSchema: ToolSchema = {
 			type: "array",
 			required: true,
 			aliases: ["elementIds"],
-			description: "Element refs or ids to delete. Prefer refs like 'clip-1' or 'text-3'.",
+			description:
+				"Element refs or ids to delete. Prefer refs like 'clip-1' or 'text-3'.",
 			items: { key: "target", type: "string", required: true },
 		},
 		{
@@ -120,15 +127,22 @@ export const moveTimelineElementsSchema: ToolSchema = {
 			type: "array",
 			required: true,
 			aliases: ["elementIds"],
-			description: "Element refs or ids to move. Prefer refs like 'clip-1' or 'text-3'.",
+			description:
+				"Element refs or ids to move. Prefer refs like 'clip-1' or 'text-3'.",
 			items: { key: "target", type: "string", required: true },
 		},
-		{ key: "start", type: "number", required: true, description: "New timeline start in seconds." },
+		{
+			key: "start",
+			type: "number",
+			required: true,
+			description: "New timeline start in seconds.",
+		},
 		{
 			key: "targetTrackRef",
 			type: "string",
 			required: false,
-			description: "Target track ref/id/label from list_timeline, e.g. 'main-1' or 'overlay-1'.",
+			description:
+				"Target track ref/id/label from list_timeline, e.g. 'main-1' or 'overlay-1'.",
 		},
 		{
 			key: "elementIds",
@@ -177,14 +191,39 @@ export const addTextSchema: ToolSchema = {
 		{ key: "text", type: "string", required: true },
 		{ key: "start", type: "number", required: true },
 		{ key: "end", type: "number", required: true },
-		{ key: "position", type: "string", required: true, enum: ["top", "center", "bottom"] },
-		{ key: "style", type: "string", required: false, enum: ["plain", "subtitle", "hook", "label"] },
+		{
+			key: "position",
+			type: "string",
+			required: true,
+			enum: ["top", "center", "bottom"],
+		},
+		{
+			key: "style",
+			type: "string",
+			required: false,
+			enum: ["plain", "subtitle", "hook", "label"],
+		},
 		{ key: "color", type: "string", required: false },
 		{ key: "fontSize", type: "number", required: false },
 		{ key: "fontFamily", type: "string", required: false },
-		{ key: "fontWeight", type: "string", required: false, enum: ["normal", "bold"] },
-		{ key: "fontStyle", type: "string", required: false, enum: ["normal", "italic"] },
-		{ key: "textAlign", type: "string", required: false, enum: ["left", "center", "right"] },
+		{
+			key: "fontWeight",
+			type: "string",
+			required: false,
+			enum: ["normal", "bold"],
+		},
+		{
+			key: "fontStyle",
+			type: "string",
+			required: false,
+			enum: ["normal", "italic"],
+		},
+		{
+			key: "textAlign",
+			type: "string",
+			required: false,
+			enum: ["left", "center", "right"],
+		},
 		{ key: "letterSpacing", type: "number", required: false },
 		{ key: "positionX", type: "number", required: false },
 		{ key: "positionY", type: "number", required: false },
@@ -205,14 +244,34 @@ export const updateTextSchema: ToolSchema = {
 			description: "Text element refs or ids. Prefer refs like 'text-1'.",
 			items: { key: "target", type: "string", required: true },
 		},
-		{ key: "elementIds", type: "array", required: false, description: "Legacy fallback. Prefer targets." },
+		{
+			key: "elementIds",
+			type: "array",
+			required: false,
+			description: "Legacy fallback. Prefer targets.",
+		},
 		{ key: "content", type: "string", required: false },
 		{ key: "color", type: "string", required: false },
 		{ key: "fontSize", type: "number", required: false },
 		{ key: "fontFamily", type: "string", required: false },
-		{ key: "fontWeight", type: "string", required: false, enum: ["normal", "bold"] },
-		{ key: "fontStyle", type: "string", required: false, enum: ["normal", "italic"] },
-		{ key: "textAlign", type: "string", required: false, enum: ["left", "center", "right"] },
+		{
+			key: "fontWeight",
+			type: "string",
+			required: false,
+			enum: ["normal", "bold"],
+		},
+		{
+			key: "fontStyle",
+			type: "string",
+			required: false,
+			enum: ["normal", "italic"],
+		},
+		{
+			key: "textAlign",
+			type: "string",
+			required: false,
+			enum: ["left", "center", "right"],
+		},
 		{ key: "letterSpacing", type: "number", required: false },
 		{ key: "positionX", type: "number", required: false },
 		{ key: "positionY", type: "number", required: false },
@@ -301,7 +360,8 @@ export const getElementSchema: ToolSchema = {
 			type: "string",
 			required: true,
 			aliases: ["elementId"],
-			description: "Timeline element ref or id. Prefer refs from list_timeline like 'clip-1'.",
+			description:
+				"Timeline element ref or id. Prefer refs from list_timeline like 'clip-1'.",
 		},
 		{
 			key: "elementId",
@@ -322,7 +382,8 @@ export const updateClipSchema: ToolSchema = {
 			type: "string",
 			required: true,
 			aliases: ["elementId"],
-			description: "Timeline element ref or id. Prefer refs from list_timeline like 'clip-1'.",
+			description:
+				"Timeline element ref or id. Prefer refs from list_timeline like 'clip-1'.",
 		},
 		{
 			key: "elementId",
@@ -456,9 +517,21 @@ export const updatePlanStepSchema: ToolSchema = {
 	parameters: [
 		{ key: "step", type: "number", required: false },
 		{ key: "stepId", type: "string", required: false },
-		{ key: "status", type: "string", required: true, enum: ["pending", "in_progress", "done", "skipped"] },
+		{
+			key: "status",
+			type: "string",
+			required: true,
+			enum: ["pending", "in_progress", "done", "skipped"],
+		},
 		{ key: "result", type: "string", required: false },
 	],
+};
+
+export const renderPreviewSchema: ToolSchema = {
+	name: "render_preview",
+	description:
+		"Renders a temporary low-quality video preview of the full timeline and loads it into context. The exported video includes all tracks, text, effects, and audio. Use this to review the final result after completing edits. The video will be available in your multimodal context automatically for analysis.",
+	parameters: [],
 };
 
 /**
@@ -499,4 +572,5 @@ export const providerToolSchemas: ToolSchema[] = [
 	askUserSchema,
 	requestPlanApprovalSchema,
 	updatePlanStepSchema,
+	renderPreviewSchema,
 ];

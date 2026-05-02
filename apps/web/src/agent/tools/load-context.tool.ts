@@ -7,6 +7,10 @@ import { EditorContextAdapter } from "@/agent/context";
 import { toolRegistry } from "@/agent/tools/registry";
 import { loadContextSchema } from "@/agent/tools/schemas";
 import { resolveAsset, resolveElement } from "@/agent/ref-resolver";
+import {
+	uploadFileToGemini,
+	type UploadedGeminiFile,
+} from "@/agent/tools/upload-to-gemini";
 
 type LoadContextTargetType = "asset" | "timeline_element";
 
@@ -55,15 +59,6 @@ type MediaContext = {
 		start: number;
 		end: number;
 	};
-};
-
-type UploadedGeminiFile = {
-	provider: "gemini";
-	status: "loaded" | "processing";
-	fileName?: string;
-	fileUri: string;
-	mimeType: string;
-	displayName?: string;
 };
 
 const assetContextCache = new Map<string, UploadedGeminiFile>();
@@ -130,7 +125,7 @@ async function loadAssetContext(
 		return { error: `Could not access file for asset ${asset.id}` };
 	}
 
-	const uploaded = await uploadFileToGemini({ file, asset });
+	const uploaded = await uploadAssetToGemini({ file, asset });
 	if ("error" in uploaded) {
 		return uploaded;
 	}
@@ -153,7 +148,10 @@ async function loadTimelineElementContext(
 ): Promise<LoadContextResult | { error: string }> {
 	const rawTarget = args.elementId ?? args.id;
 	if (!rawTarget) {
-		return { error: "elementId (or id) or element ref is required for timeline_element target" };
+		return {
+			error:
+				"elementId (or id) or element ref is required for timeline_element target",
+		};
 	}
 
 	const resolved = resolveElement(rawTarget, context);
@@ -162,11 +160,7 @@ async function loadTimelineElementContext(
 	const elementId = resolved.elementId;
 	const trackId = resolved.trackId;
 
-	const found = findTimelineElement(
-		context.timelineTracks,
-		trackId,
-		elementId,
-	);
+	const found = findTimelineElement(context.timelineTracks, trackId, elementId);
 	if (!found) {
 		return { error: "Timeline element not found" };
 	}
@@ -228,7 +222,7 @@ async function loadTimelineElementContext(
 	return { error: "Timeline element has no loadable context" };
 }
 
-async function uploadFileToGemini({
+async function uploadAssetToGemini({
 	file,
 	asset,
 }: {
@@ -246,36 +240,7 @@ async function uploadFileToGemini({
 		return { error: `Unsupported MIME type for asset ${asset.id}` };
 	}
 
-	const formData = new FormData();
-	formData.set("file", file);
-	formData.set("displayName", asset.name);
-	formData.set("mimeType", mimeType);
-
-	const response = await fetch("/api/agent/context/load", {
-		method: "POST",
-		body: formData,
-	});
-
-	const data = (await response.json()) as Partial<UploadedGeminiFile> & {
-		error?: string;
-	};
-
-	if (!response.ok) {
-		return { error: data.error ?? "Failed to load context" };
-	}
-
-	if (!data.fileUri || !data.mimeType || !data.status) {
-		return { error: "Invalid context load response" };
-	}
-
-	return {
-		provider: "gemini",
-		status: data.status,
-		fileName: data.fileName,
-		fileUri: data.fileUri,
-		mimeType: data.mimeType,
-		displayName: data.displayName,
-	};
+	return uploadFileToGemini({ file, displayName: asset.name, mimeType });
 }
 
 function resolveGeminiMimeType({
@@ -293,7 +258,8 @@ function resolveGeminiMimeType({
 		return fileType;
 	}
 
-	const mimeType = inferMimeTypeFromName(displayName) ?? inferMimeTypeFromName(fileName);
+	const mimeType =
+		inferMimeTypeFromName(displayName) ?? inferMimeTypeFromName(fileName);
 	if (mimeType) {
 		return mimeType;
 	}

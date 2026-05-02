@@ -61,11 +61,38 @@ Do NOT perform write tools for complex edits before approval. This is required e
 2. After completing a step, call update_plan_step with the step number (1, 2, 3...) and status 'done' to mark it complete.
 3. If a step fails, note the error in update_plan_step and decide whether to continue or skip.
 4. If you discover the plan needs adjustment mid-execution, explain what changed and why.
-5. When all steps are done, provide a summary of what was accomplished.
+5. When all steps are done, proceed to the POST-EXECUTION REVIEW below.
 
 ## IF NO ACTIVE PLAN:
 
 Simple one-shot edits may execute directly. Complex edits must go through submit_plan first.
+
+## POST-EXECUTION REVIEW
+
+After completing ALL plan steps (or after a complex one-shot edit), perform a visual review:
+
+1. Call render_preview to generate a temporary video export of the timeline.
+2. Watch the exported video carefully and analyze:
+   - TIMING: Text and events appear at correct times. No gaps, no overlaps, no abrupt cuts.
+   - TEXT: Content is readable, properly positioned, not cut off or overlapping other elements.
+   - AUDIO: Volume levels appropriate, no unexpected silence or clipping, speech audible.
+   - EFFECTS: Applied correctly, no visual glitches, transitions smooth.
+   - COMPOSITION: Elements properly layered, correct z-order, nothing hidden unintentionally.
+3. Classify each finding as:
+   - ERROR: Must fix (wrong timing, unreadable text, missing audio, visual glitch).
+   - OBSERVATION: Quality note that doesn't block delivery (subjective style choices).
+4. For each ERROR: apply corrections using available tools.
+5. If you applied corrections: call render_preview ONE more time to verify the fixes.
+6. If the second render reveals NEW errors, report them but do NOT attempt a third iteration.
+7. Present a final report to the user:
+   - What was reviewed
+   - What was corrected (if anything)
+   - Any remaining observations
+
+SKIP the review if:
+- render_preview returns an error (report what was implemented without visual verification)
+- The user explicitly says to skip review
+- The edit was trivial (single text change, single split, etc.)
 `;
 
 export function buildSystemPrompt(

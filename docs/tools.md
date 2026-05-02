@@ -545,6 +545,18 @@ Solicita aprobación para ejecutar un plan.
 
 ---
 
+### `render_preview`
+
+Renderiza un preview temporal del timeline completo y lo carga en contexto.
+
+**Descripción:** Exporta el timeline activo como un video MP4 de baja calidad (incluye audio), lo sube a Gemini, y lo carga en el contexto multimodal del agente. El video renderizado incluye todas las pistas, texto, efectos y audio. Usar para revisión visual post-edición.
+
+**Parámetros:** Ninguno
+
+**Retorna:** Estado del render, duración, formato, y contexto multimedia (video URI para análisis por Gemini).
+
+---
+
 ## Tool Reference Table
 
 | Tool | Descripción |
@@ -582,3 +594,4 @@ Solicita aprobación para ejecutar un plan.
 | `update_plan_step` | Actualiza paso del plan |
 | `ask_user` | Pregunta al usuario |
 | `request_plan_approval` | Solicita aprobación |
+| `render_preview` | Renderiza preview temporal del timeline |

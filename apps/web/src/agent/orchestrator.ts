@@ -5,6 +5,7 @@ import type {
 	ToolDefinition,
 	ToolResult,
 } from "@/agent/types";
+import { EditorContextAdapter } from "@/agent/context";
 import { toolRegistry } from "@/agent/tools/registry";
 import "@/agent/tools";
 import { useChatStore } from "@/stores/chat-store";
@@ -56,19 +57,21 @@ export async function run(
 	try {
 		let iterations = 0;
 		let hitCap = false;
+		let currentContext = context;
 
 		while (iterations < MAX_ITERATIONS) {
 			iterations++;
 
 			const liveMode = useAgentStore.getState().mode;
-			const liveContext: AgentContext = { ...context, mode: liveMode };
+			currentContext = { ...EditorContextAdapter.getContext(), mode: liveMode };
+			agentStore.setContext(currentContext);
 
 			const response = await fetch("/api/agent/chat", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					messages: workingMessages,
-					context: liveContext,
+					context: currentContext,
 				}),
 			});
 
@@ -111,7 +114,9 @@ export async function run(
 				timestamp: Date.now(),
 			});
 
-			const toolResults = await resolveToolCalls(data.toolCalls, context);
+			const resolved = await resolveToolCalls(data.toolCalls, currentContext);
+			const toolResults = resolved.results;
+			currentContext = resolved.context;
 
 			for (const tr of toolResults) {
 				const content = tr.error
@@ -217,12 +222,18 @@ function validateToolArgs(
 async function resolveToolCalls(
 	toolCalls: ToolCall[],
 	context: AgentContext,
-): Promise<ToolResult[]> {
+): Promise<{ results: ToolResult[]; context: AgentContext }> {
 	const agentStore = useAgentStore.getState();
 	const results: ToolResult[] = [];
+	let currentContext = context;
 
 	for (const tc of toolCalls) {
 		useAgentStore.getState().setActiveTool(tc.name);
+		currentContext = {
+			...EditorContextAdapter.getContext(),
+			mode: useAgentStore.getState().mode,
+		};
+		agentStore.setContext(currentContext);
 		const currentMode = useAgentStore.getState().mode;
 		const currentPlan = usePlanStore.getState().plan;
 
@@ -288,8 +299,25 @@ async function resolveToolCalls(
 				continue;
 			}
 
-			const result = await tool.execute(tc.args, context);
+			const result = await tool.execute(tc.args, currentContext);
+			if (isToolExecutionError(result)) {
+				results.push({
+					toolCallId: tc.id,
+					name: tc.name,
+					result: null,
+					error: result.error,
+				});
+				continue;
+			}
+
 			results.push({ toolCallId: tc.id, name: tc.name, result });
+			if (WRITE_TOOLS.has(tc.name)) {
+				currentContext = {
+					...EditorContextAdapter.getContext(),
+					mode: useAgentStore.getState().mode,
+				};
+				agentStore.setContext(currentContext);
+			}
 		} catch (error) {
 			results.push({
 				toolCallId: tc.id,
@@ -301,7 +329,16 @@ async function resolveToolCalls(
 	}
 
 	agentStore.setActiveTool(null);
-	return results;
+	return { results, context: currentContext };
+}
+
+function isToolExecutionError(result: unknown): result is { error: string } {
+	return (
+		typeof result === "object" &&
+		result !== null &&
+		"error" in result &&
+		typeof (result as { error?: unknown }).error === "string"
+	);
 }
 
 function requestApproval(toolCall: ToolCall): Promise<boolean> {

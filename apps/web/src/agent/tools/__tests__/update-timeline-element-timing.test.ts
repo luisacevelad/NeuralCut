@@ -29,6 +29,11 @@ await import("@/agent/tools/update-timeline-element-timing.tool");
 const context: AgentContext = {
 	projectId: "proj-1",
 	activeSceneId: "scene-A",
+	fps: null,
+	duration: null,
+	resolution: null,
+	aspectRatio: null,
+	projectName: null,
 	mediaAssets: [],
 	playbackTimeMs: 0,
 };

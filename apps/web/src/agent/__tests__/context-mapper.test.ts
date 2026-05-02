@@ -4,7 +4,17 @@ import { buildContextFromEditorState } from "@/agent/context-mapper";
 describe("buildContextFromEditorState (context mapper)", () => {
 	test("maps active media populated from editor", () => {
 		const ctx = buildContextFromEditorState({
-			project: { metadata: { id: "proj-1" } },
+			project: {
+				metadata: {
+					id: "proj-1",
+					name: "My Project",
+					duration: 45.2,
+				},
+				settings: {
+					fps: { numerator: 30, denominator: 1 },
+					canvasSize: { width: 1080, height: 1920 },
+				},
+			},
 			activeScene: { id: "scene-A" },
 			assets: [
 				{ id: "m1", name: "intro.mp4", type: "video", duration: 30 },
@@ -16,6 +26,11 @@ describe("buildContextFromEditorState (context mapper)", () => {
 
 		expect(ctx.projectId).toBe("proj-1");
 		expect(ctx.activeSceneId).toBe("scene-A");
+		expect(ctx.fps).toBe(30);
+		expect(ctx.duration).toBe(45.2);
+		expect(ctx.resolution).toEqual({ width: 1080, height: 1920 });
+		expect(ctx.aspectRatio).toBe("9:16");
+		expect(ctx.projectName).toBe("My Project");
 		expect(ctx.mediaAssets).toHaveLength(2);
 		expect(ctx.mediaAssets[0]).toEqual({
 			id: "m1",
@@ -45,6 +60,11 @@ describe("buildContextFromEditorState (context mapper)", () => {
 
 		expect(ctx.projectId).toBeNull();
 		expect(ctx.activeSceneId).toBeNull();
+		expect(ctx.fps).toBeNull();
+		expect(ctx.duration).toBeNull();
+		expect(ctx.resolution).toBeNull();
+		expect(ctx.aspectRatio).toBeNull();
+		expect(ctx.projectName).toBeNull();
 		expect(ctx.mediaAssets).toEqual([]);
 		expect(ctx.playbackTimeMs).toBe(0);
 	});
@@ -246,5 +266,58 @@ describe("buildContextFromEditorState (context mapper)", () => {
 		});
 
 		expect(ctx.mediaAssets).toEqual([]);
+	});
+
+	test("computes aspect ratio from resolution via GCD", () => {
+		const ctx = buildContextFromEditorState({
+			project: {
+				metadata: { id: "proj-1" },
+				settings: {
+					fps: { numerator: 60, denominator: 1 },
+					canvasSize: { width: 1920, height: 1080 },
+				},
+			},
+			activeScene: null,
+			assets: [],
+			currentTimeTicks: 0,
+			ticksPerSecond: 100,
+		});
+
+		expect(ctx.aspectRatio).toBe("16:9");
+		expect(ctx.fps).toBe(60);
+		expect(ctx.resolution).toEqual({ width: 1920, height: 1080 });
+	});
+
+	test("handles NTSC fractional frame rates", () => {
+		const ctx = buildContextFromEditorState({
+			project: {
+				metadata: { id: "proj-1" },
+				settings: {
+					fps: { numerator: 30_000, denominator: 1_001 },
+					canvasSize: { width: 1920, height: 1080 },
+				},
+			},
+			activeScene: null,
+			assets: [],
+			currentTimeTicks: 0,
+			ticksPerSecond: 100,
+		});
+
+		expect(ctx.fps).toBeCloseTo(29.97002997, 4);
+	});
+
+	test("returns null metadata fields when project has no settings", () => {
+		const ctx = buildContextFromEditorState({
+			project: { metadata: { id: "proj-1" } },
+			activeScene: null,
+			assets: [],
+			currentTimeTicks: 0,
+			ticksPerSecond: 100,
+		});
+
+		expect(ctx.fps).toBeNull();
+		expect(ctx.resolution).toBeNull();
+		expect(ctx.aspectRatio).toBeNull();
+		expect(ctx.projectName).toBeNull();
 	});
 });

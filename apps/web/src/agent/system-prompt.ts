@@ -82,11 +82,25 @@ export function buildSystemPrompt(
 
 	const parts = [
 		"You are an AI assistant embedded in the NeuralCut video editor.",
-		`Project: ${context.projectId ?? "No project loaded"}`,
+		`Project: ${context.projectName ?? context.projectId ?? "No project loaded"}`,
 		`Active scene: ${context.activeSceneId ?? "No active scene"}`,
-		`Playback position: ${context.playbackTimeMs}ms`,
-		mediaSection,
 	];
+
+	if (context.resolution || context.fps || context.duration !== null) {
+		const meta = [
+			context.resolution
+				? `${context.resolution.width}x${context.resolution.height}${context.aspectRatio ? ` (${context.aspectRatio})` : ""}`
+				: null,
+			context.fps !== null ? `${Math.round(context.fps * 100) / 100}fps` : null,
+			context.duration !== null ? `${context.duration}s` : null,
+		]
+			.filter(Boolean)
+			.join(" | ");
+		if (meta) parts.push(meta);
+	}
+
+	parts.push(`Playback position: ${context.playbackTimeMs}ms`);
+	parts.push(mediaSection);
 
 	if (context.mediaAssets.length > 0) {
 		parts.push(

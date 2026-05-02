@@ -65,6 +65,11 @@ export interface ToolResult {
 export interface AgentContext {
 	projectId: string | null;
 	activeSceneId: string | null;
+	fps: number | null;
+	duration: number | null;
+	resolution: { width: number; height: number } | null;
+	aspectRatio: string | null;
+	projectName: string | null;
 	mediaAssets: Array<{
 		id: string;
 		name: string;

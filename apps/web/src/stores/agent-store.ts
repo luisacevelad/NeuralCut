@@ -21,6 +21,11 @@ export interface PendingModeTransition {
 const DEFAULT_CONTEXT: AgentContext = {
 	projectId: null,
 	activeSceneId: null,
+	fps: null,
+	duration: null,
+	resolution: null,
+	aspectRatio: null,
+	projectName: null,
 	mediaAssets: [],
 	playbackTimeMs: 0,
 };

@@ -18,6 +18,11 @@ import type { AgentContext } from "@/agent/types";
 const MOCK_CONTEXT: AgentContext = {
 	projectId: "proj-1",
 	activeSceneId: "scene-A",
+	fps: null,
+	duration: null,
+	resolution: null,
+	aspectRatio: null,
+	projectName: null,
 	mediaAssets: [],
 	playbackTimeMs: 0,
 };

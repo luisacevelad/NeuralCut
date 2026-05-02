@@ -12,6 +12,11 @@ describe("echo_context tool", () => {
 		const context: AgentContext = {
 			projectId: "proj-1",
 			activeSceneId: "scene-A",
+			fps: null,
+			duration: null,
+			resolution: null,
+			aspectRatio: null,
+			projectName: null,
 			mediaAssets: [
 				{ id: "m1", name: "clip.mp4", type: "video", duration: 120 },
 				{ id: "m2", name: "song.mp3", type: "audio", duration: 45 },
@@ -35,6 +40,11 @@ describe("echo_context tool", () => {
 		const context: AgentContext = {
 			projectId: null,
 			activeSceneId: null,
+			fps: null,
+			duration: null,
+			resolution: null,
+			aspectRatio: null,
+			projectName: null,
 			mediaAssets: [],
 			playbackTimeMs: 0,
 		};
@@ -55,6 +65,11 @@ describe("echo_context tool", () => {
 		const context: AgentContext = {
 			projectId: "proj-2",
 			activeSceneId: null,
+			fps: null,
+			duration: null,
+			resolution: null,
+			aspectRatio: null,
+			projectName: null,
 			mediaAssets: [],
 			playbackTimeMs: 0,
 		};

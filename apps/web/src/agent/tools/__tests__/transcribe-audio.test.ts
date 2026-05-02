@@ -37,6 +37,11 @@ function makeContext(overrides: Partial<AgentContext> = {}): AgentContext {
 	return {
 		projectId: "proj-1",
 		activeSceneId: "scene-A",
+		fps: null,
+		duration: null,
+		resolution: null,
+		aspectRatio: null,
+		projectName: null,
 		mediaAssets: [],
 		playbackTimeMs: 0,
 		...overrides,

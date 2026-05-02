@@ -84,12 +84,18 @@ describe("agent/types contracts", () => {
 		const ctx: AgentContext = {
 			projectId: "proj-1",
 			activeSceneId: "scene-A",
+			fps: 30,
+			duration: 60,
+			resolution: { width: 1920, height: 1080 },
+			aspectRatio: "16:9",
+			projectName: "Test",
 			mediaAssets: [
 				{ id: "m1", name: "clip.mp4", type: "video", duration: 30 },
 			],
 			playbackTimeMs: 5000,
 		};
 		expect(ctx.projectId).toBe("proj-1");
+		expect(ctx.fps).toBe(30);
 		expect(ctx.mediaAssets).toHaveLength(1);
 		expect(ctx.playbackTimeMs).toBe(5000);
 	});
@@ -98,11 +104,17 @@ describe("agent/types contracts", () => {
 		const ctx: AgentContext = {
 			projectId: null,
 			activeSceneId: null,
+			fps: null,
+			duration: null,
+			resolution: null,
+			aspectRatio: null,
+			projectName: null,
 			mediaAssets: [],
 			playbackTimeMs: 0,
 		};
 		expect(ctx.projectId).toBeNull();
 		expect(ctx.activeSceneId).toBeNull();
+		expect(ctx.fps).toBeNull();
 		expect(ctx.mediaAssets).toEqual([]);
 	});
 
@@ -128,6 +140,11 @@ describe("agent/types contracts", () => {
 		const ctx: AgentContext = {
 			projectId: "p1",
 			activeSceneId: null,
+			fps: null,
+			duration: null,
+			resolution: null,
+			aspectRatio: null,
+			projectName: null,
 			mediaAssets: [],
 			playbackTimeMs: 0,
 		};

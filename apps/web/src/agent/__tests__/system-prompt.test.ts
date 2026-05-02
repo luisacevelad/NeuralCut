@@ -5,6 +5,11 @@ import type { AgentContext } from "@/agent/types";
 const BASE_CONTEXT: AgentContext = {
 	projectId: "proj-1",
 	activeSceneId: "scene-A",
+	fps: null,
+	duration: null,
+	resolution: null,
+	aspectRatio: null,
+	projectName: null,
 	mediaAssets: [],
 	playbackTimeMs: 0,
 };
@@ -18,6 +23,11 @@ describe("buildSystemPrompt", () => {
 		const context: AgentContext = {
 			projectId: "proj-1",
 			activeSceneId: "scene-A",
+			fps: 30,
+			duration: 60,
+			resolution: { width: 1920, height: 1080 },
+			aspectRatio: "16:9",
+			projectName: "Test Project",
 			mediaAssets: [
 				{ id: "m1", name: "intro.mp4", type: "video", duration: 30 },
 				{ id: "m2", name: "bgm.mp3", type: "audio", duration: 180 },
@@ -31,7 +41,10 @@ describe("buildSystemPrompt", () => {
 		expect(prompt).toContain("bgm.mp3");
 		expect(prompt).toContain("video, 30s");
 		expect(prompt).toContain("audio, 180s");
-		expect(prompt).toContain("Project: proj-1");
+		expect(prompt).toContain("Test Project");
+		expect(prompt).toContain("1920x1080 (16:9)");
+		expect(prompt).toContain("30fps");
+		expect(prompt).toContain("60s");
 		expect(prompt).toContain("Active scene: scene-A");
 		expect(prompt).toContain("Playback position: 15000ms");
 		expect(prompt).toContain("NeuralCut video editor");
@@ -41,6 +54,11 @@ describe("buildSystemPrompt", () => {
 		const context: AgentContext = {
 			projectId: "proj-1",
 			activeSceneId: "scene-A",
+			fps: null,
+			duration: null,
+			resolution: null,
+			aspectRatio: null,
+			projectName: null,
 			mediaAssets: [
 				{ id: "m1", name: "intro.mp4", type: "video", duration: 30 },
 			],
@@ -56,6 +74,11 @@ describe("buildSystemPrompt", () => {
 		const context: AgentContext = {
 			projectId: "proj-1",
 			activeSceneId: "scene-A",
+			fps: null,
+			duration: null,
+			resolution: null,
+			aspectRatio: null,
+			projectName: null,
 			mediaAssets: [
 				{ id: "m1", name: "conclu.mov", type: "video", duration: 60 },
 			],
@@ -81,6 +104,11 @@ describe("buildSystemPrompt", () => {
 		const context: AgentContext = {
 			projectId: "proj-2",
 			activeSceneId: null,
+			fps: null,
+			duration: null,
+			resolution: null,
+			aspectRatio: null,
+			projectName: null,
 			mediaAssets: [],
 			playbackTimeMs: 0,
 		};
@@ -88,7 +116,7 @@ describe("buildSystemPrompt", () => {
 		const prompt = buildSystemPrompt(context);
 
 		expect(prompt).toContain("No media assets loaded.");
-		expect(prompt).toContain("Project: proj-2");
+		expect(prompt).toContain("proj-2");
 		expect(prompt).toContain("No active scene");
 		expect(prompt).toContain("Playback position: 0ms");
 	});
@@ -97,6 +125,11 @@ describe("buildSystemPrompt", () => {
 		const context: AgentContext = {
 			projectId: null,
 			activeSceneId: null,
+			fps: null,
+			duration: null,
+			resolution: null,
+			aspectRatio: null,
+			projectName: null,
 			mediaAssets: [],
 			playbackTimeMs: 0,
 		};
@@ -182,5 +215,49 @@ describe("buildSystemPrompt", () => {
 		const prompt = buildSystemPrompt(BASE_CONTEXT, []);
 
 		expect(prompt).not.toContain("Available tools:");
+	});
+
+	test("shows project metadata line with resolution, fps, and duration", () => {
+		const context: AgentContext = {
+			projectId: "proj-1",
+			activeSceneId: "scene-A",
+			fps: 30,
+			duration: 45.2,
+			resolution: { width: 1080, height: 1920 },
+			aspectRatio: "9:16",
+			projectName: "Viral Short",
+			mediaAssets: [],
+			playbackTimeMs: 0,
+		};
+
+		const prompt = buildSystemPrompt(context);
+
+		expect(prompt).toContain("1080x1920 (9:16)");
+		expect(prompt).toContain("30fps");
+		expect(prompt).toContain("45.2s");
+	});
+
+	test("falls back to projectId when projectName is null", () => {
+		const context: AgentContext = {
+			projectId: "proj-abc",
+			activeSceneId: "scene-A",
+			fps: null,
+			duration: null,
+			resolution: null,
+			aspectRatio: null,
+			projectName: null,
+			mediaAssets: [],
+			playbackTimeMs: 0,
+		};
+
+		const prompt = buildSystemPrompt(context);
+
+		expect(prompt).toContain("proj-abc");
+	});
+
+	test("omits metadata line when all metadata fields are null", () => {
+		const prompt = buildSystemPrompt(BASE_CONTEXT);
+
+		expect(prompt).not.toContain("fps");
 	});
 });

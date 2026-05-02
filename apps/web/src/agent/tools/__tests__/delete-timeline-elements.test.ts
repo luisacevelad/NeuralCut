@@ -18,6 +18,11 @@ await import("@/agent/tools/delete-timeline-elements.tool");
 const context: AgentContext = {
 	projectId: "proj-1",
 	activeSceneId: "scene-A",
+	fps: null,
+	duration: null,
+	resolution: null,
+	aspectRatio: null,
+	projectName: null,
 	mediaAssets: [],
 	playbackTimeMs: 0,
 };

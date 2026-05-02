@@ -27,6 +27,11 @@ jest.mock("@/agent/context", () => ({
 		getContext: () => ({
 			projectId: null,
 			activeSceneId: null,
+			fps: null,
+			duration: null,
+			resolution: null,
+			aspectRatio: null,
+			projectName: null,
 			mediaAssets: [],
 			playbackTimeMs: 0,
 		}),
@@ -95,6 +100,11 @@ toolRegistry.register("_test_throwing_tool", throwingTool);
 const MOCK_CONTEXT: AgentContext = {
 	projectId: "proj-1",
 	activeSceneId: "scene-A",
+	fps: null,
+	duration: null,
+	resolution: null,
+	aspectRatio: null,
+	projectName: null,
 	mediaAssets: [],
 	playbackTimeMs: 0,
 };
@@ -443,6 +453,11 @@ describe("orchestrator", () => {
 		const context: AgentContext = {
 			projectId: "special-proj",
 			activeSceneId: "scene-X",
+			fps: null,
+			duration: null,
+			resolution: null,
+			aspectRatio: null,
+			projectName: null,
 			mediaAssets: [
 				{ id: "m1", name: "a.mp4", type: "video", duration: 10 },
 			],

@@ -5,6 +5,11 @@ import type { AgentContext } from "@/agent/types";
 const MOCK_CONTEXT: AgentContext = {
 	projectId: "proj-1",
 	activeSceneId: "scene-A",
+	fps: null,
+	duration: null,
+	resolution: null,
+	aspectRatio: null,
+	projectName: null,
 	mediaAssets: [{ id: "m1", name: "clip.mp4", type: "video", duration: 60 }],
 	playbackTimeMs: 3000,
 };

@@ -30,6 +30,11 @@ const chatRequestSchema = z.object({
 	context: z.object({
 		projectId: z.string().nullable(),
 		activeSceneId: z.string().nullable(),
+		fps: z.number().nullable(),
+		duration: z.number().nullable(),
+		resolution: z.object({ width: z.number(), height: z.number() }).nullable(),
+		aspectRatio: z.string().nullable(),
+		projectName: z.string().nullable(),
 		mediaAssets: z.array(
 			z.object({
 				id: z.string(),

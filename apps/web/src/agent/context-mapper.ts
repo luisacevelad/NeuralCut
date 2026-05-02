@@ -3,7 +3,7 @@ import type { AgentContext, AgentTimelineTrack } from "@/agent/types";
 type AssetLookup = Map<string, { name: string }>;
 
 export function buildContextFromEditorState(params: {
-	project: { metadata: { id: string } } | null;
+	project: ProjectInput | null;
 	activeScene: ActiveSceneInput | null;
 	assets: Array<{ id: string; name: string; type: string; duration?: number }>;
 	currentTimeTicks: number;
@@ -15,9 +15,18 @@ export function buildContextFromEditorState(params: {
 		assetLookup.set(a.id, { name: a.name });
 	}
 
+	const project = params.project;
+
 	return {
-		projectId: params.project?.metadata.id ?? null,
+		projectId: project?.metadata.id ?? null,
 		activeSceneId: params.activeScene?.id ?? null,
+		fps: project ? projectFpsToFloat(project.settings?.fps) : null,
+		duration: project?.metadata.duration ?? null,
+		resolution: project?.settings?.canvasSize ?? null,
+		aspectRatio: project?.settings?.canvasSize
+			? computeAspectRatio(project.settings.canvasSize)
+			: null,
+		projectName: project?.metadata.name ?? null,
 		mediaAssets: params.assets.map((a) => ({
 			id: a.id,
 			name: a.name,
@@ -35,6 +44,14 @@ export function buildContextFromEditorState(params: {
 		),
 	};
 }
+
+type ProjectInput = {
+	metadata: { id: string; name?: string; duration?: number };
+	settings?: {
+		fps?: { numerator: number; denominator: number };
+		canvasSize?: { width: number; height: number };
+	};
+};
 
 type ActiveSceneInput = {
 	id: string;
@@ -70,36 +87,60 @@ function buildTimelineTracks(
 		const trackType = mapOverlayTrackType(track.type);
 		const trackRef = nextRef(counters, trackType);
 		tracks.push(
-			toTimelineTrack(track, trackType, trackRef, ticksPerSecond, assetLookup, counters, {
-				position: position++,
-				visualLayer: overlayTracks.length - index,
-				isVisualLayer: true,
-				stacking: index === 0 ? "top" : "above_main",
-			}),
+			toTimelineTrack(
+				track,
+				trackType,
+				trackRef,
+				ticksPerSecond,
+				assetLookup,
+				counters,
+				{
+					position: position++,
+					visualLayer: overlayTracks.length - index,
+					isVisualLayer: true,
+					stacking: index === 0 ? "top" : "above_main",
+				},
+			),
 		);
 	}
 
 	if (scene.tracks.main) {
 		const trackRef = nextRef(counters, "main");
 		tracks.push(
-			toTimelineTrack(scene.tracks.main, "main", trackRef, ticksPerSecond, assetLookup, counters, {
-				position: position++,
-				visualLayer: 0,
-				isVisualLayer: true,
-				stacking: "main",
-			}),
+			toTimelineTrack(
+				scene.tracks.main,
+				"main",
+				trackRef,
+				ticksPerSecond,
+				assetLookup,
+				counters,
+				{
+					position: position++,
+					visualLayer: 0,
+					isVisualLayer: true,
+					stacking: "main",
+				},
+			),
 		);
 	}
 
 	for (const track of scene.tracks.audio ?? []) {
 		const trackRef = nextRef(counters, "audio");
 		tracks.push(
-			toTimelineTrack(track, "audio", trackRef, ticksPerSecond, assetLookup, counters, {
-				position: position++,
-				visualLayer: null,
-				isVisualLayer: false,
-				stacking: "audio",
-			}),
+			toTimelineTrack(
+				track,
+				"audio",
+				trackRef,
+				ticksPerSecond,
+				assetLookup,
+				counters,
+				{
+					position: position++,
+					visualLayer: null,
+					isVisualLayer: false,
+					stacking: "audio",
+				},
+			),
 		);
 	}
 
@@ -137,7 +178,10 @@ function toTimelineTrack(
 			.filter(hasTimelineElementShape)
 			.map((element) => {
 				const start = toSeconds(element.startTime, ticksPerSecond);
-				const end = toSeconds(element.startTime + element.duration, ticksPerSecond);
+				const end = toSeconds(
+					element.startTime + element.duration,
+					ticksPerSecond,
+				);
 				const duration = end - start;
 				const assetId = hasMediaId(element) ? element.mediaId : undefined;
 				const assetName = assetId ? assetLookup.get(assetId)?.name : undefined;
@@ -264,4 +308,20 @@ function hasNonEmptyArray(obj: unknown, key: string): boolean {
 	if (typeof obj !== "object" || obj === null || !(key in obj)) return false;
 	const value = (obj as Record<string, unknown>)[key];
 	return Array.isArray(value) && value.length > 0;
+}
+
+function projectFpsToFloat(
+	fps: { numerator: number; denominator: number } | undefined,
+): number | null {
+	if (!fps) return null;
+	return fps.numerator / fps.denominator;
+}
+
+function computeAspectRatio(size: { width: number; height: number }): string {
+	const g = gcd(size.width, size.height);
+	return `${size.width / g}:${size.height / g}`;
+}
+
+function gcd(a: number, b: number): number {
+	return b === 0 ? a : gcd(b, a % b);
 }

@@ -3,11 +3,18 @@ import type { AgentContext, AgentMode } from "@/agent/types";
 const PLAN_MODE_INSTRUCTIONS = `## MODE: PLAN (READ-ONLY)
 You cannot edit. Only read tools, load_context, list_skills, load_skill, ask_user, and submit_plan.
 
-Workflow:
-1. Analyze: use read-only tools + load_context to see/hear footage
-2. Discover: list_skills for relevant editing patterns
-3. Clarify: ask_user if anything ambiguous
-4. Plan: submit_plan with structured steps referencing SPECIFIC tools, timestamps, element IDs
+Workflow — follow these steps IN ORDER:
+1. Analyze: use read-only tools + load_context to see/hear footage. Understand the timeline and assets.
+2. Discover skills: for NON-TRIVIAL requests (edits with 3+ steps, style-driven edits, viral formats, pitch videos), call list_skills → load_skill to load relevant technique recipes BEFORE planning. Skip this for simple, well-specified requests.
+3. Clarify: call ask_user to resolve missing decisions BEFORE submit_plan. You may ask 1-3 questions. Use ask_user with the 'questions' array parameter to ask multiple questions in a single call. Each question can have its own quick-reply options.
+4. Plan: submit_plan with structured steps referencing SPECIFIC tools, timestamps, element IDs.
+
+Question policy:
+- If a missing decision would materially change the edit, ask_user BEFORE submitting a plan. Do not guess.
+- Prefer ask_user over assumptions for style, scope, missing assets, unclear targets, or conflicting instructions.
+- For multi-question: pass questions: [{ question: "...", options: [...] }, ...]. The user answers each in sequence.
+- Ask only high-leverage questions. Keep them short. Use options when possible.
+- If the user already gave enough direction, do not ask unnecessary questions — go straight to submit_plan.
 
 Plan quality: each step must name specific tools and values. Order by dependency. Be honest about limitations. Submit when you have enough context.`;
 

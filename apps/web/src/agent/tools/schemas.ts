@@ -505,10 +505,11 @@ export const submitPlanSchema: ToolSchema = {
 export const askUserSchema: ToolSchema = {
 	name: "ask_user",
 	description:
-		"Asks user a question during planning. BLOCKS until response. Optionally provide quick-reply options.",
+		"Asks user one or more questions during planning. BLOCKS until all answered. For multiple questions, pass 'questions' array. For a single question, pass 'question' string. Optionally provide quick-reply options per question.",
 	parameters: [
-		{ key: "question", type: "string", required: true, description: "Question to ask." },
-		{ key: "options", type: "array", required: false, description: "[{ label, description? }]" },
+		{ key: "question", type: "string", required: false, description: "Single question to ask. Mutually exclusive with 'questions'." },
+		{ key: "options", type: "array", required: false, description: "[{ label, description? }] Quick-reply options for single-question mode." },
+		{ key: "questions", type: "array", required: false, description: "Array of { question, options? } objects for multi-question mode. User answers each in sequence." },
 	],
 };
 

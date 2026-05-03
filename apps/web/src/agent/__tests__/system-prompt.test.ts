@@ -166,6 +166,7 @@ describe("buildSystemPrompt", () => {
 
 		expect(prompt).toContain("MODE: PLAN");
 		expect(prompt).toContain("READ-ONLY");
+		expect(prompt).toContain("ask_user BEFORE submitting a plan");
 	});
 
 	test("includes execute mode when explicitly passed", () => {
@@ -251,5 +252,38 @@ describe("buildSystemPrompt", () => {
 		const prompt = buildSystemPrompt(BASE_CONTEXT);
 
 		expect(prompt).not.toContain("fps");
+	});
+
+	// -----------------------------------------------------------------------
+	// Plan-mode prompt strength — skill loading + multi-question guidance
+	// -----------------------------------------------------------------------
+
+	test("plan mode instructs skill loading for non-trivial requests", () => {
+		const prompt = buildSystemPrompt(BASE_CONTEXT, "plan");
+
+		expect(prompt).toContain("list_skills");
+		expect(prompt).toContain("load_skill");
+	});
+
+	test("plan mode mentions multi-question ask_user support", () => {
+		const prompt = buildSystemPrompt(BASE_CONTEXT, "plan");
+
+		// The prompt should mention the 'questions' array parameter
+		expect(prompt).toMatch(/questions.*array|ask_user.*multiple/i);
+	});
+
+	test("plan mode instructs to ask before plan when scope/style missing", () => {
+		const prompt = buildSystemPrompt(BASE_CONTEXT, "plan");
+
+		expect(prompt).toContain("ask_user");
+		expect(prompt).toMatch(/before.*submit_plan|BEFORE.*plan/i);
+	});
+
+	test("plan mode includes explicit step-by-step workflow", () => {
+		const prompt = buildSystemPrompt(BASE_CONTEXT, "plan");
+
+		// Should have numbered workflow steps
+		expect(prompt).toMatch(/1\.\s/);
+		expect(prompt).toMatch(/2\.\s/);
 	});
 });

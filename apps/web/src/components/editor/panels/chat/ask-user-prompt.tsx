@@ -7,24 +7,29 @@ import { Button } from "@/components/ui/button";
 import { usePlanStore } from "@/stores/plan-store";
 
 export function AskUserPrompt() {
-	const pendingQuestion = usePlanStore((s) => s.pendingQuestion);
-	const answerQuestion = usePlanStore((s) => s.answerQuestion);
+	const currentQuestion = usePlanStore((s) => s.currentPendingQuestion);
+	const pendingQuestions = usePlanStore((s) => s.pendingQuestions);
+	const answerPendingQuestion = usePlanStore((s) => s.answerPendingQuestion);
 	const [freeForm, setFreeForm] = useState("");
+
+	const totalQuestions = pendingQuestions.length;
+	const answeredCount = pendingQuestions.filter((q) => q.answer).length;
 
 	const handleOptionClick = useCallback(
 		(label: string) => {
-			answerQuestion(label);
+			if (!currentQuestion) return;
+			answerPendingQuestion(currentQuestion.id, label);
 			setFreeForm("");
 		},
-		[answerQuestion],
+		[answerPendingQuestion, currentQuestion],
 	);
 
 	const handleFreeFormSubmit = useCallback(() => {
 		const trimmed = freeForm.trim();
-		if (!trimmed) return;
-		answerQuestion(trimmed);
+		if (!trimmed || !currentQuestion) return;
+		answerPendingQuestion(currentQuestion.id, trimmed);
 		setFreeForm("");
-	}, [freeForm, answerQuestion]);
+	}, [freeForm, answerPendingQuestion, currentQuestion]);
 
 	const handleKeyDown = useCallback(
 		(e: React.KeyboardEvent) => {
@@ -36,7 +41,7 @@ export function AskUserPrompt() {
 		[handleFreeFormSubmit],
 	);
 
-	if (!pendingQuestion || pendingQuestion.answer) return null;
+	if (!currentQuestion) return null;
 
 	return (
 		<div className="flex flex-col gap-2 rounded-md border border-blue-500/30 bg-blue-500/5 px-3 py-2.5">
@@ -49,12 +54,19 @@ export function AskUserPrompt() {
 				<span className="text-xs font-medium text-blue-400">
 					Agent question
 				</span>
+				{totalQuestions > 1 && (
+					<span className="text-muted-foreground ml-auto text-[10px]">
+						{answeredCount + 1} of {totalQuestions}
+					</span>
+				)}
 			</div>
-			<p className="text-xs text-foreground/90">{pendingQuestion.question}</p>
+			<p className="text-xs text-foreground/90">
+				{currentQuestion.question}
+			</p>
 
-			{pendingQuestion.options && pendingQuestion.options.length > 0 && (
+			{currentQuestion.options && currentQuestion.options.length > 0 && (
 				<div className="flex flex-wrap gap-1.5">
-					{pendingQuestion.options.map((opt) => (
+					{currentQuestion.options.map((opt) => (
 						<Button
 							key={opt.label}
 							variant="outline"

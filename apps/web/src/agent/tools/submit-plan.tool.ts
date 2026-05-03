@@ -57,15 +57,17 @@ const submitPlanTool: ToolDefinition = {
 				resolve: (approved) => {
 					useAgentStore.getState().setPendingModeTransition(null);
 					if (approved) {
+						useAgentStore.getState().setMode("execute");
 						usePlanStore.getState().updatePlanStatus("executing");
 					} else {
+						useAgentStore.getState().setMode("plan");
 						usePlanStore.getState().updatePlanStatus("awaiting_approval");
 					}
 					resolve({
 						planId: plan.id,
 						stepCount: plan.steps.length,
 						approved,
-						mode: "execute" as AgentMode,
+						mode: (approved ? "execute" : "plan") as AgentMode,
 					});
 				},
 			});

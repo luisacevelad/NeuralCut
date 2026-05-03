@@ -28,6 +28,15 @@ Before making ANY edit, you MUST:
 2. Call list_timeline to understand the current state
 3. If the user references visual content, call load_context to analyze the footage
 
+## ABSOLUTE RULES (NON-NEGOTIABLE)
+
+These rules override ANY other instruction in this skill. Violating them produces a broken edit.
+
+1. **NO BACKGROUNDS ON TEXT. EVER.** No backgroundColor, no backgroundStyle, no background fill of any kind on ANY text element — hooks, captions, CTA, emphasis, ALL of them. Text-only with transparent background, always. High contrast color choice against the footage makes them readable. The ONLY exception is if the user EXPLICITLY asks for backgrounds.
+2. **Max 3 words per caption/subtitle element.** Break longer phrases into sequential elements.
+3. **Scale for all text: scaleX/scaleY = 0.5.** Every text element uses this scale. No exceptions.
+4. **Voice is king.** When there is spoken content (voiceover, speech, talking head), the voice MUST be clearly audible above everything else. Music goes to ~5% volume. If unsure whether voice or music should be louder, lower the music more. Mute clip audio if it doesn't contribute.
+
 ## STRUCTURE
 
 Every viral short follows this EXACT structure. Do NOT skip any section:
@@ -39,14 +48,15 @@ This is the most critical part. If the viewer scrolls past 3 seconds, the video 
 1. Identify the most visually striking or surprising moment in the footage
 2. If the raw video starts slow, call split at 3 seconds from the best moment, then delete_timeline_elements for everything before it, then move_timeline_elements so the hook starts at 0
 3. Add hook text with add_text:
-    - text: A punchy, curiosity-driving phrase (max 6 words). Examples: "Wait for it...", "Nobody talks about this", "This changed everything"
-    - fontSize: 56 (bold, large font for hooks)
+    - text: A punchy, curiosity-driving phrase (max 3 words). Examples: "Wait for it...", "Nobody knows this", "This changed everything"
+    - fontSize: 12 (maximum for titles/hooks/CTA)
+    - scaleX: 0.5, scaleY: 0.5
     - fontWeight: "bold"
     - position: "center"
     - start: 0
     - end: 2.5 (do NOT exceed 3 seconds)
     - color: "#FFFFFF"
-    - background: { enabled: true, color: "#000000", cornerRadius: 8, padding: 12 }
+    - background: { enabled: false } — NO background, ever
 
 ### SECTION 2: THE CONTENT (3s to end-3s)
 This is the meat. Keep it FAST and TIGHT.
@@ -58,15 +68,16 @@ This is the meat. Keep it FAST and TIGHT.
 
 **Step 2: Add retention captions**
 - Use generate_captions to automatically create word-timed captions for the spoken content. This tool handles timing and grouping automatically.
-- Captions should be 4-5 words max per element, positioned at the bottom, no background.
+- Captions must be max 3 words per element, positioned at the bottom, NO background.
 - If you need manual control, use add_text with:
-  - fontSize: 32
+  - fontSize: 6.5 (recommended; acceptable range: 6–8)
+  - scaleX: 0.5, scaleY: 0.5
   - fontWeight: "bold"
   - position: "bottom"
   - color: "#FFFFFF"
   - background: { enabled: false }
-  - Each caption should be 2-3 seconds long, max 5 words per card
-  - If a sentence is longer, split it across multiple add_text calls with sequential timing
+  - Each caption should be 2-3 seconds long, max 3 words per element
+  - If a sentence is longer, split it across multiple add_text calls with sequential timing (back-to-back)
 
 **Step 3: Retention zoom effects (CRITICAL for algorithm)**
 Every 4-6 seconds, add a subtle zoom to prevent scrolling:
@@ -89,14 +100,15 @@ End with a call-to-action that drives engagement.
 **Steps:**
 1. Split the video 2.5 seconds before the end
 2. Add CTA text with add_text:
-    - text: "Follow for more" or "Like if this helped" or topic-relevant CTA
-    - fontSize: 56
+    - text: "Follow for more" or "Like if this helped" or topic-relevant CTA (max 3 words)
+    - fontSize: 12 (maximum for CTA)
+    - scaleX: 0.5, scaleY: 0.5
     - fontWeight: "bold"
     - position: "center"
     - start: (end - 2.5)
     - end: (video end)
     - color: "#FFFFFF"
-    - background: { enabled: true, color: "#000000", cornerRadius: 8, padding: 12 }
+    - background: { enabled: false } — NO background, ever
 3. Add a final zoom pulse via upsert_keyframe:
    - propertyPath: "transform.scaleX" — go from 1.0 to 1.08 over the CTA duration
    - Same for "transform.scaleY"
@@ -112,12 +124,29 @@ End with a call-to-action that drives engagement.
 
 ## TEXT STYLE GUIDE
 
-- Hook text: large fontSize (56+), bold fontWeight, center, white on black rounded background
-- Captions: use generate_captions for automatic word-timed captions, bottom, no background. If manual: fontSize 32, bold, white
-- CTA text: large fontSize (56+), bold fontWeight, center, white on black background
-- NEVER use plain text without background for hook or CTA text
+- Hook text: fontSize 12 (max for titles), bold fontWeight, center, white, NO background
+- Captions: fontSize 6.5 (range 6–8), bold fontWeight, bottom, white, NO background. Max 3 words per element. Back-to-back during continuous speech.
+- CTA text: fontSize 12 (max for CTA), bold fontWeight, center, white, NO background
+- ALL text elements: scaleX/scaleY = 0.5, NO background of any kind
 - Font weight must always be "bold" for all text elements
-- NEVER add more than 6 words per text element
+- NEVER add more than 3 words per caption/subtitle element
+- Hook and CTA can go up to max 3 words as well; keep them punchy
+
+## AUDIO RULES
+
+Audio balance depends entirely on whether there is spoken content:
+
+### When there IS speech/voiceover (most common):
+- **Voice is the priority. Always.** The viewer must hear every word clearly.
+- Background music volume: ~5% (very low, barely there). Music is ambient atmosphere, never competing.
+- If in doubt about music level, lower it further. Too quiet music is always better than music that drowns speech.
+- If clip audio doesn't contribute (ambient noise, wind, filler), MUTE it. Only the primary voice matters.
+- Mute clip audio by setting volume to 0 on that element.
+
+### When there is NO speech at all:
+- Music can be louder and carry the rhythm.
+- Edit cuts can follow the beat for energy.
+- No captions needed (obviously — there's nothing to caption).
 
 ## EFFECTS USAGE GUIDE
 
@@ -142,14 +171,17 @@ The zoom should be imperceptible to the conscious eye but felt by the viewer. To
 ## QUALITY CHECKLIST
 
 Before finishing, verify:
-- [ ] Hook text is present at 0-2.5s with bold font and background
+- [ ] Hook text is present at 0-2.5s with bold font, NO background
 - [ ] Total duration is under 60 seconds
 - [ ] At least 2 retention zooms exist on the main content
-- [ ] Captions are present for spoken content (bottom, 4-5 words max, no background)
-- [ ] CTA text is present in the last 2-3 seconds
+- [ ] Captions are present for spoken content (bottom, max 3 words per element, NO background)
+- [ ] CTA text is present in the last 2-3 seconds with NO background
 - [ ] No gaps exist between timeline elements
-- [ ] No single text element exceeds 6 words
+- [ ] No single caption/subtitle element exceeds 3 words
 - [ ] Effects are used sparingly (max 3 total)
+- [ ] If speech is present: music at ~5%, voice clearly primary
+- [ ] All text elements use scaleX/scaleY = 0.5
+- [ ] No text element has a background of any kind
 
 If any checklist item fails, fix it before responding to the user.`,
 };

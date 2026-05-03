@@ -80,12 +80,14 @@ Every short needs at minimum: a hook text element in the first 3 seconds, and ca
 #### CRITICAL: Subtitle Rules
 When generating captions/subtitles, these rules are NON-NEGOTIABLE:
 
-1. **Scale: ALWAYS 5%.** Every text element created for subtitles must use scale 5%. Not 100%, not 1% — exactly 5%. This is not optional.
-2. **Font size: 60–70 max.** Subtitle text elements must have a fontSize between 60 and 70. Never exceed 70. Lower is acceptable for stylistic reasons, but the ceiling is 70.
-3. **NO background. EVER.** Subtitles must NEVER have a background color or background fill of any kind. They must be text-only — transparent background, always. If you find yourself adding a backgroundColor or backgroundStyle to a subtitle, stop and remove it. This applies to all subtitle elements: captions, hook text, CTA text, emphasis text — none of them get backgrounds.
-4. **Max 3 words per text element.** Each subtitle/caption text element must contain no more than 3 words. Break longer phrases into multiple sequential elements if needed. This keeps text punchy and readable on mobile screens.
+1. **Scale: ALWAYS scaleX/scaleY = 0.5.** Every text element for subtitles/captions uses scaleX: 0.5, scaleY: 0.5. No exceptions.
+2. **Font size by element type:**
+   - **Captions/subtitles:** fontSize 6.5 (recommended). Acceptable range: 6–8. Never exceed 8.
+   - **Titles / hooks / CTA / emphasis:** fontSize max 12. These need to stand out from captions.
+3. **NO background. EVER.** Subtitles must NEVER have a background color or background fill of any kind. They must be text-only — transparent background, always. If you find yourself adding a backgroundColor or backgroundStyle to ANY text element (captions, hook text, CTA text, emphasis text), stop and remove it. The ONLY exception is if the user explicitly asks for backgrounds.
+4. **Max 3 words per caption/subtitle element.** Each subtitle/caption text element must contain no more than 3 words. Break longer phrases into multiple sequential elements if needed. This keeps text punchy and readable on mobile screens.
 
-Use generate_captions to automatically create word-timed caption elements synced to the transcript — each caption should be 3 words max, positioned at the bottom, high contrast against the footage, always with scale 5% and fontSize 60–70.
+Use generate_captions to automatically create word-timed caption elements synced to the transcript — each caption should be 3 words max, positioned at the bottom, high contrast against the footage, always with scaleX/scaleY 0.5 and fontSize 6.5.
 
 ### Step 5: Control visual rhythm
 Review the cut pattern. Long clips (over 5–6 seconds without a cut or visual change) need intervention: either cut, add a text element, or add a subtle scale keyframe to create movement. Use upsert_keyframe with bezier interpolation to add slow, gentle zoom drifts on static shots — this creates the sense of camera movement without actual camera movement.
@@ -93,8 +95,18 @@ Review the cut pattern. Long clips (over 5–6 seconds without a cut or visual c
 ### Step 6: Add CTA
 The last 2–3 seconds need a clear action. Pick a CTA that's specific to this content, not generic. Add it as a text element. If there's a natural endpoint before the raw footage ends, cut there — don't pad to fill time.
 
-### Step 7: Music (if available)
-If the user has uploaded background music, add it as an audio overlay. Set volume low enough that speech is still clearly primary (around 15–25% relative to main audio). If there's no spoken content, music can be full volume and the edit rhythm should loosely follow the beat.
+### Step 7: Music and Audio Balance (if available)
+Audio balance depends on whether there is spoken content:
+
+**When there IS speech/voiceover (most common):**
+- Voice is the priority. The viewer must hear every word clearly.
+- Background music volume: ~5% (very low). Music is ambient atmosphere, never competing.
+- If in doubt about music level, lower it further. Too quiet music is always better than music that drowns speech.
+- If clip audio doesn't contribute (ambient noise, wind), mute it — only the primary voice matters.
+
+**When there is NO speech at all:**
+- Music can be louder and carry the rhythm.
+- Edit cuts can follow the beat for energy.
 
 ## Tool Guidance
 
@@ -106,7 +118,7 @@ If the user has uploaded background music, add it as an audio overlay. Set volum
 
 **upsert_keyframe for zoom drift** — Static shots die on short-form. A slow 1.0 → 1.04 scale over 4–6 seconds using bezier interpolation creates life in a static frame without feeling like a zoom. Always animate both scaleX and scaleY identically.
 
-**add_text for hook and CTA** — Use bold fontWeight for emphasis text like hooks and CTAs. For all subtitle-related text elements (captions, hooks, CTAs, emphasis), ALWAYS set scale to 5% and fontSize between 60–70 max. NEVER add backgrounds to subtitles — no backgroundColor, no backgroundStyle, no background fill of any kind. Subtitles are text-only with transparent background, always readable through high contrast color choice against the footage. For captions, prefer generate_captions which handles word-timing automatically.
+**add_text for hook and CTA** — Use bold fontWeight for emphasis text like hooks and CTAs. For ALL text elements: ALWAYS set scaleX/scaleY to 0.5. Hook/CTA/emphasis text: fontSize max 12. Caption/subtitle text: fontSize 6.5 (range 6–8). NEVER add backgrounds to ANY text — no backgroundColor, no backgroundStyle, no background fill of any kind. Text-only with transparent background, always readable through high contrast color choice against the footage. For captions, prefer generate_captions which handles word-timing automatically.
 
 ## Common Patterns
 

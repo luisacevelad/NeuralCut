@@ -98,7 +98,16 @@ For static shots that need energy, add slow scale or position keyframes using up
 Use apply_effect sparingly: vignette on emotionally heavy moments (low intensity), sharpen for footage that feels soft. Don't apply effects uniformly — use them at specific moments where they serve a purpose.
 
 ### Step 7: Music balance
-If music is present, adjust its volume so it supports without competing. During moments of spoken audio, music should be clearly in the background. During visual-only segments (no voiceover), music can rise. Use volume keyframes on the music element if the balance needs to shift dynamically throughout the piece.
+If music is present, adjust its volume based on whether there is spoken content:
+
+**During voiceover/interview audio:**
+- Music at ~5% volume — barely audible, purely atmospheric. The voice MUST be clearly primary.
+- If in doubt about the level, lower the music further. Voice clarity always wins.
+
+**During visual-only segments (no voiceover):**
+- Music can rise to carry the emotional weight and rhythm.
+
+Use volume keyframes on the music element if the balance needs to shift dynamically throughout the piece.
 
 ## Tool Guidance
 

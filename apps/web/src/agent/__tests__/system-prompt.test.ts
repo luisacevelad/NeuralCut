@@ -201,6 +201,34 @@ describe("buildSystemPrompt", () => {
 		expect(prompt).toContain("45.2s");
 	});
 
+	test("includes coordinate system explanation when resolution is present", () => {
+		const context: AgentContext = {
+			projectId: "proj-1",
+			activeSceneId: "scene-A",
+			fps: 30,
+			duration: 45.2,
+			resolution: { width: 1920, height: 1080 },
+			aspectRatio: "16:9",
+			projectName: "Test",
+			mediaAssets: [],
+			playbackTimeMs: 0,
+		};
+
+		const prompt = buildSystemPrompt(context);
+
+		expect(prompt).toContain("COORDINATE SYSTEM");
+		expect(prompt).toContain("origin (0,0) = canvas center");
+		expect(prompt).toContain("±960 X");
+		expect(prompt).toContain("±540 Y");
+		expect(prompt).toContain("New text defaults to (0,0)");
+	});
+
+	test("omits coordinate system explanation when no resolution", () => {
+		const prompt = buildSystemPrompt(BASE_CONTEXT);
+
+		expect(prompt).not.toContain("COORDINATE SYSTEM");
+	});
+
 	test("falls back to projectId when projectName is null", () => {
 		const context: AgentContext = {
 			projectId: "proj-abc",

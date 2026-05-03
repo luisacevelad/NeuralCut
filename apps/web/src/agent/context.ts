@@ -592,7 +592,7 @@ export const EditorContextAdapter = {
 			return { error: "Invalid time range" };
 		}
 
-		const resolvedPosition = getTextPosition(position);
+		const resolvedPosition = getTextPosition(position, getCanvasSize(core));
 		const overridePosition =
 			positionX !== undefined || positionY !== undefined
 				? {
@@ -1643,6 +1643,23 @@ function hasProperty(obj: unknown, prop: string): boolean {
 	return typeof obj === "object" && obj !== null && prop in obj;
 }
 
+function getCanvasSize(
+	core: ReturnType<typeof EditorCore.getInstance>,
+): { width: number; height: number } | null {
+	const project = core.project.getActiveOrNull();
+	const canvasSize = (
+		project as { settings?: { canvasSize?: { width: number; height: number } } } | null
+	)?.settings?.canvasSize;
+	if (
+		canvasSize &&
+		typeof canvasSize.width === "number" &&
+		typeof canvasSize.height === "number"
+	) {
+		return canvasSize;
+	}
+	return null;
+}
+
 function ticksToSeconds(ticks: number): number {
 	return ticks / TICKS_PER_SECOND;
 }
@@ -1760,15 +1777,20 @@ function getMaxElementDurationTicks({
 	);
 }
 
-function getTextPosition(position: "top" | "center" | "bottom"): {
+function getTextPosition(
+	position: "top" | "center" | "bottom",
+	canvasSize?: { width: number; height: number } | null,
+): {
 	x: number;
 	y: number;
 } {
 	if (position === "top") {
-		return { x: 0, y: -35 };
+		const topY = canvasSize ? -(Math.round(canvasSize.height * 0.4)) : -35;
+		return { x: 0, y: topY };
 	}
 	if (position === "bottom") {
-		return { x: 0, y: 35 };
+		const bottomY = canvasSize ? Math.round(canvasSize.height * 0.4) : 35;
+		return { x: 0, y: bottomY };
 	}
 	return { x: 0, y: 0 };
 }

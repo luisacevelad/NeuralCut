@@ -55,6 +55,13 @@ export function buildSystemPrompt(
 		if (meta) parts.push(meta);
 	}
 
+	if (context.resolution) {
+		const { width, height } = context.resolution;
+		parts.push(
+			`COORDINATE SYSTEM: origin (0,0) = canvas center. positionX/positionY are absolute pixel offsets from center: +X right, -X left, +Y down, -Y up. Visual range ≈ ±${Math.round(width / 2)} X / ±${Math.round(height / 2)} Y. New text defaults to (0,0).`,
+		);
+	}
+
 	parts.push(`Playback position: ${context.playbackTimeMs}ms`);
 	parts.push(mediaSection);
 

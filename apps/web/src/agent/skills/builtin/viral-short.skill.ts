@@ -1,5 +1,19 @@
 import type { SkillDefinition } from "../types";
 import { skillRegistry } from "../registry";
+import {
+	renderCreativeGating,
+	renderVolumeModel,
+	renderSubtitleRules,
+	TEXT_SCALE,
+	CAPTION_FONT_SIZE,
+	CAPTION_FONT_SIZE_MIN,
+	CAPTION_FONT_SIZE_MAX,
+	TITLE_FONT_SIZE_MAX,
+	MAX_WORDS_PER_CAPTION,
+	DEFAULT_TEXT_COLOR,
+	DEFAULT_FONT_WEIGHT,
+	MUSIC_WITH_VOICE_RANGE,
+} from "../shared/short-form-policy";
 
 const viralShortSkill: SkillDefinition = {
 	id: "viral-short",
@@ -21,17 +35,7 @@ const viralShortSkill: SkillDefinition = {
 	author: "system",
 	instructions: `You are operating in VIRAL SHORT mode. Your goal is to transform raw footage into a high-retention short-form video optimized for TikTok, Instagram Reels, and YouTube Shorts.
 
-## ⚠️ MANDATORY CREATIVE GATING
-
-Before planning or editing, check whether the user has provided direction on these creative decisions:
-
-1. **Subtitle position** — bottom (default) vs center vs other?
-2. **Typography style** — font family and weight
-3. **Text color** — white (default), yellow, or custom?
-4. **Visual effects** — zoom, glow, vignette, or clean?
-5. **Clip audio** — keep original audio or mute?
-
-If the user has NOT addressed 3 or more of these, you MUST call ask_user BEFORE submit_plan or any direct editing. Ask 2–3 concrete questions max. If the user says "default", "hacelo vos", "I don't care", "whatever" — use the defaults below and proceed without asking.
+${renderCreativeGating()}
 
 ## MANDATORY PRE-FLIGHT
 
@@ -44,26 +48,11 @@ Before making ANY edit, you MUST:
 
 These rules override ANY other instruction in this skill. Violating them produces a broken edit.
 
-1. **NO BACKGROUNDS ON TEXT. EVER.** No backgroundColor, no backgroundStyle, no background fill of any kind on ANY text element — hooks, captions, CTA, emphasis, ALL of them. Text-only with transparent background, always. High contrast color choice against the footage makes them readable. The ONLY exception is if the user EXPLICITLY asks for backgrounds.
-2. **Max 3 words per caption/subtitle element.** Break longer phrases into sequential elements.
-3. **Scale for all text: scaleX/scaleY = 0.5.** Every text element uses this scale. No exceptions.
-4. **Voice is king.** When there is spoken content (voiceover, speech, talking head), the voice MUST be clearly audible above everything else. Music goes to -15 to -20 volume. If unsure whether voice or music should be louder, lower the music more. Mute clip audio if it doesn't contribute.
+${renderSubtitleRules()}
 
-## VOLUME MODEL (CRITICAL)
+5. **Voice is king.** When there is spoken content (voiceover, speech, talking head), the voice MUST be clearly audible above everything else. Music goes to ${MUSIC_WITH_VOICE_RANGE[0]} to ${MUSIC_WITH_VOICE_RANGE[1]} volume. If unsure whether voice or music should be louder, lower the music more. Mute clip audio if it doesn't contribute.
 
-This editor uses **relative volume offsets**, NOT percentages:
-- **0 = baseline** (no change from original)
-- **Positive = louder** (boost above baseline)
-- **Negative = quieter** (cut below baseline)
-- **muted: true = silent** (use the muted flag, NOT an extreme negative volume)
-
-### Concrete rules:
-- **Voiceover/voice**: keep at 0, or boost +8 to +12 if needed. Never exceed +15.
-- **Background music with voice**: set volume to -15 to -20. Barely perceptible.
-- **Clip audio**: mute by default (muted: true). If user wants it: -10 to -15 with voice present.
-- **Music with NO speech**: 0 or slightly positive (+3 to +5).
-
-NEVER use percentage language ("5% volume"). Always use offset model: 0, +10, -15, -20.
+${renderVolumeModel()}
 
 ## STRUCTURE
 
@@ -77,13 +66,13 @@ This is the most critical part. If the viewer scrolls past 3 seconds, the video 
 2. If the raw video starts slow, call split at 3 seconds from the best moment, then delete_timeline_elements for everything before it, then move_timeline_elements so the hook starts at 0
 3. Add hook text with add_text:
     - text: A punchy, curiosity-driving phrase (max 3 words). Examples: "Wait for it...", "Nobody knows this", "This changed everything"
-    - fontSize: 12 (maximum for titles/hooks/CTA)
-    - scaleX: 0.5, scaleY: 0.5
-    - fontWeight: "bold"
+    - fontSize: ${TITLE_FONT_SIZE_MAX} (maximum for titles/hooks/CTA)
+    - scaleX: ${TEXT_SCALE}, scaleY: ${TEXT_SCALE}
+    - fontWeight: "${DEFAULT_FONT_WEIGHT}"
     - position: "center"
     - start: 0
     - end: 2.5 (do NOT exceed 3 seconds)
-    - color: "#FFFFFF"
+    - color: "${DEFAULT_TEXT_COLOR}"
     - background: { enabled: false } — NO background, ever
 
 ### SECTION 2: THE CONTENT (3s to end-3s)
@@ -96,15 +85,15 @@ This is the meat. Keep it FAST and TIGHT.
 
 **Step 2: Add retention captions**
 - Use generate_captions to automatically create word-timed captions for the spoken content. This tool handles timing and grouping automatically.
-- Captions must be max 3 words per element, positioned at the bottom, NO background.
+- Captions must be max ${MAX_WORDS_PER_CAPTION} words per element, positioned at the bottom, NO background.
 - If you need manual control, use add_text with:
-  - fontSize: 6.5 (recommended; acceptable range: 6–8)
-  - scaleX: 0.5, scaleY: 0.5
-  - fontWeight: "bold"
+  - fontSize: ${CAPTION_FONT_SIZE} (recommended; acceptable range: ${CAPTION_FONT_SIZE_MIN}–${CAPTION_FONT_SIZE_MAX})
+  - scaleX: ${TEXT_SCALE}, scaleY: ${TEXT_SCALE}
+  - fontWeight: "${DEFAULT_FONT_WEIGHT}"
   - position: "bottom"
-  - color: "#FFFFFF"
+  - color: "${DEFAULT_TEXT_COLOR}"
   - background: { enabled: false }
-  - Each caption should be 2-3 seconds long, max 3 words per element
+  - Each caption should be 2-3 seconds long, max ${MAX_WORDS_PER_CAPTION} words per element
   - If a sentence is longer, split it across multiple add_text calls with sequential timing (back-to-back)
 
 **Step 3: Retention zoom effects (CRITICAL for algorithm)**
@@ -129,13 +118,13 @@ End with a call-to-action that drives engagement.
 1. Split the video 2.5 seconds before the end
 2. Add CTA text with add_text:
     - text: "Follow for more" or "Like if this helped" or topic-relevant CTA (max 3 words)
-    - fontSize: 12 (maximum for CTA)
-    - scaleX: 0.5, scaleY: 0.5
-    - fontWeight: "bold"
+    - fontSize: ${TITLE_FONT_SIZE_MAX} (maximum for CTA)
+    - scaleX: ${TEXT_SCALE}, scaleY: ${TEXT_SCALE}
+    - fontWeight: "${DEFAULT_FONT_WEIGHT}"
     - position: "center"
     - start: (end - 2.5)
     - end: (video end)
-    - color: "#FFFFFF"
+    - color: "${DEFAULT_TEXT_COLOR}"
     - background: { enabled: false } — NO background, ever
 3. Add a final zoom pulse via upsert_keyframe:
    - propertyPath: "transform.scaleX" — go from 1.0 to 1.08 over the CTA duration
@@ -152,28 +141,13 @@ End with a call-to-action that drives engagement.
 
 ## TEXT STYLE GUIDE
 
-- Hook text: fontSize 12 (max for titles), bold fontWeight, center, white, NO background
-- Captions: fontSize 6.5 (range 6–8), bold fontWeight, bottom, white, NO background. Max 3 words per element. Back-to-back during continuous speech.
-- CTA text: fontSize 12 (max for CTA), bold fontWeight, center, white, NO background
-- ALL text elements: scaleX/scaleY = 0.5, NO background of any kind
-- Font weight must always be "bold" for all text elements
-- NEVER add more than 3 words per caption/subtitle element
-- Hook and CTA can go up to max 3 words as well; keep them punchy
-
-## AUDIO RULES
-
-Audio balance depends entirely on whether there is spoken content. Follow the VOLUME MODEL rules.
-
-### When there IS speech/voiceover (most common):
-- **Voice is the priority. Always.** The viewer must hear every word clearly.
-- Background music: set volume to -15 to -20 (barely perceptible, pure atmosphere).
-- If in doubt, go lower (-20 to -25). Too quiet is always better than music competing with speech.
-- Clip audio that doesn't contribute (ambient noise, wind, filler): MUTE it (muted: true).
-
-### When there is NO speech at all:
-- Music can stay at 0 or go slightly positive (+3 to +5) for energy.
-- Edit cuts can follow the beat for energy.
-- No captions needed (obviously — there's nothing to caption).
+- Hook text: fontSize ${TITLE_FONT_SIZE_MAX} (max for titles), ${DEFAULT_FONT_WEIGHT} fontWeight, center, white, NO background
+- Captions: fontSize ${CAPTION_FONT_SIZE} (range ${CAPTION_FONT_SIZE_MIN}–${CAPTION_FONT_SIZE_MAX}), ${DEFAULT_FONT_WEIGHT} fontWeight, bottom, white, NO background. Max ${MAX_WORDS_PER_CAPTION} words per element. Back-to-back during continuous speech.
+- CTA text: fontSize ${TITLE_FONT_SIZE_MAX} (max for CTA), ${DEFAULT_FONT_WEIGHT} fontWeight, center, white, NO background
+- ALL text elements: scaleX/scaleY = ${TEXT_SCALE}, NO background of any kind
+- Font weight must always be "${DEFAULT_FONT_WEIGHT}" for all text elements
+- NEVER add more than ${MAX_WORDS_PER_CAPTION} words per caption/subtitle element
+- Hook and CTA can go up to max ${MAX_WORDS_PER_CAPTION} words as well; keep them punchy
 
 ## EFFECTS USAGE GUIDE
 
@@ -201,13 +175,13 @@ Before finishing, verify:
 - [ ] Hook text is present at 0-2.5s with bold font, NO background
 - [ ] Total duration is under 60 seconds
 - [ ] At least 2 retention zooms exist on the main content
-- [ ] Captions are present for spoken content (bottom, max 3 words per element, NO background)
+- [ ] Captions are present for spoken content (bottom, max ${MAX_WORDS_PER_CAPTION} words per element, NO background)
 - [ ] CTA text is present in the last 2-3 seconds with NO background
 - [ ] No gaps exist between timeline elements
-- [ ] No single caption/subtitle element exceeds 3 words
+- [ ] No single caption/subtitle element exceeds ${MAX_WORDS_PER_CAPTION} words
 - [ ] Effects are used sparingly (max 3 total)
-- [ ] If speech is present: music volume at -15 to -20, voice clearly primary
-- [ ] All text elements use scaleX/scaleY = 0.5
+- [ ] If speech is present: music volume at ${MUSIC_WITH_VOICE_RANGE[0]} to ${MUSIC_WITH_VOICE_RANGE[1]}, voice clearly primary
+- [ ] All text elements use scaleX/scaleY = ${TEXT_SCALE}
 - [ ] No text element has a background of any kind
 
 If any checklist item fails, fix it before responding to the user.`,

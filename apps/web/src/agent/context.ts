@@ -1502,8 +1502,8 @@ export const EditorContextAdapter = {
 		}
 
 		if (volume !== undefined) {
-			if (typeof volume !== "number" || volume < 0 || volume > 100) {
-				return { error: "volume must be a number between 0 and 100" };
+			if (typeof volume !== "number" || volume < -100 || volume > 100) {
+				return { error: "volume must be a number between -100 and 100" };
 			}
 			if (element.type !== "video" && element.type !== "audio") {
 				return {
@@ -2065,7 +2065,7 @@ function serializeElement(
 				opacity: element.opacity,
 				blendMode: element.blendMode ?? null,
 				hidden: element.hidden ?? false,
-				volume: element.volume ?? 100,
+				volume: element.volume ?? 0,
 				muted: element.muted ?? false,
 				masks: element.masks ?? [],
 				effects: element.effects ?? [],

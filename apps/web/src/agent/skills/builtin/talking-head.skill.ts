@@ -84,12 +84,14 @@ If no relevant B-roll exists for a jump cut, consider adding a subtle zoom keyfr
 Use the **generate-captions** skill workflow: group transcribed words into 3-word chunks (max 3 words per element, NON-NEGOTIABLE), create text elements in a single batch add_text call with fontSize: 6.5, scaleX: 0.5, scaleY: 0.5, fontFamily: "Vend Sans", no background, positioned at bottom. Ensure captions are back-to-back in continuous speech with no gaps, but do not extend captions into silence. Each caption's timing comes from the actual word boundaries (first word start - 0.15s to last word end + 0.2s).
 
 ### Step 7: Audio balance
-This skill is for talking-head content — the spoken word is the story. Audio balance reflects that:
+This skill is for talking-head content — the spoken word is the story. Audio balance reflects that.
 
-- **Voice is the priority.** Background music (if present) must be at ~5% volume — barely there, purely atmospheric.
-- **If in doubt, lower the music.** Too quiet music is always better than music that competes with speech.
-- **Mute clip audio** if it doesn't contribute (ambient noise, wind, handling sounds). Only the speaker's voice matters.
-- If there are moments with no speech (intro/outro), music can rise slightly, but should remain professional and unobtrusive.
+This editor uses **relative volume offsets**: 0 = baseline (no change), positive = louder, negative = quieter, muted: true = silent. Use update_clip with the volume parameter.
+
+- **Voice is the priority.** Background music (if present) must be at volume -15 to -20 — barely there, purely atmospheric.
+- **If in doubt, go lower** (-20 to -25). Too quiet music is always better than music that competes with speech.
+- **Mute clip audio** (muted: true) if it doesn't contribute (ambient noise, wind, handling sounds). Only the speaker's voice matters.
+- If there are moments with no speech (intro/outro), music can rise to 0 or slightly positive, but should remain professional and unobtrusive.
 
 ### Step 8: Supporting elements (if needed)
 If the content has distinct sections, consider adding a brief text label at section transitions using add_text with appropriate fontSize and fontWeight (position 'top') so viewers can follow the structure. Only add these if the content genuinely has navigable sections — don't force structure that isn't there.

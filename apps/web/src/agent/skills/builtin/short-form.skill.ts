@@ -44,6 +44,24 @@ Think like a viewer with their thumb hovering over the screen. You have 2 second
 
 The short-form format is not a compressed version of longer content — it's a different medium. Information density is high, patience is zero, and visual stimulation must be constant. The spoken word supports the visuals; neither can carry the full load alone.
 
+## ⚠️ MANDATORY CREATIVE GATING
+
+Before planning (submit_plan) or executing any edit on a short-form creative project, you MUST check whether the user has provided direction on these creative decisions:
+
+### Required creative decisions for short-form:
+1. **Subtitle position** — bottom (default) vs center vs other?
+2. **Typography style** — font family and weight
+3. **Text color** — white (default), yellow, or custom?
+4. **Visual effects** — zoom drift, glow, vignette, or clean/no effects?
+5. **Clip audio** — keep original clip audio or mute it?
+
+### Gating rules:
+- If the user has NOT addressed 3 or more of these, you MUST call ask_user BEFORE submit_plan or any direct editing.
+- Ask 2–3 concrete questions max. Use the "Creative Questions" section below for exact wording.
+- If the user says something like "hacelo vos", "default", "decidilo vos", "whatever you think", "I don't care" — treat ALL unanswered decisions as using the Explicit Defaults below and proceed WITHOUT asking.
+- If the user already gave enough direction (e.g. "white text, bottom subtitles, no effects, mute clips"), don't ask anything — just execute.
+- NEVER skip this check. Even in execute mode, if creative decisions are missing, ask_user first.
+
 ## Core Principles
 
 **1. The hook is the whole game.**
@@ -67,23 +85,41 @@ When the user doesn't answer creative questions or doesn't provide style details
 
 - **Rhythm**: dynamic medium-fast — cuts every 2–4 seconds, no clip over 5–6 seconds without visual change
 - **Captions**: YES if there is speech or voiceover. No captions on mute-only content
-- **Music volume**: very low (~5%) when voice is present; music is atmosphere, never competing with speech
-- **Clip audio**: MUTED by default. Original clip audio is noise — only the primary voice matters. Only unmute if the user explicitly wants the clip's original sound
+- **Subtitle position**: bottom
+- **Text color**: white (#FFFFFF)
+- **Font**: default (whatever fontFamily the editor uses by default)
+- **Visual effects**: subtle zoom drift (1.0 → 1.04 over 4–6s) on static shots only. No glow, no vignette, no other effects unless user asked.
+- **Clip audio**: MUTED by default. Original clip audio is noise — only the primary voice matters. Only unmute if the user explicitly wants the clip's original sound.
 - **Text background**: NONE. All text elements have transparent background by default
-- **Zoom drift**: subtle (1.0 → 1.04 over 4–6s) on static shots to create life
+
+## Volume Model (CRITICAL — READ THIS)
+
+This editor uses **relative volume offsets**, NOT percentages. The semantics are:
+
+- **0 = baseline** (no change from original volume)
+- **Positive values = louder** (boost above baseline)
+- **Negative values = quieter** (cut below baseline)
+- **Muted = silent** (use the \`muted: true\` flag, NOT volume: -100)
+
+### Concrete volume rules for short-form with speech:
+- **Voiceover / main voice**: keep at 0 (baseline). If the voice needs a boost, use +8 to +12. Never exceed +15.
+- **Background music when voice is present**: set volume to -15 to -20. The music should be barely perceptible — pure atmosphere. If unsure, go lower (-20 to -25). Too quiet is always better than too loud.
+- **Clip audio (original footage sound)**: mute by default (muted: true). Only unmute if the user explicitly wants it, and even then lower it to -10 to -15 if voice is also present.
+- **Music when NO speech**: can stay at 0 or go slightly positive (+3 to +5) for energy.
+
+### NEVER use percentage language for volume.
+Do NOT say "5% volume", "15% volume", "25% volume". This is WRONG for this editor. Always use the offset model: 0, +10, -15, -20, etc.
 
 ## Creative Questions (ask only when definition is missing)
 
-Before you start editing, if the user hasn't given enough style direction, ask ONLY the concrete decisions that actually change the output. Keep it to 2–3 questions max — not a branding questionnaire.
+These are the concrete questions you should ask via ask_user when the Creative Gating check determines decisions are missing. Pick 2–3 max — the most impactful unknowns:
 
-Pick from these specific, actionable questions (not abstract ones):
-
-- **Ritmo**: "Querés un ritmo más rápido y dinámico (cortes cada 1–2s) o algo más pausado que respire?"
-- **Colores de texto**: "Algún color específico para los textos, o uso blanco/default?"
-- **Tipografía**: "Tenés una fuente en mente, o uso la default?"
+- **Subtitle position**: "Los subtítulos van abajo (default) o los querés en otra posición?"
+- **Text color**: "Algún color específico para los textos, o uso blanco/default?"
+- **Typography**: "Tenés una fuente en mente, o uso la default?"
 - **Captions**: "Querés captions/subtítulos en todo lo hablado, o solo títulos (hook + CTA)?"
-- **Efectos visuales**: "Querés zooms sutiles o algún otro efecto visual en tomas estáticas, o limpio sin efectos?"
-- **Audio de clips**: "Querés que se escuche el audio original de los clips, o lo muteo y dejo solo voz/música?"
+- **Visual effects**: "Querés zooms sutiles o algún otro efecto visual en tomas estáticas, o limpio sin efectos?"
+- **Clip audio**: "Querés que se escuche el audio original de los clips, o lo muteo y dejo solo voz/música?"
 
 **Rules for asking**:
 - Ask LITTLE. Only what changes the result
@@ -126,16 +162,16 @@ Review the cut pattern. Long clips (over 5–6 seconds without a cut or visual c
 The last 2–3 seconds need a clear action. Pick a CTA that's specific to this content, not generic. Add it as a text element. If there's a natural endpoint before the raw footage ends, cut there — don't pad to fill time.
 
 ### Step 7: Music and Audio Balance (if available)
-Audio balance depends on whether there is spoken content:
+Audio balance depends on whether there is spoken content. Apply the Volume Model rules from above.
 
 **When there IS speech/voiceover (most common):**
 - Voice is the priority. The viewer must hear every word clearly.
-- Background music volume: ~5% (very low). Music is ambient atmosphere, never competing.
-- If in doubt about music level, lower it further. Too quiet music is always better than music that drowns speech.
-- If clip audio doesn't contribute (ambient noise, wind), mute it — only the primary voice matters.
+- Background music: set volume to -15 to -20 (barely perceptible, pure atmosphere).
+- If in doubt about music level, go lower (-20 to -25). Too quiet is always better than music that competes with speech.
+- Clip audio: mute by default (muted: true). Only the primary voice matters.
 
 **When there is NO speech at all:**
-- Music can be louder and carry the rhythm.
+- Music can stay at 0 or go slightly positive (+3 to +5) for energy.
 - Edit cuts can follow the beat for energy.
 
 ## Tool Guidance
@@ -147,6 +183,8 @@ Audio balance depends on whether there is spoken content:
 **split in batch** — Every split call refreshes refs. Plan all your cut points from the transcript analysis, then execute them in as few split calls as possible.
 
 **upsert_keyframe for zoom drift** — Static shots die on short-form. A slow 1.0 → 1.04 scale over 4–6 seconds using bezier interpolation creates life in a static frame without feeling like a zoom. Always animate both scaleX and scaleY identically.
+
+**update_clip for volume** — Use update_clip with the volume parameter to set audio levels. Remember: 0 = baseline, negative = quieter, positive = louder. Use muted: true to fully silence clip audio.
 
 **add_text for hook and CTA** — Use bold fontWeight for emphasis text like hooks and CTAs. For ALL text elements: ALWAYS set scaleX/scaleY to 0.5. Hook/CTA/emphasis text: fontSize max 12. Caption/subtitle text: fontSize 6.5 (range 6–8). NEVER add backgrounds to ANY text — no backgroundColor, no backgroundStyle, no background fill of any kind. Text-only with transparent background, always readable through high contrast color choice against the footage. For captions, prefer generate_captions which handles word-timing automatically.
 

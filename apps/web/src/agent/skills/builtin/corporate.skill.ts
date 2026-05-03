@@ -88,7 +88,7 @@ Assemble the core structure on the timeline:
 1. If there's a branded intro clip: place it first at position 0.
 2. Place the main content footage after the intro.
 3. If there's a branded outro: place it at the end, after the main content.
-4. Add background music as an audio track at low volume (it should be present but never distracting during speech).
+4. Add background music as an audio track at low volume (volume: -15 to -20 during speech; 0 during non-speech sections). It should be present but never distracting.
 
 This gives you the skeleton. Everything else fills in around it.
 
@@ -115,9 +115,11 @@ The logo can appear throughout the video, or only during specific sections (intr
 If product footage or screen recording assets are available, place them as overlays or main track elements at the moments in the speech where that product or feature is being discussed. The alignment should be precise — the viewer should see the product exactly when the speaker mentions it, not 2 seconds before or after.
 
 ### Step 8: Music balance and closing
-Ensure background music is appropriately balanced: clearly audible but firmly in the background during speech. If there's no speech in certain sections (intro, outro), music can rise slightly but should remain professional in character — ambient or corporate-style music, not energetic.
+Ensure background music is appropriately balanced. This editor uses **relative volume offsets**: 0 = baseline, positive = louder, negative = quieter. Use update_clip with the volume parameter.
 
-At the outro: if no branded outro clip is available, fade to black with the music fading out over 1.5–2 seconds. If a branded outro exists, let it play in full — don't cut it short.
+During speech: music at -15 to -20 (firmly in the background). During non-speech sections (intro, outro): music can rise to 0 or slightly positive (+3 to +5) but should remain professional in character.
+
+At the outro: if no branded outro clip is available, fade to black with the music fading out over 1.5–2 seconds using volume keyframes (animate from current level to -50 or lower). If a branded outro exists, let it play in full — don't cut it short.
 
 ## Tool Guidance
 

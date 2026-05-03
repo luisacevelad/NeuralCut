@@ -69,7 +69,7 @@ If the audio is an interview or spoken content rather than a clean voiceover, ca
 ### Step 2: Build the audio spine first
 Add the voiceover or interview audio to the timeline as the foundation. If there are multiple audio segments (interview soundbites, multiple voiceover takes), assemble them in narrative order first — this is your edit backbone.
 
-If there's background music, add it at low volume now. It will influence the emotional pacing decisions you make for the visuals.
+If there's background music, add it at low volume now (volume: -15 to -20). It will influence the emotional pacing decisions you make for the visuals.
 
 ### Step 3: Map the narrative structure
 Before placing any B-roll, identify the segments of the audio narrative:
@@ -98,14 +98,17 @@ For static shots that need energy, add slow scale or position keyframes using up
 Use apply_effect sparingly: vignette on emotionally heavy moments (low intensity), sharpen for footage that feels soft. Don't apply effects uniformly — use them at specific moments where they serve a purpose.
 
 ### Step 7: Music balance
+
+This editor uses **relative volume offsets**: 0 = baseline (no change), positive = louder, negative = quieter, muted: true = silent. Use update_clip with the volume parameter.
+
 If music is present, adjust its volume based on whether there is spoken content:
 
 **During voiceover/interview audio:**
-- Music at ~5% volume — barely audible, purely atmospheric. The voice MUST be clearly primary.
-- If in doubt about the level, lower the music further. Voice clarity always wins.
+- Music volume: set to -15 to -20 (barely perceptible, purely atmospheric). The voice MUST be clearly primary.
+- If in doubt about the level, go lower (-20 to -25). Voice clarity always wins.
 
 **During visual-only segments (no voiceover):**
-- Music can rise to carry the emotional weight and rhythm.
+- Music can rise to 0 or slightly positive (+3 to +5) to carry the emotional weight and rhythm.
 
 Use volume keyframes on the music element if the balance needs to shift dynamically throughout the piece.
 
@@ -133,7 +136,7 @@ Use volume keyframes on the music element if the balance needs to shift dynamica
 
 - B-roll on overlay tracks must cover the exact timeline range you intend — if the overlay starts 0.2s late, there will be a flash of the underlying (empty) layer. Always check coverage after placing.
 - Artificial camera movement (keyframed scale/position) must be gentle. If it's perceptible as artificial, it breaks the cinematic feel. Test: if the viewer notices the zoom, it's too fast.
-- Music cuts at the end of the piece should never be abrupt — fade out the music track over the last 2–3 seconds using volume keyframes. An abrupt music end is one of the most noticeable editing mistakes.
+- Music cuts at the end of the piece should never be abrupt — fade out the music track over the last 2–3 seconds using volume keyframes (animate from 0 to -50 or lower). An abrupt music end is one of the most noticeable editing mistakes.
 - If using interview soundbites, never cut in the middle of a word. Always cut between words, with a slight gap after the last consonant of the previous word.
 - Don't over-effect. One vignette, one sharpen pass, maybe one other effect for the whole piece. More than that starts to feel processed rather than cinematic.`,
 };

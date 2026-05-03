@@ -133,7 +133,7 @@ export type AgentTimelineTrack = {
 		rotation?: number;
 		/** Opacity 0-100. Undefined for elements that don't support opacity (audio, effect). */
 		opacity?: number;
-		/** Volume 0-100. Undefined for non-audio elements (audio and video clips only). */
+		/** Relative volume offset from baseline. 0 = no change, positive = louder, negative = quieter. Typical range: -50 to +20. Undefined for non-audio elements (audio and video clips only). */
 		volume?: number;
 		/** Whether the element is muted. Undefined for non-audio elements. */
 		muted?: boolean;

@@ -405,7 +405,7 @@ export const updateClipSchema: ToolSchema = {
 			enum: ["normal", "darken", "multiply", "screen", "overlay", "lighten"],
 		},
 		{ key: "hidden", type: "boolean", required: false, description: "Hide/show." },
-		{ key: "volume", type: "number", required: false, description: "0-100 (video/audio)." },
+		{ key: "volume", type: "number", required: false, description: "Relative volume offset from baseline. 0 = no change, positive = louder, negative = quieter. Typical range: -50 to +20. Example: -15 for background music under voice, +10 to boost voiceover (video/audio)." },
 		{ key: "muted", type: "boolean", required: false, description: "Mute/unmute (video/audio)." },
 	],
 };

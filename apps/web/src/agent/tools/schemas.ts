@@ -14,7 +14,7 @@ import type { ToolParameter, ToolSchema } from "@/agent/types";
 export const loadContextSchema: ToolSchema = {
 	name: "load_context",
 	description:
-		"Loads Gemini multimodal context for a project asset or timeline element. For media: targetType='asset' with id (asset name like 'intro.mov' or internal id). For timeline elements: targetType='timeline_element' with id (ref like 'clip-1' or 'text-3').",
+		"Loads Gemini multimodal context for a project asset or timeline element. For media: targetType='asset' with id (asset name like 'intro.mov' or internal id). For timeline elements: targetType='timeline_element' with id (element ref like 'intro-1', 'text-1', or elementId).",
 	parameters: [
 		{
 			key: "targetType",
@@ -39,7 +39,7 @@ export const loadContextSchema: ToolSchema = {
 			key: "elementId",
 			type: "string",
 			required: false,
-			description: "Element id or ref like 'clip-1'.",
+			description: "Element id, ref, or displayName.",
 		},
 	],
 };
@@ -77,14 +77,14 @@ export const listProjectAssetsSchema: ToolSchema = {
 export const listTimelineSchema: ToolSchema = {
 	name: "list_timeline",
 	description:
-		"Lists active timeline as tracks with elements. start/end in seconds. Tracks include position, visualLayer (higher=above, null for audio), stacking. Call before any edit to discover element refs ('clip-1', 'text-3'). Refs change after split/delete — recall after writes.",
+		"Lists active timeline as tracks with elements. Each element has ref (semantic, like 'intro-1', 'text-1'), displayName (human-readable label), start/end in seconds. Tracks include position, visualLayer (higher=above, null for audio), stacking. Call before any edit to discover elements. Refs change after split/delete — recall after writes.",
 	parameters: [],
 };
 
 export const splitSchema: ToolSchema = {
 	name: "split",
 	description:
-		"Splits elements at times in seconds. Does NOT delete or move content. After splitting, element refs change — call list_timeline again before using refs like 'clip-1' in subsequent operations. Omit target to split all elements at those times.",
+		"Splits elements at times in seconds. Does NOT delete or move content. After splitting, element refs change — call list_timeline again before using refs in subsequent operations. Omit target to split all elements at those times.",
 	parameters: [
 		{
 			key: "times",
@@ -96,7 +96,7 @@ export const splitSchema: ToolSchema = {
 			key: "target",
 			type: "string",
 			required: false,
-			description: "Element ref to restrict split to, e.g. 'clip-1'.",
+			description: "Element ref, displayName, or elementId to restrict split to.",
 		},
 	],
 };
@@ -258,7 +258,7 @@ export const updateTextSchema: ToolSchema = {
 			type: "array",
 			required: true,
 			aliases: ["elementIds"],
-			description: "Text element refs like 'text-1'.",
+			description: "Text element refs, displayNames, or elementIds.",
 			items: { key: "target", type: "string", required: true },
 		},
 		{
@@ -364,7 +364,7 @@ export const getElementSchema: ToolSchema = {
 			type: "string",
 			required: true,
 			aliases: ["elementId"],
-			description: "Element ref or id, e.g. 'clip-1'.",
+			description: "Element ref, displayName, or elementId.",
 		},
 		{
 			key: "elementId",

@@ -51,10 +51,7 @@ export function resolveElement(
 ): ResolvedElement | { error: string } {
 	const tracks = context.timelineTracks ?? [];
 
-	if (looksLikeRef(target)) {
-		return resolveByRef(target, tracks);
-	}
-
+	// 1. Exact match by elementId (always unique)
 	const byId = findElementAcrossTracks(tracks, target);
 	if (byId) {
 		return {
@@ -64,6 +61,28 @@ export function resolveElement(
 		};
 	}
 
+	// 2. Exact match by ref (always unique)
+	const byRef = findElementByRef(target, tracks);
+	if (byRef) {
+		return {
+			elementId: byRef.element.elementId,
+			trackId: byRef.track.trackId,
+			ref: byRef.element.ref,
+		};
+	}
+
+	// 3. Exact match by displayName (if unique)
+	const byDisplayName = findElementByDisplayName(target, tracks);
+	if (byDisplayName && "error" in byDisplayName) return byDisplayName;
+	if (byDisplayName) {
+		return {
+			elementId: byDisplayName.element.elementId,
+			trackId: byDisplayName.track.trackId,
+			ref: byDisplayName.element.ref,
+		};
+	}
+
+	// 4. Match by assetName / name / content (existing heuristic)
 	return resolveByContent(target, tracks);
 }
 
@@ -118,26 +137,44 @@ export function resolveTrack(
 	};
 }
 
-function looksLikeRef(target: string): boolean {
-	return /^(clip|text|effect|element)-\d+$/i.test(target);
-}
-
-function resolveByRef(
+function findElementByRef(
 	ref: string,
 	tracks: AgentTimelineTrack[],
-): ResolvedElement | { error: string } {
+): { track: AgentTimelineTrack; element: AgentTimelineTrack["elements"][number] } | null {
 	for (const track of tracks) {
 		for (const element of track.elements) {
 			if (element.ref.toLowerCase() === ref.toLowerCase()) {
-				return {
-					elementId: element.elementId,
-					trackId: track.trackId,
-					ref: element.ref,
-				};
+				return { track, element };
 			}
 		}
 	}
-	return { error: `Element ref "${ref}" not found in timeline.` };
+	return null;
+}
+
+function findElementByDisplayName(
+	target: string,
+	tracks: AgentTimelineTrack[],
+): { track: AgentTimelineTrack; element: AgentTimelineTrack["elements"][number] } | null | { error: string } {
+	const matches: Array<{ track: AgentTimelineTrack; element: AgentTimelineTrack["elements"][number] }> = [];
+
+	for (const track of tracks) {
+		for (const element of track.elements) {
+			if (
+				element.displayName &&
+				element.displayName.toLowerCase() === target.toLowerCase()
+			) {
+				matches.push({ track, element });
+			}
+		}
+	}
+
+	if (matches.length === 1) return matches[0];
+	if (matches.length > 1) {
+		return {
+			error: `Ambiguous display name "${target}". Matches: ${matches.map((m) => `${m.element.ref} (${m.element.displayName})`).join(", ")}`,
+		};
+	}
+	return null;
 }
 
 function resolveByContent(
@@ -172,7 +209,7 @@ function resolveByContent(
 		};
 	}
 
-	return { error: `Element not found: "${target}". Use list_timeline to discover refs.` };
+	return { error: `Element not found: "${target}". Use list_timeline to discover element refs and names.` };
 }
 
 function findElementAcrossTracks(

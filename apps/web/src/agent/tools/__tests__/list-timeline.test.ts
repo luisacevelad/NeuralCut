@@ -28,6 +28,7 @@ function makeContext(overrides: Partial<AgentContext> = {}): AgentContext {
 					{
 						elementId: "clip-1",
 						ref: "clip-1",
+						displayName: "Intro",
 						type: "video",
 						assetId: "m1",
 						name: "Intro",
@@ -67,6 +68,7 @@ describe("list_timeline tool", () => {
 						{
 							elementId: "clip-1",
 							ref: "clip-1",
+							displayName: "Intro",
 							type: "video",
 							assetId: "m1",
 							name: "Intro",

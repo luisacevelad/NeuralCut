@@ -35,14 +35,15 @@ const context: AgentContext = {
 			type: "main",
 			position: 0,
 			elements: [
-				{
-					elementId: "el-1",
-					ref: "clip-1",
-					assetName: "intro.mov",
-					type: "video",
-					startTime: 0,
-					duration: 10,
-				},
+			{
+				elementId: "el-1",
+				ref: "clip-1",
+				displayName: "intro.mov",
+				assetName: "intro.mov",
+				type: "video",
+				startTime: 0,
+				duration: 10,
+			},
 			],
 		},
 	],

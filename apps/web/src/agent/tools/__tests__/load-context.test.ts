@@ -46,6 +46,7 @@ function makeContext(overrides: Partial<AgentContext> = {}): AgentContext {
 					{
 						elementId: "caption-1",
 						ref: "text-1",
+						displayName: "Text: Hello Gemini",
 						type: "text",
 						name: "Caption",
 						content: "Hello Gemini",
@@ -68,6 +69,7 @@ function makeContext(overrides: Partial<AgentContext> = {}): AgentContext {
 					{
 						elementId: "clip-1",
 						ref: "clip-1",
+						displayName: "Intro clip",
 						type: "video",
 						assetId: "asset-video",
 						name: "Intro clip",
@@ -257,6 +259,7 @@ describe("load_context tool", () => {
 							{
 								elementId: "clip-1",
 								ref: "clip-1",
+								displayName: "other.mp4",
 								type: "video",
 								assetId: "asset-video-2",
 								duration: 10,
@@ -288,13 +291,29 @@ describe("load_context tool", () => {
 		);
 	});
 
-	test("validates missing timeline identifiers", async () => {
+	test("resolves element from elementId alone via resolveElement", async () => {
 		const tool = toolRegistry.get("load_context");
 		const result = await tool.execute(
 			{ targetType: "timeline_element", elementId: "caption-1" },
 			makeContext(),
 		);
 
-		expect(result).toEqual({ error: "trackId and elementId are required" });
+		expect(result).toEqual({
+			targetType: "timeline_element",
+			id: "caption-1",
+			status: "loaded",
+			cached: true,
+			provider: "gemini",
+			context: {
+				kind: "text",
+				trackId: "text-track",
+				elementId: "caption-1",
+				type: "text",
+				name: "Caption",
+				content: "Hello Gemini",
+				start: 1,
+				end: 3,
+			},
+		});
 	});
 });

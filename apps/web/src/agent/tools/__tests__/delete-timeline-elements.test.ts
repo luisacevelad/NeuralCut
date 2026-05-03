@@ -25,6 +25,47 @@ const context: AgentContext = {
 	projectName: null,
 	mediaAssets: [],
 	playbackTimeMs: 0,
+	timelineTracks: [
+		{
+			trackId: "main-track",
+			trackRef: "main-1",
+			trackLabel: "Main",
+			type: "main",
+			position: 0,
+			visualLayer: 0,
+			isVisualLayer: true,
+			stacking: "main",
+			elements: [
+				{
+					elementId: "clip-1",
+					ref: "clip-1",
+					displayName: "clip-1",
+					type: "video",
+					start: 0,
+					end: 10,
+					duration: 10,
+				},
+				{
+					elementId: "text-1",
+					ref: "text-1",
+					displayName: "text-1",
+					type: "text",
+					start: 0,
+					end: 5,
+					duration: 5,
+				},
+				{
+					elementId: "clip-2",
+					ref: "clip-2",
+					displayName: "clip-2",
+					type: "video",
+					start: 10,
+					end: 20,
+					duration: 10,
+				},
+			],
+		},
+	],
 };
 
 describe("delete_timeline_elements tool", () => {
@@ -57,17 +98,17 @@ describe("delete_timeline_elements tool", () => {
 
 		expect(await tool.execute({ elementIds: [] }, context)).toEqual({
 			error:
-				'elementIds must be a non-empty JSON array of strings, e.g. ["id1","id2"]',
+				"targets must be a non-empty array of element refs, displayNames, or elementIds.",
 		});
 		expect(await tool.execute({ elementIds: ["", "  "] }, context)).toEqual(
 			{
 				error:
-					'elementIds must be a non-empty JSON array of strings, e.g. ["id1","id2"]',
+					"targets must be a non-empty array of element refs, displayNames, or elementIds.",
 			},
 		);
 		expect(await tool.execute({}, context)).toEqual({
 			error:
-				'elementIds must be a non-empty JSON array of strings, e.g. ["id1","id2"]',
+				"targets must be a non-empty array of element refs, displayNames, or elementIds.",
 		});
 		expect(mockDeleteTimelineElements).not.toHaveBeenCalled();
 	});

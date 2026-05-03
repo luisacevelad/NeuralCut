@@ -26,7 +26,7 @@ export function resolveTargetsToElementIds(
 ): { elementIds: string[] } | { error: string } {
 	const rawIds = resolveElementIds(targets);
 	if (!rawIds) {
-		return { error: "targets must be a non-empty array of element refs (e.g. 'clip-1', 'text-3') or element IDs." };
+		return { error: "targets must be a non-empty array of element refs, displayNames, or elementIds." };
 	}
 
 	const elementIds: string[] = [];

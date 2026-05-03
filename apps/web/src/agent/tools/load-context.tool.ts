@@ -11,6 +11,10 @@ import {
 	uploadFileToGemini,
 	type UploadedGeminiFile,
 } from "@/agent/tools/upload-to-gemini";
+import {
+	COMPRESS_THRESHOLD,
+	compressVideoForContext,
+} from "@/lib/media/video-compressor";
 
 type LoadContextTargetType = "asset" | "timeline_element";
 
@@ -229,10 +233,33 @@ async function uploadAssetToGemini({
 	file: File;
 	asset: AgentContext["mediaAssets"][number];
 }): Promise<UploadedGeminiFile | { error: string }> {
+	let fileToUpload = file;
+
+	if (asset.type === "video" && file.size > COMPRESS_THRESHOLD) {
+		const originalMB = (file.size / 1024 / 1024).toFixed(1);
+		console.log(
+			`[compress] Compressing "${asset.name}" (${originalMB}MB) for Gemini upload...`,
+		);
+		const t0 = performance.now();
+		try {
+			fileToUpload = await compressVideoForContext(file);
+			const compressedMB = (fileToUpload.size / 1024 / 1024).toFixed(1);
+			const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+			console.log(
+				`[compress] "${asset.name}": ${originalMB}MB → ${compressedMB}MB (${elapsed}s)`,
+			);
+		} catch (error) {
+			console.warn(
+				`[compress] Failed for "${asset.name}", uploading original:`,
+				error,
+			);
+		}
+	}
+
 	const mimeType = resolveGeminiMimeType({
-		fileName: file.name,
+		fileName: fileToUpload.name,
 		displayName: asset.name,
-		fileType: file.type,
+		fileType: fileToUpload.type,
 		assetType: asset.type,
 	});
 
@@ -240,7 +267,11 @@ async function uploadAssetToGemini({
 		return { error: `Unsupported MIME type for asset ${asset.id}` };
 	}
 
-	return uploadFileToGemini({ file, displayName: asset.name, mimeType });
+	return uploadFileToGemini({
+		file: fileToUpload,
+		displayName: asset.name,
+		mimeType,
+	});
 }
 
 function resolveGeminiMimeType({

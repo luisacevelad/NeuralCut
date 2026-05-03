@@ -27,6 +27,40 @@ const context: AgentContext = {
 	projectName: null,
 	mediaAssets: [],
 	playbackTimeMs: 0,
+	timelineTracks: [
+		{
+			trackId: "main",
+			trackRef: "main-1",
+			trackLabel: "Main",
+			type: "main",
+			position: 0,
+			visualLayer: 0,
+			isVisualLayer: true,
+			stacking: "main",
+			elements: [
+				{
+					elementId: "clip-1",
+					ref: "clip-1",
+					displayName: "clip-1",
+					type: "video",
+					start: 0,
+					end: 10,
+					duration: 10,
+				},
+			],
+		},
+		{
+			trackId: "overlay-1",
+			trackRef: "overlay-1",
+			trackLabel: "Overlay",
+			type: "overlay",
+			position: 1,
+			visualLayer: 1,
+			isVisualLayer: true,
+			stacking: "above_main",
+			elements: [],
+		},
+	],
 };
 
 describe("move_timeline_elements tool", () => {
@@ -73,7 +107,7 @@ describe("move_timeline_elements tool", () => {
 
 		expect(await tool.execute({ elementIds: [], start: 0 }, context)).toEqual({
 			error:
-				'elementIds must be a non-empty JSON array of strings, e.g. ["id1","id2"]',
+				"targets must be a non-empty array of element refs, displayNames, or elementIds.",
 		});
 		expect(
 			await tool.execute({ elementIds: ["clip-1"], start: -1 }, context),
@@ -94,7 +128,7 @@ describe("move_timeline_elements tool", () => {
 				context,
 			),
 		).toEqual({
-			error: "Invalid target track id",
+			error: 'Track not found: "". Available: main-1, overlay-1',
 		});
 		expect(mockMoveTimelineElements).not.toHaveBeenCalled();
 	});

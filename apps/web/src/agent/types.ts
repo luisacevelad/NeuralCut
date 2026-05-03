@@ -106,6 +106,8 @@ export type AgentTimelineTrack = {
 	elements: Array<{
 		elementId: string;
 		ref: string;
+		/** Human-readable label: asset name for media, "Text: …" for text, name or ref as fallback. */
+		displayName: string;
 		type: string;
 		assetId?: string;
 		assetName?: string;

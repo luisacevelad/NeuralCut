@@ -203,6 +203,7 @@ describe("buildContextFromEditorState (context mapper)", () => {
 					{
 						elementId: "text-1",
 						ref: "text-1",
+						displayName: "Text: Hello world",
 						type: "text",
 						name: "Caption",
 						content: "Hello world",
@@ -231,6 +232,7 @@ describe("buildContextFromEditorState (context mapper)", () => {
 					{
 						elementId: "clip-1",
 						ref: "clip-1",
+						displayName: "Intro",
 						type: "video",
 						assetId: "m1",
 						name: "Intro",
@@ -260,7 +262,8 @@ describe("buildContextFromEditorState (context mapper)", () => {
 				elements: [
 					{
 						elementId: "music-1",
-						ref: "clip-1",
+						ref: "clip-2",
+						displayName: "Music",
 						type: "audio",
 						assetId: "m2",
 						name: "Music",

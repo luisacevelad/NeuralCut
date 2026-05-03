@@ -53,6 +53,47 @@ const context: AgentContext = {
 	projectName: null,
 	mediaAssets: [],
 	playbackTimeMs: 0,
+	timelineTracks: [
+		{
+			trackId: "track-1",
+			trackRef: "track-1",
+			trackLabel: "Track 1",
+			type: "text",
+			position: 0,
+			visualLayer: 0,
+			isVisualLayer: true,
+			stacking: "main",
+			elements: [
+				{
+					elementId: "el-1",
+					ref: "el-1",
+					displayName: "el-1",
+					type: "text",
+					start: 0,
+					end: 5,
+					duration: 5,
+				},
+				{
+					elementId: "el-2",
+					ref: "el-2",
+					displayName: "el-2",
+					type: "text",
+					start: 0,
+					end: 5,
+					duration: 5,
+				},
+				{
+					elementId: "el-3",
+					ref: "el-3",
+					displayName: "el-3",
+					type: "text",
+					start: 0,
+					end: 5,
+					duration: 5,
+				},
+			],
+		},
+	],
 };
 
 describe("update_text tool", () => {
@@ -145,17 +186,17 @@ describe("update_text tool", () => {
 
 		expect(await tool.execute({}, context)).toEqual({
 			error:
-				'elementIds must be a non-empty JSON array of strings, e.g. ["id1","id2"]',
+				"targets must be a non-empty array of element refs, displayNames, or elementIds.",
 		});
 		expect(await tool.execute({ elementIds: [] }, context)).toEqual({
 			error:
-				'elementIds must be a non-empty JSON array of strings, e.g. ["id1","id2"]',
+				"targets must be a non-empty array of element refs, displayNames, or elementIds.",
 		});
 		expect(
 			await tool.execute({ elementIds: ["", "  "] }, context),
 		).toEqual({
 			error:
-				'elementIds must be a non-empty JSON array of strings, e.g. ["id1","id2"]',
+				"targets must be a non-empty array of element refs, displayNames, or elementIds.",
 		});
 		expect(mockUpdateText).not.toHaveBeenCalled();
 	});

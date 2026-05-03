@@ -81,6 +81,7 @@ function buildTimelineTracks(
 	const overlayTracks = scene.tracks.overlay ?? [];
 	let position = 0;
 	const counters: Record<string, number> = {};
+	const elementCounters: Record<string, number> = {};
 
 	for (let index = 0; index < overlayTracks.length; index++) {
 		const track = overlayTracks[index];
@@ -93,7 +94,7 @@ function buildTimelineTracks(
 				trackRef,
 				ticksPerSecond,
 				assetLookup,
-				counters,
+				elementCounters,
 				{
 					position: position++,
 					visualLayer: overlayTracks.length - index,
@@ -113,7 +114,7 @@ function buildTimelineTracks(
 				trackRef,
 				ticksPerSecond,
 				assetLookup,
-				counters,
+				elementCounters,
 				{
 					position: position++,
 					visualLayer: 0,
@@ -133,7 +134,7 @@ function buildTimelineTracks(
 				trackRef,
 				ticksPerSecond,
 				assetLookup,
-				counters,
+				elementCounters,
 				{
 					position: position++,
 					visualLayer: null,
@@ -159,13 +160,12 @@ function toTimelineTrack(
 	trackRef: string,
 	ticksPerSecond: number,
 	assetLookup: AssetLookup,
-	counters: Record<string, number>,
+	elementCounters: Record<string, number>,
 	stacking: Pick<
 		AgentTimelineTrack,
 		"position" | "visualLayer" | "isVisualLayer" | "stacking"
 	>,
 ): AgentTimelineTrack {
-	const elementCounters: Record<string, number> = {};
 	const trackLabel = buildTrackLabel(type, stacking.stacking);
 
 	return {
@@ -186,16 +186,22 @@ function toTimelineTrack(
 				const assetId = hasMediaId(element) ? element.mediaId : undefined;
 				const assetName = assetId ? assetLookup.get(assetId)?.name : undefined;
 				const elementType = mapElementType(element.type, assetId !== undefined);
-				const ref = nextRef(elementCounters, elementType);
+				const ref = buildElementRef(elementCounters, elementType, assetName);
+				const hasContent = hasTextContent(element);
+				const content = hasContent
+					? (element as { content: string }).content
+					: undefined;
+				const displayName = buildDisplayName(assetName, content, element.name, ref);
 
 				return {
 					elementId: element.id,
 					ref,
+					displayName,
 					type: element.type,
 					...(assetId ? { assetId } : {}),
 					...(assetName ? { assetName } : {}),
 					...(element.name ? { name: element.name } : {}),
-					...(hasTextContent(element) ? { content: element.content } : {}),
+					...(hasContent ? { content } : {}),
 					duration: Math.round(duration * 1000) / 1000,
 					...(hasNonEmptyArray(element, "masks") ? { hasMask: true } : {}),
 					...(hasNonEmptyArray(element, "effects") ? { hasEffects: true } : {}),
@@ -227,6 +233,45 @@ function mapElementType(rawType: string, hasAsset: boolean): string {
 	if (rawType === "effect") return "effect";
 	if (hasAsset) return "clip";
 	return "element";
+}
+
+function slugify(name: string): string {
+	return name
+		.replace(/\.[^.]+$/, "")
+		.replace(/[^a-zA-Z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		.toLowerCase()
+		.slice(0, 30)
+		.replace(/-+$/, "");
+}
+
+function buildElementRef(
+	elementCounters: Record<string, number>,
+	elementType: string,
+	assetName: string | undefined,
+): string {
+	if (assetName) {
+		const slug = slugify(assetName);
+		if (slug.length > 0) {
+			return nextRef(elementCounters, slug);
+		}
+	}
+	return nextRef(elementCounters, elementType);
+}
+
+function buildDisplayName(
+	assetName: string | undefined,
+	content: string | undefined,
+	name: string | undefined,
+	ref: string,
+): string {
+	if (assetName) return assetName;
+	if (content) {
+		const trimmed = content.trim();
+		if (trimmed.length <= 40) return `Text: ${trimmed}`;
+		return `Text: ${trimmed.slice(0, 37)}...`;
+	}
+	return name ?? ref;
 }
 
 function toSeconds(ticks: number, ticksPerSecond: number): number {

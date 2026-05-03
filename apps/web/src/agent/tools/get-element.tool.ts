@@ -12,7 +12,7 @@ const getElementTool: ToolDefinition = {
 	): Promise<Record<string, unknown> | { error: string }> => {
 		const target = args.target ?? args.elementId;
 		if (typeof target !== "string" || !target.trim()) {
-			return { error: "Pass target (element ref like 'clip-1') or elementId." };
+			return { error: "Pass target (element ref, displayName, or elementId)." };
 		}
 
 		const resolved = resolveElement(target, context);

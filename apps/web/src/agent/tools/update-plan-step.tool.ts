@@ -66,6 +66,19 @@ const updatePlanStepTool: ToolDefinition = {
 
 		planStore.updateStepStatus(resolvedStepId, status as PlanStepStatus, result);
 
+		// Auto-clear plan when all steps are done or skipped
+		const updatedPlan = planStore.plan;
+		if (updatedPlan) {
+			const allDone = updatedPlan.steps.every(
+				(s) => s.status === "done" || s.status === "skipped",
+			);
+			if (allDone) {
+				setTimeout(() => {
+					usePlanStore.getState().clearPlan();
+				}, 1500);
+			}
+		}
+
 		return {
 			success: true,
 			step: plan.steps.findIndex((s) => s.id === resolvedStepId) + 1,

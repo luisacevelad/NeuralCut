@@ -49,7 +49,7 @@ const submitPlanTool: ToolDefinition = {
 
 		const plan = createPlanFromSteps(summary, normalizedSteps, questions);
 		usePlanStore.getState().setPlan(plan);
-		useAgentStore.getState().setMode("plan");
+		usePlanStore.getState().updatePlanStatus("awaiting_approval");
 
 		return new Promise((resolve) => {
 			useAgentStore.getState().setPendingModeTransition({
@@ -57,17 +57,15 @@ const submitPlanTool: ToolDefinition = {
 				resolve: (approved) => {
 					useAgentStore.getState().setPendingModeTransition(null);
 					if (approved) {
-						useAgentStore.getState().setMode("execute");
 						usePlanStore.getState().updatePlanStatus("executing");
 					} else {
-						useAgentStore.getState().setMode("plan");
 						usePlanStore.getState().updatePlanStatus("awaiting_approval");
 					}
 					resolve({
 						planId: plan.id,
 						stepCount: plan.steps.length,
 						approved,
-						mode: approved ? "execute" : "plan",
+						mode: "execute" as AgentMode,
 					});
 				},
 			});

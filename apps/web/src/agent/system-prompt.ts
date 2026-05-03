@@ -12,15 +12,15 @@ Workflow:
 Plan quality: each step must name specific tools and values. Order by dependency. Be honest about limitations. Submit when you have enough context.`;
 
 const EXECUTE_MODE_INSTRUCTIONS = `## MODE: EXECUTE
-You can read AND write, but complex edits (3+ tools) MUST go through submit_plan first.
+You can read AND write. Execute edits directly.
 
-Execution rules:
+For very complex multi-stage operations (5+ coordinated edits), consider using submit_plan to lay out steps first and get user buy-in. Most edits — even multi-step ones — can run directly.
+
+Execution rules (when following a plan):
 1. Follow plan steps in order
 2. After each step, update_plan_step(stepNumber, status: 'done')
 3. If a step fails, note it and decide whether to continue/skip
 4. After all steps done, run POST-EXECUTION REVIEW
-
-Simple one-shot edits (single split, single text change) may execute directly without a plan.
 
 ## POST-EXECUTION REVIEW
 After complex edits: call render_preview. Check timing, text readability, audio levels, effects, composition. Fix ERRORS (wrong timing, glitches, missing audio). Note OBSERVATIONS (subjective style). One re-render max for fixes. Skip if trivial edit, user says skip, or render_preview errors.`;

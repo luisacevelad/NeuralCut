@@ -158,6 +158,7 @@ describe("buildSystemPrompt", () => {
 		const prompt = buildSystemPrompt(BASE_CONTEXT);
 
 		expect(prompt).toContain("MODE: EXECUTE");
+		expect(prompt).toContain("Execute edits directly");
 	});
 
 	test("includes plan mode when mode is plan", () => {
@@ -171,6 +172,13 @@ describe("buildSystemPrompt", () => {
 		const prompt = buildSystemPrompt(BASE_CONTEXT, "execute");
 
 		expect(prompt).toContain("MODE: EXECUTE");
+	});
+
+	test("execute mode does not force submit_plan for regular edits", () => {
+		const prompt = buildSystemPrompt(BASE_CONTEXT, "execute");
+
+		expect(prompt).not.toContain("MUST go through submit_plan");
+		expect(prompt).toContain("Execute edits directly");
 	});
 
 	test("shows project metadata line with resolution, fps, and duration", () => {

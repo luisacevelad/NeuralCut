@@ -49,7 +49,6 @@ const DEFAULT_MENTION_STATE: MentionState = {
 
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
 	const [value, setValue] = useState("");
-	const shiftHandledRef = useRef(false);
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const [mentionState, setMentionState] = useState<MentionState>(
 		DEFAULT_MENTION_STATE,
@@ -170,27 +169,13 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 				}
 			}
 
-			if (e.key === "Shift") {
-				if (!shiftHandledRef.current) {
-					shiftHandledRef.current = true;
-					toggleMode();
-				}
-				return;
-			}
-
 			if (e.key === "Enter" && !e.shiftKey) {
 				e.preventDefault();
 				handleSend();
 			}
 		},
-		[handleSend, toggleMode, mentionState.open, closeMention],
+		[handleSend, mentionState.open, closeMention],
 	);
-
-	const handleKeyUp = useCallback((e: KeyboardEvent<HTMLTextAreaElement>) => {
-		if (e.key === "Shift") {
-			shiftHandledRef.current = false;
-		}
-	}, []);
 
 	const togglePermission = useCallback(() => {
 		const next: PermissionMode = permissionMode === "skip" ? "ask" : "skip";
@@ -225,7 +210,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 						</span>
 					)}
 					<span className="text-muted-foreground text-[10px]">
-						Press Shift to switch · @ to reference
+						@ to reference
 					</span>
 				</div>
 			</div>
@@ -236,7 +221,6 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
 					value={value}
 					onChange={handleChange}
 					onKeyDown={handleKeyDown}
-					onKeyUp={handleKeyUp}
 					disabled={disabled || !!pendingTransition}
 					placeholder={
 						isPlanMode

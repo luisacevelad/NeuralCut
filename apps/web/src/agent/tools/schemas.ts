@@ -567,7 +567,6 @@ export const providerToolSchemas: ToolSchema[] = [
 	loadSkillSchema,
 	submitPlanSchema,
 	askUserSchema,
-	requestPlanApprovalSchema,
 	updatePlanStepSchema,
 	renderPreviewSchema,
 ];

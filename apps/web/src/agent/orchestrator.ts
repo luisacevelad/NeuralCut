@@ -269,7 +269,7 @@ async function resolveToolCalls(
 				name: tc.name,
 				result: null,
 				error:
-					"Cannot edit while a plan is awaiting user approval. Call request_plan_approval and wait for the user to choose Go edit.",
+					"Cannot edit while a plan is awaiting user approval. Wait for the user to approve or reject the plan.",
 			});
 			continue;
 		}
@@ -279,7 +279,7 @@ async function resolveToolCalls(
 				toolCallId: tc.id,
 				name: tc.name,
 				result: null,
-				error: `Cannot use '${tc.name}' in plan mode. This tool modifies the timeline. Use submit_plan to finalize your plan, then request_plan_approval to switch to execute mode.`,
+				error: `Cannot use '${tc.name}' in plan mode. This tool modifies the timeline. Use submit_plan to finalize your plan first.`,
 			});
 			continue;
 		}

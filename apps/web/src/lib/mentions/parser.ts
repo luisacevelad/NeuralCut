@@ -113,19 +113,25 @@ function resolveMention(
 		});
 		if ("error" in data) return null;
 
+		const displayName = findElementDisplayName(
+			elementResult.elementId,
+			context,
+		);
+
 		return {
 			kind: "element",
 			ref: elementResult.ref,
-			label:
-				(data.name as string) ??
-				(data.assetName as string) ??
-				elementResult.ref,
-			data,
+			label: displayName ?? elementResult.ref,
+			data: compactElementData(data),
 		};
 	}
 
 	const assetResult = resolveAsset(target, context);
 	if (!("error" in assetResult)) {
+		const assetMeta = context.mediaAssets.find(
+			(a) => a.id === assetResult.assetId,
+		);
+
 		return {
 			kind: "asset",
 			ref: assetResult.assetId,
@@ -133,11 +139,55 @@ function resolveMention(
 			data: {
 				assetId: assetResult.assetId,
 				assetName: assetResult.assetName,
+				...(assetMeta
+					? { type: assetMeta.type, duration: assetMeta.duration }
+					: {}),
 			},
 		};
 	}
 
 	return null;
+}
+
+function findElementDisplayName(
+	elementId: string,
+	context: AgentContext,
+): string | null {
+	const tracks = context.timelineTracks ?? [];
+	for (const track of tracks) {
+		for (const element of track.elements) {
+			if (element.elementId === elementId) {
+				return element.displayName;
+			}
+		}
+	}
+	return null;
+}
+
+const NOISY_KEYS = new Set([
+	"animations",
+	"masks",
+	"effects",
+	"background",
+	"fontSize",
+	"fontFamily",
+	"fontWeight",
+	"fontStyle",
+	"textAlign",
+	"letterSpacing",
+	"lineHeight",
+]);
+
+function compactElementData(
+	data: Record<string, unknown>,
+): Record<string, unknown> {
+	const result: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(data)) {
+		if (!NOISY_KEYS.has(key)) {
+			result[key] = value;
+		}
+	}
+	return result;
 }
 
 export function buildInjectedContent(
@@ -149,7 +199,7 @@ export function buildInjectedContent(
 	const sections = attachments.map((att) => {
 		const header =
 			att.kind === "element"
-				? `[Referenced element: ${att.ref}]`
+				? `[Referenced element: ${att.label} | ref: ${att.ref}]`
 				: `[Referenced asset: ${att.label}]`;
 		const data = JSON.stringify(att.data, null, 2);
 		return `${header}\n${data}`;

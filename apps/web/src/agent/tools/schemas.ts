@@ -194,9 +194,9 @@ const textItemProperties: ToolParameter[] = [
 	{
 		key: "position",
 		type: "string",
-		required: true,
+		required: false,
 		enum: ["top", "center", "bottom"],
-		description: "Vertical preset.",
+		description: "Vertical preset (rough). Prefer positionY for precise control.",
 	},
 	{ key: "color", type: "string", required: false, description: "Hex color." },
 	{ key: "fontSize", type: "number", required: false, description: "Font size." },
@@ -222,6 +222,8 @@ const textItemProperties: ToolParameter[] = [
 	{ key: "letterSpacing", type: "number", required: false, description: "Letter spacing." },
 	{ key: "positionX", type: "number", required: false, description: "X position (-50 to 50)." },
 	{ key: "positionY", type: "number", required: false, description: "Y position (-50 to 50)." },
+	{ key: "scaleX", type: "number", required: false, description: "Scale X (0.5 = 50%). Default: 1." },
+	{ key: "scaleY", type: "number", required: false, description: "Scale Y (0.5 = 50%). Default: 1." },
 	{ key: "background", type: "object", required: false, description: "{ enabled, color?, cornerRadius?, padding? }" },
 ];
 
@@ -275,6 +277,8 @@ export const updateTextSchema: ToolSchema = {
 		{ key: "letterSpacing", type: "number", required: false },
 		{ key: "positionX", type: "number", required: false, description: "X position (-50 to 50)." },
 		{ key: "positionY", type: "number", required: false, description: "Y position (-50 to 50)." },
+		{ key: "scaleX", type: "number", required: false, description: "Scale X (0.5 = 50%). Default: 1." },
+		{ key: "scaleY", type: "number", required: false, description: "Scale Y (0.5 = 50%). Default: 1." },
 		{ key: "background", type: "object", required: false, description: "{ enabled, color?, cornerRadius?, padding? }" },
 	],
 };

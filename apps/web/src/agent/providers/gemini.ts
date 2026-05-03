@@ -126,7 +126,10 @@ export function toGeminiContents(messages: ChatMessage[]): Content[] {
 			// to wrapping it if it's not valid JSON.
 			let responseData: object;
 			try {
-				responseData = JSON.parse(msg.content) as object;
+				const parsed = JSON.parse(msg.content);
+				responseData = Array.isArray(parsed)
+					? { results: parsed }
+					: (parsed as object);
 			} catch {
 				responseData = { result: msg.content };
 			}

@@ -16,6 +16,8 @@ export type UpdateTextArgs = {
 	letterSpacing?: number;
 	positionX?: number;
 	positionY?: number;
+	scaleX?: number;
+	scaleY?: number;
 	background?: {
 		enabled: boolean;
 		color?: string;
@@ -94,6 +96,12 @@ const updateTextTool: ToolDefinition = {
 		if (args.positionY !== undefined && typeof args.positionY !== "number") {
 			return { error: "Invalid positionY" };
 		}
+		if (args.scaleX !== undefined && typeof args.scaleX !== "number") {
+			return { error: "Invalid scaleX" };
+		}
+		if (args.scaleY !== undefined && typeof args.scaleY !== "number") {
+			return { error: "Invalid scaleY" };
+		}
 		if (background !== undefined && typeof background !== "object") {
 			return { error: "Invalid background" };
 		}
@@ -117,6 +125,8 @@ const updateTextTool: ToolDefinition = {
 			overrides.positionX = args.positionX as number;
 		if (args.positionY !== undefined)
 			overrides.positionY = args.positionY as number;
+		if (args.scaleX !== undefined) overrides.scaleX = args.scaleX as number;
+		if (args.scaleY !== undefined) overrides.scaleY = args.scaleY as number;
 		if (background !== undefined)
 			overrides.background = background as UpdateTextArgs["background"];
 

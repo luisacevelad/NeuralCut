@@ -15,6 +15,8 @@ export type TextStyleOverrides = {
 	letterSpacing?: number;
 	positionX?: number;
 	positionY?: number;
+	scaleX?: number;
+	scaleY?: number;
 	background?: {
 		enabled: boolean;
 		color?: string;
@@ -27,7 +29,7 @@ export type AddTextArgs = {
 	text: string;
 	start: number;
 	end: number;
-	position: TextPosition;
+	position?: TextPosition;
 } & TextStyleOverrides;
 
 export type AddTextResult = {
@@ -87,9 +89,15 @@ function validateAndBuildOverrides(
 	if (args.positionX !== undefined && typeof args.positionX !== "number") {
 		return { error: "Invalid positionX" };
 	}
-	if (args.positionY !== undefined && typeof args.positionY !== "number") {
-		return { error: "Invalid positionY" };
-	}
+		if (args.positionY !== undefined && typeof args.positionY !== "number") {
+			return { error: "Invalid positionY" };
+		}
+		if (args.scaleX !== undefined && typeof args.scaleX !== "number") {
+			return { error: "Invalid scaleX" };
+		}
+		if (args.scaleY !== undefined && typeof args.scaleY !== "number") {
+			return { error: "Invalid scaleY" };
+		}
 	if (args.background !== undefined && typeof args.background !== "object") {
 		return { error: "Invalid background" };
 	}
@@ -130,7 +138,7 @@ function validateTextItem(
 	if (!isValidTime(start) || !isValidTime(end) || start >= end) {
 		return { error: "Invalid time range" };
 	}
-	if (!isValidPosition(position)) {
+	if (position !== undefined && !isValidPosition(position)) {
 		return { error: "Invalid text position" };
 	}
 
@@ -141,7 +149,7 @@ function validateTextItem(
 		text,
 		start,
 		end,
-		position,
+		...(isValidPosition(position) && { position }),
 		...result,
 	};
 }

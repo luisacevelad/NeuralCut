@@ -558,7 +558,7 @@ export const EditorContextAdapter = {
 		text,
 		start,
 		end,
-		position,
+		position = "center",
 		color,
 		fontSize,
 		fontFamily,
@@ -568,12 +568,14 @@ export const EditorContextAdapter = {
 		letterSpacing,
 		positionX,
 		positionY,
+		scaleX,
+		scaleY,
 		background,
 	}: {
 		text: string;
 		start: number;
 		end: number;
-		position: "top" | "center" | "bottom";
+		position?: "top" | "center" | "bottom";
 	} & TextStyleOverrides):
 		| { elementId: string; trackId: string }
 		| { error: string } {
@@ -616,6 +618,8 @@ export const EditorContextAdapter = {
 				transform: {
 					...DEFAULTS.text.element.transform,
 					position: overridePosition,
+					...(scaleX !== undefined && { scaleX }),
+					...(scaleY !== undefined && { scaleY }),
 				},
 			},
 			startTime: startTicks,
@@ -650,6 +654,8 @@ export const EditorContextAdapter = {
 		letterSpacing,
 		positionX,
 		positionY,
+		scaleX,
+		scaleY,
 		background,
 	}: {
 		elementIds: string[];
@@ -703,6 +709,8 @@ export const EditorContextAdapter = {
 				letterSpacing,
 				positionX,
 				positionY,
+				scaleX,
+				scaleY,
 				background,
 			});
 			updates.push({ trackId: track.id, elementId: element.id, patch });
@@ -1818,7 +1826,12 @@ function buildTextPatch(
 	if (overrides.letterSpacing !== undefined)
 		patch.letterSpacing = overrides.letterSpacing;
 
-	if (overrides.positionX !== undefined || overrides.positionY !== undefined) {
+	if (
+		overrides.positionX !== undefined ||
+		overrides.positionY !== undefined ||
+		overrides.scaleX !== undefined ||
+		overrides.scaleY !== undefined
+	) {
 		const currentPos = element.transform.position;
 		patch.transform = {
 			...element.transform,
@@ -1826,6 +1839,8 @@ function buildTextPatch(
 				x: overrides.positionX ?? currentPos.x,
 				y: overrides.positionY ?? currentPos.y,
 			},
+			...(overrides.scaleX !== undefined && { scaleX: overrides.scaleX }),
+			...(overrides.scaleY !== undefined && { scaleY: overrides.scaleY }),
 		};
 	}
 

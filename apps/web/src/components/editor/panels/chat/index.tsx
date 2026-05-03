@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useCallback } from "react";
+import { useParams } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { BubbleChatIncomeIcon } from "@hugeicons/core-free-icons";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,18 +14,30 @@ import { ChatInput } from "./chat-input";
 import { ToolPermissionRequest } from "./tool-permission-request";
 import { AskUserPrompt } from "./ask-user-prompt";
 import { PlanApprovalCard } from "./plan-approval-card";
+import { SessionHeader } from "./session-header";
 import { run as orchestratorRun } from "@/agent/orchestrator";
 import { EditorContextAdapter } from "@/agent/context";
 
 export function ChatPanel() {
+	const params = useParams();
+	const projectId = params.project_id as string;
+
 	const messages = useChatStore((s) => s.messages);
 	const loading = useChatStore((s) => s.loading);
 	const error = useChatStore((s) => s.error);
+	const initialized = useChatStore((s) => s.initialized);
+	const initProject = useChatStore((s) => s.initProject);
 	const sendMessage = useChatStore((s) => s.sendMessage);
 	const setError = useChatStore((s) => s.setError);
 	const pendingApproval = useAgentStore((s) => s.pendingApproval);
 
 	const scrollRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (projectId) {
+			initProject(projectId);
+		}
+	}, [projectId, initProject]);
 
 	useEffect(() => {
 		if (scrollRef.current) {
@@ -50,8 +63,20 @@ export function ChatPanel() {
 		await orchestratorRun(store.messages, context);
 	}, []);
 
+	if (!initialized) {
+		return (
+			<div className="flex h-full flex-col">
+				<div className="flex flex-1 items-center justify-center">
+					<Spinner className="text-muted-foreground size-4" />
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<div className="flex h-full flex-col">
+			<SessionHeader />
+
 			{messages.length === 0 && !loading && !error ? (
 				<div className="flex flex-1 flex-col items-center justify-center gap-3 p-4">
 					<HugeiconsIcon

@@ -122,9 +122,12 @@ function validateAndBuildOverrides(
 		overrides.positionY = args.positionY as number;
 	if (args.scaleX !== undefined) overrides.scaleX = args.scaleX as number;
 	if (args.scaleY !== undefined) overrides.scaleY = args.scaleY as number;
-	if (args.background !== undefined)
+	if (args.background !== undefined) {
 		overrides.background =
 			args.background as TextStyleOverrides["background"];
+	} else {
+		overrides.background = { enabled: false };
+	}
 
 	return overrides;
 }

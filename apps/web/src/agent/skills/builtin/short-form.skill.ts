@@ -61,6 +61,36 @@ Fast cuts are a tool, not a target. The editing rhythm should match the energy o
 **5. End with momentum, not fade-out.**
 The CTA should feel like a natural extension of the content, not a commercial. The best CTAs are specific to the content ("follow for part 2", "comment your answer below") not generic ("like and subscribe").
 
+## Explicit Defaults (when the user doesn't specify)
+
+When the user doesn't answer creative questions or doesn't provide style details, apply these defaults without asking again:
+
+- **Rhythm**: dynamic medium-fast — cuts every 2–4 seconds, no clip over 5–6 seconds without visual change
+- **Captions**: YES if there is speech or voiceover. No captions on mute-only content
+- **Music volume**: very low (~5%) when voice is present; music is atmosphere, never competing with speech
+- **Clip audio**: MUTED by default. Original clip audio is noise — only the primary voice matters. Only unmute if the user explicitly wants the clip's original sound
+- **Text background**: NONE. All text elements have transparent background by default
+- **Zoom drift**: subtle (1.0 → 1.04 over 4–6s) on static shots to create life
+
+## Creative Questions (ask only when definition is missing)
+
+Before you start editing, if the user hasn't given enough style direction, ask ONLY the concrete decisions that actually change the output. Keep it to 2–3 questions max — not a branding questionnaire.
+
+Pick from these specific, actionable questions (not abstract ones):
+
+- **Ritmo**: "Querés un ritmo más rápido y dinámico (cortes cada 1–2s) o algo más pausado que respire?"
+- **Colores de texto**: "Algún color específico para los textos, o uso blanco/default?"
+- **Tipografía**: "Tenés una fuente en mente, o uso la default?"
+- **Captions**: "Querés captions/subtítulos en todo lo hablado, o solo títulos (hook + CTA)?"
+- **Efectos visuales**: "Querés zooms sutiles o algún otro efecto visual en tomas estáticas, o limpio sin efectos?"
+- **Audio de clips**: "Querés que se escuche el audio original de los clips, o lo muteo y dejo solo voz/música?"
+
+**Rules for asking**:
+- Ask LITTLE. Only what changes the result
+- If the user doesn't answer, use the Explicit Defaults above — don't ask again
+- Never ask abstract branding questions ("what's your brand identity?") — only concrete, binary-or-pickable choices
+- If the user already gave enough direction (e.g. "make it fast, white text"), don't ask anything — just execute
+
 ## Workflow
 
 ### Step 1: Audit all assets

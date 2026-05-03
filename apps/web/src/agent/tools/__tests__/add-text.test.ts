@@ -72,8 +72,61 @@ describe("add_text tool", () => {
 			start: 1,
 			end: 4,
 			position: "bottom",
+			background: { enabled: false },
 		});
 		expect(result).toEqual({ elementId: "text-1", trackId: "text-track-1" });
+	});
+
+	test("defaults background to disabled when not provided", async () => {
+		const tool = toolRegistry.get("add_text");
+		await tool.execute(
+			{ text: "No bg", start: 0, end: 2 },
+			context,
+		);
+
+		expect(mockAddText).toHaveBeenCalledWith(
+			expect.objectContaining({
+				background: { enabled: false },
+			}),
+		);
+	});
+
+	test("preserves explicit background when provided", async () => {
+		const tool = toolRegistry.get("add_text");
+		await tool.execute(
+			{
+				text: "With bg",
+				start: 0,
+				end: 2,
+				background: { enabled: true, color: "#000000", cornerRadius: 4, padding: 8 },
+			},
+			context,
+		);
+
+		expect(mockAddText).toHaveBeenCalledWith(
+			expect.objectContaining({
+				background: { enabled: true, color: "#000000", cornerRadius: 4, padding: 8 },
+			}),
+		);
+	});
+
+	test("allows explicit background disabled", async () => {
+		const tool = toolRegistry.get("add_text");
+		await tool.execute(
+			{
+				text: "Explicit off",
+				start: 0,
+				end: 2,
+				background: { enabled: false },
+			},
+			context,
+		);
+
+		expect(mockAddText).toHaveBeenCalledWith(
+			expect.objectContaining({
+				background: { enabled: false },
+			}),
+		);
 	});
 
 	test("passes overrides to the adapter", async () => {
@@ -200,18 +253,21 @@ describe("add_text tool", () => {
 			start: 0,
 			end: 2,
 			position: "top",
+			background: { enabled: false },
 		});
 		expect(mockAddText).toHaveBeenNthCalledWith(2, {
 			text: "Second",
 			start: 2,
 			end: 4,
 			position: "bottom",
+			background: { enabled: false },
 		});
 		expect(mockAddText).toHaveBeenNthCalledWith(3, {
 			text: "Third",
 			start: 4,
 			end: 6,
 			position: "center",
+			background: { enabled: false },
 		});
 		expect(result).toEqual([
 			{ elementId: "text-1", trackId: "text-track-1" },
@@ -239,6 +295,7 @@ describe("add_text tool", () => {
 			position: "top",
 			color: "#FF0000",
 			fontSize: 10,
+			background: { enabled: false },
 		});
 		expect(mockAddText).toHaveBeenNthCalledWith(2, {
 			text: "Blue",
@@ -247,6 +304,7 @@ describe("add_text tool", () => {
 			position: "bottom",
 			color: "#0000FF",
 			fontWeight: "bold",
+			background: { enabled: false },
 		});
 	});
 

@@ -8,6 +8,7 @@ import {
 	ToolExecutionCard,
 	type ToolExecutionPair,
 } from "./tool-execution-card";
+import { renderMessageWithMentions } from "./mention-chip";
 
 interface MessageBubbleProps {
 	message: ChatMessage;
@@ -77,6 +78,22 @@ function isToolResultAbsorbed(
 	);
 }
 
+function extractDisplayContent(content: string): string {
+	const lines = content.split("\n");
+	const endIdx = lines.indexOf("");
+	if (endIdx === -1) return content;
+
+	const hasInjectedContext = lines
+		.slice(0, endIdx)
+		.some((line) => line.startsWith("[Referenced "));
+	if (!hasInjectedContext) return content;
+
+	return lines
+		.slice(endIdx + 1)
+		.join("\n")
+		.trimStart();
+}
+
 export function MessageBubble({ message, messages }: MessageBubbleProps) {
 	const isUser = message.role === "user";
 
@@ -116,6 +133,10 @@ export function MessageBubble({ message, messages }: MessageBubbleProps) {
 			})
 		: [];
 
+	const displayContent = isUser
+		? extractDisplayContent(message.content)
+		: message.content;
+
 	return (
 		<div
 			className={cn(
@@ -123,8 +144,10 @@ export function MessageBubble({ message, messages }: MessageBubbleProps) {
 				isUser ? "bg-secondary" : "bg-transparent",
 			)}
 		>
-			{message.content && (
-				<p className="text-sm whitespace-pre-wrap">{message.content}</p>
+			{displayContent && (
+				<p className="text-sm whitespace-pre-wrap">
+					{isUser ? renderMessageWithMentions(displayContent) : displayContent}
+				</p>
 			)}
 			{toolPairs.length > 0 && (
 				<div className="flex flex-col gap-1">

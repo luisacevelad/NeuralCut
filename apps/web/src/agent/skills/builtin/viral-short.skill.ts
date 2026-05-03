@@ -49,7 +49,7 @@ This is the most critical part. If the viewer scrolls past 3 seconds, the video 
 2. If the raw video starts slow, call split at 3 seconds from the best moment, then delete_timeline_elements for everything before it, then move_timeline_elements so the hook starts at 0
 3. Add hook text with add_text:
     - text: A punchy, curiosity-driving phrase (max 3 words). Examples: "Wait for it...", "Nobody knows this", "This changed everything"
-    - fontSize: 12 (maximum for titles/hooks/CTA)
+    - fontSize: 15 (maximum for titles/hooks/CTA)
     - scaleX: 0.5, scaleY: 0.5
     - fontWeight: "bold"
     - position: "center"
@@ -70,7 +70,7 @@ This is the meat. Keep it FAST and TIGHT.
 - Use generate_captions to automatically create word-timed captions for the spoken content. This tool handles timing and grouping automatically.
 - Captions must be max 3 words per element, positioned at the bottom, NO background.
 - If you need manual control, use add_text with:
-  - fontSize: 6.5 (recommended; acceptable range: 6–8)
+  - fontSize: 6.5 (recommended; acceptable range: 6–9)
   - scaleX: 0.5, scaleY: 0.5
   - fontWeight: "bold"
   - position: "bottom"
@@ -101,7 +101,7 @@ End with a call-to-action that drives engagement.
 1. Split the video 2.5 seconds before the end
 2. Add CTA text with add_text:
     - text: "Follow for more" or "Like if this helped" or topic-relevant CTA (max 3 words)
-    - fontSize: 12 (maximum for CTA)
+    - fontSize: 15 (maximum for CTA)
     - scaleX: 0.5, scaleY: 0.5
     - fontWeight: "bold"
     - position: "center"
@@ -124,9 +124,9 @@ End with a call-to-action that drives engagement.
 
 ## TEXT STYLE GUIDE
 
-- Hook text: fontSize 12 (max for titles), bold fontWeight, center, white, NO background
-- Captions: fontSize 6.5 (range 6–8), bold fontWeight, bottom, white, NO background. Max 3 words per element. Back-to-back during continuous speech.
-- CTA text: fontSize 12 (max for CTA), bold fontWeight, center, white, NO background
+- Hook text: fontSize 15 (max for titles), bold fontWeight, center, white, NO background
+- Captions: fontSize 6.5 (range 6–9), bold fontWeight, bottom, white, NO background. Max 3 words per element. Back-to-back during continuous speech.
+- CTA text: fontSize 15 (max for CTA), bold fontWeight, center, white, NO background
 - ALL text elements: scaleX/scaleY = 0.5, NO background of any kind
 - Font weight must always be "bold" for all text elements
 - NEVER add more than 3 words per caption/subtitle element

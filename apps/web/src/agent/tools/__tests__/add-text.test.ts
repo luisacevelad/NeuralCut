@@ -222,7 +222,7 @@ describe("add_text tool", () => {
 				{ text: "A", start: 0, end: 1, position: "center", fontSize: -5 },
 				context,
 			),
-		).toEqual({ error: "Invalid fontSize" });
+		).toEqual({ error: expect.stringContaining("fontSize must be between") });
 
 		expect(
 			await tool.execute(
@@ -336,5 +336,121 @@ describe("add_text tool", () => {
 			),
 		).toEqual({ error: "Each item in texts must be an object" });
 		expect(mockAddText).not.toHaveBeenCalled();
+	});
+
+	test("rejects fontSize below minimum (6)", async () => {
+		const tool = toolRegistry.get("add_text");
+		const result = await tool.execute(
+			{ text: "Hi", start: 0, end: 1, fontSize: 5 },
+			context,
+		);
+		expect(result).toEqual({ error: expect.stringContaining("fontSize must be between") });
+		expect(mockAddText).not.toHaveBeenCalled();
+	});
+
+	test("rejects fontSize above maximum (15)", async () => {
+		const tool = toolRegistry.get("add_text");
+		const result = await tool.execute(
+			{ text: "Hi", start: 0, end: 1, fontSize: 16 },
+			context,
+		);
+		expect(result).toEqual({ error: expect.stringContaining("fontSize must be between") });
+		expect(mockAddText).not.toHaveBeenCalled();
+	});
+
+	test("allows fontSize at exact boundaries (6 and 15)", async () => {
+		const tool = toolRegistry.get("add_text");
+		await tool.execute({ text: "A", start: 0, end: 1, fontSize: 6 }, context);
+		await tool.execute({ text: "B", start: 0, end: 1, fontSize: 15 }, context);
+		expect(mockAddText).toHaveBeenCalledTimes(2);
+	});
+
+	test("allows decimal fontSize within range", async () => {
+		const tool = toolRegistry.get("add_text");
+		await tool.execute({ text: "A", start: 0, end: 1, fontSize: 6.5 }, context);
+		expect(mockAddText).toHaveBeenCalledTimes(1);
+	});
+
+	test("rejects text exceeding word count (vertical canvas)", async () => {
+		const tool = toolRegistry.get("add_text");
+		const verticalContext: AgentContext = {
+			...context,
+			resolution: { width: 1080, height: 1920 },
+		};
+		const result = await tool.execute(
+			{ text: "one two three four", start: 0, end: 1 },
+			verticalContext,
+		);
+		expect(result).toEqual({ error: expect.stringContaining("4 words") });
+		expect(mockAddText).not.toHaveBeenCalled();
+	});
+
+	test("allows text at max word count (vertical canvas)", async () => {
+		const tool = toolRegistry.get("add_text");
+		const verticalContext: AgentContext = {
+			...context,
+			resolution: { width: 1080, height: 1920 },
+		};
+		await tool.execute(
+			{ text: "one two three", start: 0, end: 1 },
+			verticalContext,
+		);
+		expect(mockAddText).toHaveBeenCalledTimes(1);
+	});
+
+	test("rejects text exceeding word count (horizontal canvas)", async () => {
+		const tool = toolRegistry.get("add_text");
+		const horizontalContext: AgentContext = {
+			...context,
+			resolution: { width: 1920, height: 1080 },
+		};
+		const result = await tool.execute(
+			{ text: "a b c d e f g", start: 0, end: 1 },
+			horizontalContext,
+		);
+		expect(result).toEqual({ error: expect.stringContaining("7 words") });
+		expect(mockAddText).not.toHaveBeenCalled();
+	});
+
+	test("uses safest fallback (3 words) when resolution is null", async () => {
+		const tool = toolRegistry.get("add_text");
+		const result = await tool.execute(
+			{ text: "one two three four", start: 0, end: 1 },
+			context, // resolution: null
+		);
+		expect(result).toEqual({ error: expect.stringContaining("unknown orientation") });
+		expect(mockAddText).not.toHaveBeenCalled();
+	});
+
+	test("batch mode: validates word count per item", async () => {
+		const tool = toolRegistry.get("add_text");
+		const verticalContext: AgentContext = {
+			...context,
+			resolution: { width: 1080, height: 1920 },
+		};
+		const result = await tool.execute(
+			{
+				texts: [
+					{ text: "ok", start: 0, end: 1 },
+					{ text: "one two three four five", start: 1, end: 2 },
+				],
+			},
+			verticalContext,
+		);
+		expect(result).toEqual({ error: expect.stringContaining("5 words") });
+	});
+
+	test("batch mode: validates fontSize per item", async () => {
+		const tool = toolRegistry.get("add_text");
+		const result = await tool.execute(
+			{
+				texts: [
+					{ text: "ok", start: 0, end: 1, fontSize: 10 },
+					{ text: "bad", start: 1, end: 2, fontSize: 20 },
+				],
+			},
+			context,
+		);
+		expect(result).toEqual({ error: expect.stringContaining("fontSize must be between") });
 	});
 });

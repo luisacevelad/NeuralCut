@@ -112,8 +112,8 @@ When generating captions/subtitles, these rules are NON-NEGOTIABLE:
 
 1. **Scale: ALWAYS scaleX/scaleY = 0.5.** Every text element for subtitles/captions uses scaleX: 0.5, scaleY: 0.5. No exceptions.
 2. **Font size by element type:**
-   - **Captions/subtitles:** fontSize 6.5 (recommended). Acceptable range: 6–8. Never exceed 8.
-   - **Titles / hooks / CTA / emphasis:** fontSize max 12. These need to stand out from captions.
+   - **Captions/subtitles:** fontSize 6.5 (recommended). Acceptable range: 6–9.
+   - **Titles / hooks / CTA / emphasis:** fontSize max 15. These need to stand out from captions.
 3. **NO background. EVER.** Subtitles must NEVER have a background color or background fill of any kind. They must be text-only — transparent background, always. If you find yourself adding a backgroundColor or backgroundStyle to ANY text element (captions, hook text, CTA text, emphasis text), stop and remove it. The ONLY exception is if the user explicitly asks for backgrounds.
 4. **Max 3 words per caption/subtitle element.** Each subtitle/caption text element must contain no more than 3 words. Break longer phrases into multiple sequential elements if needed. This keeps text punchy and readable on mobile screens.
 
@@ -148,7 +148,7 @@ Audio balance depends on whether there is spoken content:
 
 **upsert_keyframe for zoom drift** — Static shots die on short-form. A slow 1.0 → 1.04 scale over 4–6 seconds using bezier interpolation creates life in a static frame without feeling like a zoom. Always animate both scaleX and scaleY identically.
 
-**add_text for hook and CTA** — Use bold fontWeight for emphasis text like hooks and CTAs. For ALL text elements: ALWAYS set scaleX/scaleY to 0.5. Hook/CTA/emphasis text: fontSize max 12. Caption/subtitle text: fontSize 6.5 (range 6–8). NEVER add backgrounds to ANY text — no backgroundColor, no backgroundStyle, no background fill of any kind. Text-only with transparent background, always readable through high contrast color choice against the footage. For captions, prefer generate_captions which handles word-timing automatically.
+**add_text for hook and CTA** — Use bold fontWeight for emphasis text like hooks and CTAs. For ALL text elements: ALWAYS set scaleX/scaleY to 0.5. Hook/CTA/emphasis text: fontSize max 15. Caption/subtitle text: fontSize 6.5 (range 6–9). NEVER add backgrounds to ANY text — no backgroundColor, no backgroundStyle, no background fill of any kind. Text-only with transparent background, always readable through high contrast color choice against the footage. For captions, prefer generate_captions which handles word-timing automatically.
 
 ## Common Patterns
 

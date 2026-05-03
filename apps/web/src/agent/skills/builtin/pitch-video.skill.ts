@@ -38,7 +38,7 @@ Professional cold open that immediately establishes credibility.
 1. If the raw footage has a natural opening, use it. If not, find the most professional-looking segment
 2. Add opening title text with add_text:
     - text: The project/product/company name (ask the user if not clear from context)
-    - fontSize: 48
+    - fontSize: 15
     - fontWeight: "bold"
     - position: "center"
     - start: 0.5
@@ -47,7 +47,7 @@ Professional cold open that immediately establishes credibility.
     - background: { enabled: true, color: "#1a1a2e", cornerRadius: 10, padding: 16 }
 3. Add a tagline or one-liner below:
     - text: One sentence that captures the value proposition
-    - fontSize: 28
+    - fontSize: 9
     - fontWeight: "normal"
     - position: "bottom"
     - start: 1
@@ -63,7 +63,7 @@ Clearly articulate the pain point. This builds empathy and urgency.
 2. Split at appropriate boundaries to isolate this segment (5s to 20s)
 3. Add a "THE PROBLEM" section header:
     - text: "THE PROBLEM" (or user's preferred phrasing)
-    - fontSize: 36
+    - fontSize: 13
     - fontWeight: "bold"
     - position: "top"
     - start: 5
@@ -71,8 +71,8 @@ Clearly articulate the pain point. This builds empathy and urgency.
     - color: "#FF6B6B"
     - background: { enabled: true, color: "#1a1a2e", cornerRadius: 6, padding: 10 }
 4. Add supporting text cards that highlight key pain points (1 card per 3-4 seconds):
-    - Each card: max 8 words, one key statistic or pain point per card
-    - fontSize: 28
+    - Each card: max 6 words, one key statistic or pain point per card
+    - fontSize: 10
     - fontWeight: "bold"
     - position: "bottom"
     - color: "#FFFFFF"
@@ -85,7 +85,7 @@ Present the product/solution with clarity and confidence.
 1. Transition to solution footage (split at 20s boundary)
 2. Add a "THE SOLUTION" section header:
     - text: "THE SOLUTION" (or "INTRODUCING [product name]")
-    - fontSize: 48
+    - fontSize: 15
     - fontWeight: "bold"
     - position: "center"
     - start: 20
@@ -93,8 +93,8 @@ Present the product/solution with clarity and confidence.
     - color: "#FFFFFF"
     - background: { enabled: true, color: "#0f3460", cornerRadius: 10, padding: 14 }
 3. Add 2-3 benefit text cards (one every 5-7 seconds):
-    - Each card states ONE clear benefit, max 8 words
-    - fontSize: 32
+    - Each card states ONE clear benefit, max 6 words
+    - fontSize: 12
     - fontWeight: "bold"
     - position: "bottom"
     - color: "#FFFFFF"
@@ -112,7 +112,7 @@ Social proof and data build trust.
 **Steps:**
 1. Add 1-2 text cards with impressive metrics (user should provide these, or infer from context):
    - Examples: "10x faster", "50% cost reduction", "Used by 10,000+ teams"
-    - fontSize: 48
+    - fontSize: 15
     - fontWeight: "bold"
     - position: "center"
     - color: "#4ECDC4"
@@ -133,7 +133,7 @@ End with a clear, confident call-to-action.
 1. Split 5 seconds before the end
 2. Add CTA text:
    - text: "Let's talk" or "Book a demo" or "Invest in [name]"
-    - fontSize: 48
+    - fontSize: 15
     - fontWeight: "bold"
     - position: "center"
     - start: (end - 4.5)
@@ -142,7 +142,7 @@ End with a clear, confident call-to-action.
     - background: { enabled: true, color: "#0f3460", cornerRadius: 10, padding: 14 }
 3. Add contact info text below:
     - text: Website URL or email (ask user if not provided)
-    - fontSize: 24
+    - fontSize: 9
     - fontWeight: "normal"
     - position: "bottom"
    - start: (end - 4)
@@ -165,10 +165,10 @@ End with a clear, confident call-to-action.
 
 This is a PITCH. Clean, confident, professional. No gimmicks.
 
-- Section headers ("THE PROBLEM", "THE SOLUTION"): fontSize 36-48, bold fontWeight, position "top" or "center", dark navy background (#1a1a2e or #0f3460)
-- Benefit/statistic cards: fontSize 28-32, bold fontWeight, position "bottom" or "center"
-- CTA: fontSize 48, bold fontWeight, center, confident navy background
-- Supporting/subtitle text: fontSize 24-28, normal fontWeight
+- Section headers ("THE PROBLEM", "THE SOLUTION"): fontSize 13–15, bold fontWeight, position "top" or "center", dark navy background (#1a1a2e or #0f3460)
+- Benefit/statistic cards: fontSize 10–12, bold fontWeight, position "bottom" or "center"
+- CTA: fontSize 15, bold fontWeight, center, confident navy background
+- Supporting/subtitle text: fontSize 9, normal fontWeight
 - Color palette:
   - Primary text: #FFFFFF (white)
   - Emphasis text: #4ECDC4 (teal) for key numbers
@@ -177,7 +177,7 @@ This is a PITCH. Clean, confident, professional. No gimmicks.
   - Subtitle text: #E0E0E0 (light gray) for secondary info
 - ALL text must have a background. NO floating text without a backing shape
 - Font weight: "bold" for headers and numbers, "normal" for subtitle lines
-- NEVER use more than 10 words per text card
+- NEVER use more than 6 words per text card (horizontal canvas limit)
 - NEVER use flashy colors (no neon, no yellow, no red except for problem section)
 
 ## EFFECTS USAGE (minimal and professional)

@@ -3,6 +3,10 @@ import type { AgentContext, ToolDefinition } from "@/agent/types";
 import { toolRegistry } from "@/agent/tools/registry";
 import { resolveTargetsToElementIds } from "@/agent/tools/resolve-element-ids";
 import { updateTextSchema } from "@/agent/tools/schemas";
+import {
+	validateFontSize,
+	validateWordCount,
+} from "@/agent/tools/text-constraints";
 import type { ToolResultEntry } from "@/agent/tools/utils/tool-results";
 
 export type UpdateTextArgs = {
@@ -81,12 +85,20 @@ const updateTextTool: ToolDefinition = {
 		) {
 			return { error: "Invalid textAlign" };
 		}
-		if (
-			args.fontSize !== undefined &&
-			(typeof args.fontSize !== "number" || args.fontSize <= 0)
-		) {
-			return { error: "Invalid fontSize" };
-		}
+
+		// Global fontSize range enforcement (6–15, no clamping)
+		const fontSizeError = validateFontSize(
+			args.fontSize as number | undefined,
+		);
+		if (fontSizeError) return fontSizeError;
+
+		// Global word-count enforcement on content based on orientation
+		const wordCountError = validateWordCount(
+			content as string | undefined,
+			context.resolution,
+		);
+		if (wordCountError) return wordCountError;
+
 		if (
 			args.letterSpacing !== undefined &&
 			typeof args.letterSpacing !== "number"

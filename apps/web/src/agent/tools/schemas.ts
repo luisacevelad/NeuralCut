@@ -199,7 +199,7 @@ const textItemProperties: ToolParameter[] = [
 		description: "Vertical preset (rough). Prefer positionY for precise control.",
 	},
 	{ key: "color", type: "string", required: false, description: "Hex color." },
-	{ key: "fontSize", type: "number", required: false, description: "Font size." },
+	{ key: "fontSize", type: "number", required: false, description: "Font size. MUST be 6–15 inclusive (decimals allowed)." },
 	{ key: "fontFamily", type: "string", required: false, description: "Font family." },
 	{
 		key: "fontWeight",
@@ -230,7 +230,7 @@ const textItemProperties: ToolParameter[] = [
 export const addTextSchema: ToolSchema = {
 	name: "add_text",
 	description:
-		"Adds text to timeline. Single: pass text, start, end, position. Batch: pass 'texts' array with multiple text objects, each fully independent (different styles, positions, etc). Prefer batch for 2+ text elements.",
+		"Adds text to timeline. Single: pass text, start, end, position. Batch: pass 'texts' array with multiple text objects, each fully independent (different styles, positions, etc). Prefer batch for 2+ text elements. CONSTRAINTS: fontSize 6–15 (rejected if outside). Word count: vertical canvas max 3 words, horizontal max 5–6 words depending on text length. Keep text short and punchy.",
 	parameters: [
 		{
 			key: "texts",
@@ -251,7 +251,7 @@ export const addTextSchema: ToolSchema = {
 export const updateTextSchema: ToolSchema = {
 	name: "update_text",
 	description:
-		"Updates text element properties. Batch: all targets get same overrides. Non-text elements skipped.",
+		"Updates text element properties. Batch: all targets get same overrides. Non-text elements skipped. CONSTRAINTS: fontSize 6–15 (rejected if outside). Word count on content: vertical canvas max 3 words, horizontal max 5–6 words depending on text length.",
 	parameters: [
 		{
 			key: "targets",
@@ -269,7 +269,7 @@ export const updateTextSchema: ToolSchema = {
 		},
 		{ key: "content", type: "string", required: false, description: "New text content." },
 		{ key: "color", type: "string", required: false, description: "Hex color." },
-		{ key: "fontSize", type: "number", required: false, description: "Font size." },
+		{ key: "fontSize", type: "number", required: false, description: "Font size. MUST be 6–15 inclusive (decimals allowed). Out-of-range values are rejected." },
 		{ key: "fontFamily", type: "string", required: false, description: "Font family." },
 		{ key: "fontWeight", type: "string", required: false, enum: ["normal", "bold"] },
 		{ key: "fontStyle", type: "string", required: false, enum: ["normal", "italic"] },

@@ -20,7 +20,7 @@ const generateCaptionsSkill: SkillDefinition = {
 Transcribe audio first (reuse existing transcription if available). Use the \`words\` array with word-level timing to build captions.
 
 ## Style
-- fontSize: 6.5 (recommended; acceptable range: 6–8), scaleX: 0.5, scaleY: 0.5, fontWeight: "bold"
+- fontSize: 6.5 (recommended; acceptable range: 6–9), scaleX: 0.5, scaleY: 0.5, fontWeight: "bold"
 - fontFamily: pick something fitting — "Vend Sans" works well. Never Arial.
 - background: { enabled: false }. No boxes. No backgrounds on ANY text element. White text directly on footage. The ONLY exception is if the user explicitly asks for backgrounds.
 - Position at bottom of frame.

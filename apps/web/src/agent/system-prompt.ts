@@ -86,6 +86,7 @@ export function buildSystemPrompt(
 		"Only claim edits performed by actual tool calls. Do not say you added/removed/updated text unless the tool call succeeded.",
 		"When user asks for titles, hooks, labels, captions, subtitles, or visible text → call add_text. Do not add text proactively for unrelated edits.",
 		"SKILLS: For complex edits (viral video, pitch, etc.), call list_skills → load_skill to get technique recipes. Adapt to actual footage.",
+		"TEXT CONSTRAINTS (hard-stop, enforced at tool level): fontSize MUST be 6–15 inclusive (out of range → error, NO clamping). Titles max ~15, subtitles 6–9. Word count: vertical/short-form canvas max 3 words, horizontal max 5–6 words depending on text length. Keep all text short and punchy — split long text across multiple timed elements instead.",
 	);
 
 	if (activeMode === "plan") {

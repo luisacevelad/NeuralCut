@@ -188,7 +188,11 @@ Carga contexto multimodal para un asset o elemento.
 
 Agrega texto visual al timeline.
 
-**Descripción:** Agrega texto visual al timeline activo.
+**Descripción:** Agrega texto visual al timeline activo. Soporta modo batch con array `texts` para múltiples elementos independientes.
+
+**Constraints (hard-stop, enforced at tool level):**
+- `fontSize`: debe estar entre 6 y 15 inclusive (valores fuera de rango son rechazados, sin clamping). Títulos: max ~15, subtítulos: 6–9.
+- Word count: canvas vertical/short-form max 3 palabras, horizontal max 5–6 palabras dependiendo del largo total del texto.
 
 **Parámetros:**
 | Campo | Tipo | Requerido | Descripción |
@@ -216,6 +220,10 @@ Agrega texto visual al timeline.
 Actualiza propiedades de elementos de texto existentes.
 
 **Descripción:** Actualiza propiedades visuales de elementos de texto. Todos los elementos listados reciben las mismas overrides.
+
+**Constraints (hard-stop, enforced at tool level):**
+- `fontSize`: debe estar entre 6 y 15 inclusive (valores fuera de rango son rechazados, sin clamping).
+- Word count en `content`: canvas vertical/short-form max 3 palabras, horizontal max 5–6 palabras.
 
 **Parámetros:**
 | Campo | Tipo | Requerido | Descripción |

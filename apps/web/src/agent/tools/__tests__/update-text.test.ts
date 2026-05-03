@@ -246,7 +246,7 @@ describe("update_text tool", () => {
 				{ elementIds: ["el-1"], fontSize: -5 },
 				context,
 			),
-		).toEqual({ error: "Invalid fontSize" });
+		).toEqual({ error: expect.stringContaining("fontSize must be between") });
 
 		expect(
 			await tool.execute(
@@ -256,5 +256,99 @@ describe("update_text tool", () => {
 		).toEqual({ error: "Invalid background" });
 
 		expect(mockUpdateText).not.toHaveBeenCalled();
+	});
+
+	test("rejects fontSize below minimum (6)", async () => {
+		const tool = toolRegistry.get("update_text");
+		const result = await tool.execute(
+			{ elementIds: ["el-1"], fontSize: 5 },
+			context,
+		);
+		expect(result).toEqual({ error: expect.stringContaining("fontSize must be between") });
+		expect(mockUpdateText).not.toHaveBeenCalled();
+	});
+
+	test("rejects fontSize above maximum (15)", async () => {
+		const tool = toolRegistry.get("update_text");
+		const result = await tool.execute(
+			{ elementIds: ["el-1"], fontSize: 16 },
+			context,
+		);
+		expect(result).toEqual({ error: expect.stringContaining("fontSize must be between") });
+		expect(mockUpdateText).not.toHaveBeenCalled();
+	});
+
+	test("allows fontSize at exact boundaries", async () => {
+		const tool = toolRegistry.get("update_text");
+		await tool.execute({ elementIds: ["el-1"], fontSize: 6 }, context);
+		await tool.execute({ elementIds: ["el-1"], fontSize: 15 }, context);
+		expect(mockUpdateText).toHaveBeenCalledTimes(2);
+	});
+
+	test("allows decimal fontSize within range", async () => {
+		const tool = toolRegistry.get("update_text");
+		await tool.execute({ elementIds: ["el-1"], fontSize: 8.5 }, context);
+		expect(mockUpdateText).toHaveBeenCalledTimes(1);
+	});
+
+	test("rejects content exceeding word count (vertical canvas)", async () => {
+		const tool = toolRegistry.get("update_text");
+		const verticalContext: AgentContext = {
+			...context,
+			resolution: { width: 1080, height: 1920 },
+		};
+		const result = await tool.execute(
+			{ elementIds: ["el-1"], content: "one two three four" },
+			verticalContext,
+		);
+		expect(result).toEqual({ error: expect.stringContaining("4 words") });
+		expect(mockUpdateText).not.toHaveBeenCalled();
+	});
+
+	test("allows content at max word count (vertical canvas)", async () => {
+		const tool = toolRegistry.get("update_text");
+		const verticalContext: AgentContext = {
+			...context,
+			resolution: { width: 1080, height: 1920 },
+		};
+		await tool.execute(
+			{ elementIds: ["el-1"], content: "one two three" },
+			verticalContext,
+		);
+		expect(mockUpdateText).toHaveBeenCalledTimes(1);
+	});
+
+	test("rejects content exceeding word count (horizontal canvas)", async () => {
+		const tool = toolRegistry.get("update_text");
+		const horizontalContext: AgentContext = {
+			...context,
+			resolution: { width: 1920, height: 1080 },
+		};
+		const result = await tool.execute(
+			{ elementIds: ["el-1"], content: "a b c d e f g" },
+			horizontalContext,
+		);
+		expect(result).toEqual({ error: expect.stringContaining("7 words") });
+		expect(mockUpdateText).not.toHaveBeenCalled();
+	});
+
+	test("uses safest fallback (3 words) when resolution is null", async () => {
+		const tool = toolRegistry.get("update_text");
+		const result = await tool.execute(
+			{ elementIds: ["el-1"], content: "one two three four" },
+			context, // resolution: null
+		);
+		expect(result).toEqual({ error: expect.stringContaining("unknown orientation") });
+		expect(mockUpdateText).not.toHaveBeenCalled();
+	});
+
+	test("skips word count validation when content is not provided", async () => {
+		const tool = toolRegistry.get("update_text");
+		// Only updating style, no content change — word count not checked
+		await tool.execute(
+			{ elementIds: ["el-1"], color: "#FF0000", fontSize: 10 },
+			context,
+		);
+		expect(mockUpdateText).toHaveBeenCalledTimes(1);
 	});
 });

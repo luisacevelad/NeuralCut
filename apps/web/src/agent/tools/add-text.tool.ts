@@ -2,6 +2,10 @@ import { EditorContextAdapter } from "@/agent/context";
 import type { AgentContext, ToolDefinition } from "@/agent/types";
 import { toolRegistry } from "@/agent/tools/registry";
 import { addTextSchema } from "@/agent/tools/schemas";
+import {
+	validateFontSize,
+	validateWordCount,
+} from "@/agent/tools/text-constraints";
 
 type TextPosition = "top" | "center" | "bottom";
 
@@ -75,12 +79,6 @@ function validateAndBuildOverrides(
 		return { error: "Invalid textAlign" };
 	}
 	if (
-		args.fontSize !== undefined &&
-		(typeof args.fontSize !== "number" || args.fontSize <= 0)
-	) {
-		return { error: "Invalid fontSize" };
-	}
-	if (
 		args.letterSpacing !== undefined &&
 		typeof args.letterSpacing !== "number"
 	) {
@@ -134,6 +132,7 @@ function validateAndBuildOverrides(
 
 function validateTextItem(
 	item: Record<string, unknown>,
+	resolution: { width: number; height: number } | null,
 ): AddTextArgs | { error: string } {
 	const { text, start, end, position } = item;
 
@@ -146,6 +145,16 @@ function validateTextItem(
 	if (position !== undefined && !isValidPosition(position)) {
 		return { error: "Invalid text position" };
 	}
+
+	// Global fontSize range enforcement (6–15, no clamping)
+	const fontSizeError = validateFontSize(
+		item.fontSize as number | undefined,
+	);
+	if (fontSizeError) return fontSizeError;
+
+	// Global word-count enforcement based on orientation
+	const wordCountError = validateWordCount(text as string, resolution);
+	if (wordCountError) return wordCountError;
 
 	const result = validateAndBuildOverrides(item);
 	if ("error" in result) return result;
@@ -171,7 +180,10 @@ const addTextTool: ToolDefinition = {
 				if (typeof item !== "object" || item === null) {
 					return { error: "Each item in texts must be an object" };
 				}
-				const validated = validateTextItem(item as Record<string, unknown>);
+				const validated = validateTextItem(
+					item as Record<string, unknown>,
+					_context.resolution,
+				);
 				if ("error" in validated) return validated;
 				const result = EditorContextAdapter.addText(validated);
 				if ("error" in result) return result;
@@ -180,7 +192,7 @@ const addTextTool: ToolDefinition = {
 			return results;
 		}
 
-		const validated = validateTextItem(args);
+		const validated = validateTextItem(args, _context.resolution);
 		if ("error" in validated) return validated;
 		return EditorContextAdapter.addText(validated);
 	},

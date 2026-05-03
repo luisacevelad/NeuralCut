@@ -286,7 +286,20 @@ export const updateTextSchema: ToolSchema = {
 export const listEffectsSchema: ToolSchema = {
 	name: "list_effects",
 	description: "Lists available effects with id, name, description. Use before get_effect → apply_effect.",
-	parameters: [{ key: "query", type: "string", required: false, description: "Search query." }],
+	parameters: [
+		{ key: "query", type: "string", required: false, description: "Search query (partial match on name/keywords)." },
+		{ key: "limit", type: "number", required: false, description: "Max results. Default: 10." },
+	],
+};
+
+export const listFontsSchema: ToolSchema = {
+	name: "list_fonts",
+	description:
+		"Lists available fonts. Returns curated system + Google fonts. Use before add_text/update_text to pick fontFamily values.",
+	parameters: [
+		{ key: "query", type: "string", required: false, description: "Partial name match (case-insensitive)." },
+		{ key: "limit", type: "number", required: false, description: "Max results. Default: 10." },
+	],
 };
 
 export const getEffectSchema: ToolSchema = {
@@ -550,6 +563,7 @@ export const providerToolSchemas: ToolSchema[] = [
 	addTextSchema,
 	updateTextSchema,
 	listEffectsSchema,
+	listFontsSchema,
 	getEffectSchema,
 	applyEffectSchema,
 	updateEffectSchema,

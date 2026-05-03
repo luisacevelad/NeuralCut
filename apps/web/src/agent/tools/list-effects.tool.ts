@@ -11,6 +11,8 @@ type ListEffectsResult = {
 	}>;
 };
 
+const DEFAULT_LIMIT = 10;
+
 const listEffectsTool: ToolDefinition = {
 	...listEffectsSchema,
 	execute: async (
@@ -19,6 +21,11 @@ const listEffectsTool: ToolDefinition = {
 	): Promise<ListEffectsResult> => {
 		const allEffects = effectsRegistry.getAll();
 		const query = typeof args.query === "string" ? args.query.trim().toLowerCase() : "";
+		const rawLimit = args.limit;
+		const limit =
+			typeof rawLimit === "number" && rawLimit > 0
+				? Math.min(rawLimit, allEffects.length)
+				: DEFAULT_LIMIT;
 
 		const effects = allEffects
 			.filter((effect) => {
@@ -33,7 +40,8 @@ const listEffectsTool: ToolDefinition = {
 				id: effect.type,
 				name: effect.name,
 				description: effect.keywords.join(", "),
-			}));
+			}))
+			.slice(0, limit);
 
 		return { effects };
 	},

@@ -23,6 +23,7 @@ import type {
 } from "@/lib/timeline";
 import type { TextStyleOverrides } from "@/agent/tools/add-text.tool";
 import type { UpdateTextArgs } from "@/agent/tools/update-text.tool";
+import type { ToolResultEntry } from "@/agent/tools/utils/tool-results";
 import { canPlaceTimeSpansOnTrack } from "@/lib/timeline/placement/overlap";
 import { validateElementTrackCompatibility } from "@/lib/timeline/placement";
 import { findTrackInSceneTracks } from "@/lib/timeline/track-element-update";
@@ -662,8 +663,13 @@ export const EditorContextAdapter = {
 	} & Omit<UpdateTextArgs, "elementIds">):
 		| {
 				success: boolean;
-				updated: Array<{ elementId: string; trackId: string }>;
+				updated: Array<{
+					elementId: string;
+					trackId: string;
+					state: Record<string, unknown>;
+				}>;
 				skipped: string[];
+				results: ToolResultEntry[];
 		  }
 		| { error: string } {
 		const core = EditorCore.getInstance();
@@ -677,17 +683,44 @@ export const EditorContextAdapter = {
 			elementIds,
 		});
 
+		const resolvedIdSet = new Set(resolved.map(({ element }) => element.id));
+
 		const textElements = resolved.filter(
 			({ element }) => element.type === "text",
 		);
-		const foundIds = new Set(textElements.map(({ element }) => element.id));
-		const skipped = elementIds.filter((id) => !foundIds.has(id));
+		const textIdSet = new Set(textElements.map(({ element }) => element.id));
+
+		const notFoundIds = elementIds.filter((id) => !resolvedIdSet.has(id));
+		const unsupportedElements = resolved.filter(
+			({ element }) => element.type !== "text",
+		);
+
+		const skipped = elementIds.filter((id) => !textIdSet.has(id));
 
 		if (textElements.length === 0) {
+			const results: ToolResultEntry[] = [
+				...notFoundIds.map(
+					(id): ToolResultEntry => ({
+						target: id,
+						status: "skipped",
+						reasonCode: "TARGET_NOT_FOUND",
+						reason: `Element not found in timeline: ${id}`,
+					}),
+				),
+				...unsupportedElements.map(
+					({ element }): ToolResultEntry => ({
+						target: element.id,
+						status: "skipped",
+						reasonCode: "UNSUPPORTED_ELEMENT_TYPE",
+						reason: `Element '${element.id}' is type '${element.type}', expected 'text'`,
+					}),
+				),
+			];
 			return {
 				success: false,
 				updated: [],
 				skipped,
+				results,
 			};
 		}
 
@@ -718,13 +751,49 @@ export const EditorContextAdapter = {
 
 		core.timeline.updateElements({ updates });
 
+		const updatedScene = core.scenes.getActiveSceneOrNull();
+		const updatedElements = updatedScene
+			? findTimelineElementsWithTracksByIds({
+					tracks: updatedScene.tracks,
+					elementIds: textElements.map(({ element }) => element.id),
+				})
+			: textElements;
+
+		const results: ToolResultEntry[] = [
+			...updatedElements.map(
+				({ element, track }): ToolResultEntry => ({
+					target: element.id,
+					status: "updated",
+					state: serializeElement(element, track.id),
+				}),
+			),
+			...notFoundIds.map(
+				(id): ToolResultEntry => ({
+					target: id,
+					status: "skipped",
+					reasonCode: "TARGET_NOT_FOUND",
+					reason: `Element not found in timeline: ${id}`,
+				}),
+			),
+			...unsupportedElements.map(
+				({ element }): ToolResultEntry => ({
+					target: element.id,
+					status: "skipped",
+					reasonCode: "UNSUPPORTED_ELEMENT_TYPE",
+					reason: `Element '${element.id}' is type '${element.type}', expected 'text'`,
+				}),
+			),
+		];
+
 		return {
 			success: true,
-			updated: updates.map((u) => ({
-				elementId: u.elementId,
-				trackId: u.trackId,
+			updated: updatedElements.map(({ element, track }) => ({
+				elementId: element.id,
+				trackId: track.id,
+				state: serializeElement(element, track.id),
 			})),
 			skipped,
+			results,
 		};
 	},
 
@@ -1329,7 +1398,12 @@ export const EditorContextAdapter = {
 		volume?: number;
 		muted?: boolean;
 	}):
-		| { success: boolean; elementId: string; applied: Record<string, unknown> }
+		| {
+				success: boolean;
+				elementId: string;
+				applied: Record<string, unknown>;
+				state: Record<string, unknown>;
+		  }
 		| { error: string } {
 		const core = EditorCore.getInstance();
 		const activeScene = core.scenes.getActiveSceneOrNull();
@@ -1542,7 +1616,22 @@ export const EditorContextAdapter = {
 			],
 		});
 
-		return { success: true, elementId, applied };
+		const updatedScene = core.scenes.getActiveSceneOrNull();
+		const [updated] = updatedScene
+			? findTimelineElementsWithTracksByIds({
+					tracks: updatedScene.tracks,
+					elementIds: [elementId],
+				})
+			: [];
+		const finalElement = updated?.element ?? resolved.element;
+		const finalTrack = updated?.track ?? resolved.track;
+
+		return {
+			success: true,
+			elementId,
+			applied,
+			state: serializeElement(finalElement, finalTrack.id),
+		};
 	},
 };
 

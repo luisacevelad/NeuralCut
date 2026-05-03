@@ -3,6 +3,17 @@ import { toolRegistry } from "@/agent/tools/registry";
 import { updateClipSchema } from "@/agent/tools/schemas";
 import { EditorContextAdapter } from "@/agent/context";
 import { resolveTargetsToElementIds } from "@/agent/tools/resolve-element-ids";
+import type {
+	ReasonCode,
+	ToolResultEntry,
+} from "@/agent/tools/utils/tool-results";
+
+function classifyClipError(error: string): ReasonCode {
+	if (error.includes("not found") || error.includes("not Found"))
+		return "TARGET_NOT_FOUND";
+	if (error.includes("does not support")) return "UNSUPPORTED_ELEMENT_TYPE";
+	return "INTERNAL_ERROR";
+}
 
 const updateClipTool: ToolDefinition = {
 	...updateClipSchema,
@@ -16,12 +27,14 @@ const updateClipTool: ToolDefinition = {
 						updated: Array<{
 							elementId: string;
 							applied: Record<string, unknown>;
+							state: Record<string, unknown>;
 						}>;
 						skipped: string[];
+						results: ToolResultEntry[];
 				  }
-				| { error: string }
+				| { error: string; results?: ToolResultEntry[] }
 		  >
-		| { error: string } => {
+		| { error: string; results?: ToolResultEntry[] } => {
 		const raw = args.targets ?? args.target ?? args.elementIds ?? args.elementId;
 		const name = args.name as string | undefined;
 		const mask = args.mask as
@@ -83,8 +96,10 @@ const updateClipTool: ToolDefinition = {
 		const updated: Array<{
 			elementId: string;
 			applied: Record<string, unknown>;
+			state: Record<string, unknown>;
 		}> = [];
 		const skipped: string[] = [];
+		const results: ToolResultEntry[] = [];
 
 		for (const elementId of resolved.elementIds) {
 			const result = EditorContextAdapter.updateClip({
@@ -106,16 +121,28 @@ const updateClipTool: ToolDefinition = {
 			});
 			if ("error" in result) {
 				skipped.push(elementId);
+				const reasonCode = classifyClipError(result.error);
+				results.push({
+					target: elementId,
+					status: "failed",
+					reasonCode,
+					reason: result.error,
+				});
 			} else {
-				updated.push({ elementId, applied: result.applied });
+				updated.push({ elementId, applied: result.applied, state: result.state });
+				results.push({
+					target: elementId,
+					status: "updated",
+					state: result.state,
+				});
 			}
 		}
 
 		if (updated.length === 0) {
-			return { error: "All targets failed to update" };
+			return { error: "All targets failed to update", results };
 		}
 
-		return { success: true, updated, skipped };
+		return { success: true, updated, skipped, results };
 	},
 };
 

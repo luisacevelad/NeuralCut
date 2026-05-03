@@ -27,6 +27,13 @@ const defaultTextBackground = {
 	offsetY: 0,
 };
 
+const defaultTextTransform: Transform = {
+	scaleX: 0.5,
+	scaleY: 0.5,
+	position: { x: 0, y: 0 },
+	rotate: 0,
+};
+
 const defaultTextElement: Omit<TextElement, "id"> = {
 	type: "text",
 	name: "Text",
@@ -46,8 +53,8 @@ const defaultTextElement: Omit<TextElement, "id"> = {
 	trimStart: 0,
 	trimEnd: 0,
 	transform: {
-		...defaultTransform,
-		position: { ...defaultTransform.position },
+		...defaultTextTransform,
+		position: { ...defaultTextTransform.position },
 	},
 	opacity: defaultOpacity,
 };

@@ -119,6 +119,22 @@ export type AgentTimelineTrack = {
 		start: number;
 		/** Timeline end in seconds. */
 		end: number;
+		/** Horizontal position from transform. Undefined for elements without transform (audio, effect). */
+		positionX?: number;
+		/** Vertical position from transform. Undefined for elements without transform (audio, effect). */
+		positionY?: number;
+		/** Horizontal scale from transform. Undefined for elements without transform. */
+		scaleX?: number;
+		/** Vertical scale from transform. Undefined for elements without transform. */
+		scaleY?: number;
+		/** Rotation in degrees from transform. Undefined for elements without transform. */
+		rotation?: number;
+		/** Opacity 0-100. Undefined for elements that don't support opacity (audio, effect). */
+		opacity?: number;
+		/** Volume 0-100. Undefined for non-audio elements (audio and video clips only). */
+		volume?: number;
+		/** Whether the element is muted. Undefined for non-audio elements. */
+		muted?: boolean;
 	}>;
 };
 

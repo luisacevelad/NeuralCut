@@ -3,6 +3,7 @@ import type { AgentContext, ToolDefinition } from "@/agent/types";
 import { toolRegistry } from "@/agent/tools/registry";
 import { resolveTargetsToElementIds } from "@/agent/tools/resolve-element-ids";
 import { updateTextSchema } from "@/agent/tools/schemas";
+import type { ToolResultEntry } from "@/agent/tools/utils/tool-results";
 
 export type UpdateTextArgs = {
 	elementIds: string[];
@@ -29,12 +30,14 @@ export type UpdateTextArgs = {
 export type UpdatedTextElement = {
 	elementId: string;
 	trackId: string;
+	state: Record<string, unknown>;
 };
 
 export type UpdateTextResult = {
 	success: boolean;
 	updated: UpdatedTextElement[];
 	skipped: string[];
+	results: ToolResultEntry[];
 };
 
 const VALID_FONT_WEIGHTS = new Set(["normal", "bold"]);

@@ -202,6 +202,9 @@ function toTimelineTrack(
 					...(element.hidden === true ? { isHidden: true } : {}),
 					start: Math.round(start * 1000) / 1000,
 					end: Math.round(end * 1000) / 1000,
+					...extractTransformFields(element),
+					...extractOpacityField(element),
+					...extractAudioFields(element),
 				};
 			}),
 	};
@@ -324,4 +327,86 @@ function computeAspectRatio(size: { width: number; height: number }): string {
 
 function gcd(a: number, b: number): number {
 	return b === 0 ? a : gcd(b, a % b);
+}
+
+function extractTransformFields(
+	element: unknown,
+): Record<string, number> {
+	if (!hasTransform(element)) return {};
+	return {
+		positionX: element.transform.position.x,
+		positionY: element.transform.position.y,
+		scaleX: element.transform.scaleX,
+		scaleY: element.transform.scaleY,
+		rotation: element.transform.rotate,
+	};
+}
+
+function extractOpacityField(
+	element: unknown,
+): Record<string, number> {
+	if (
+		typeof element === "object" &&
+		element !== null &&
+		"opacity" in element &&
+		typeof element.opacity === "number"
+	) {
+		return { opacity: element.opacity };
+	}
+	return {};
+}
+
+function extractAudioFields(
+	element: unknown,
+): Record<string, unknown> {
+	const result: Record<string, unknown> = {};
+	if (
+		typeof element === "object" &&
+		element !== null &&
+		"volume" in element &&
+		typeof element.volume === "number"
+	) {
+		result.volume = element.volume;
+	}
+	if (
+		typeof element === "object" &&
+		element !== null &&
+		"muted" in element &&
+		typeof element.muted === "boolean"
+	) {
+		result.muted = element.muted;
+	}
+	return result;
+}
+
+function hasTransform(
+	element: unknown,
+): element is {
+	transform: {
+		position: { x: number; y: number };
+		scaleX: number;
+		scaleY: number;
+		rotate: number;
+	};
+} {
+	if (typeof element !== "object" || element === null || !("transform" in element)) {
+		return false;
+	}
+	const t = (element as { transform: unknown }).transform;
+	if (typeof t !== "object" || t === null) return false;
+	return (
+		"position" in t &&
+		"scaleX" in t &&
+		"scaleY" in t &&
+		"rotate" in t &&
+		typeof t.scaleX === "number" &&
+		typeof t.scaleY === "number" &&
+		typeof t.rotate === "number" &&
+		typeof (t as { position: unknown }).position === "object" &&
+		(t as { position: unknown }).position !== null &&
+		"x" in (t as { position: Record<string, unknown> }).position &&
+		"y" in (t as { position: Record<string, unknown> }).position &&
+		typeof (t as { position: Record<string, unknown> }).position.x === "number" &&
+		typeof (t as { position: Record<string, unknown> }).position.y === "number"
+	);
 }

@@ -24,10 +24,14 @@ const mockUpdateText = mock(
 	}) => ({
 		success: true,
 		updated: [
-			{ elementId: "el-1", trackId: "track-1" },
-			{ elementId: "el-2", trackId: "track-1" },
+			{ elementId: "el-1", trackId: "track-1", state: { elementId: "el-1", type: "text" } },
+			{ elementId: "el-2", trackId: "track-1", state: { elementId: "el-2", type: "text" } },
 		],
 		skipped: [],
+		results: [
+			{ target: "el-1", status: "updated", state: { elementId: "el-1", type: "text" } },
+			{ target: "el-2", status: "updated", state: { elementId: "el-2", type: "text" } },
+		],
 	}),
 );
 
@@ -79,10 +83,14 @@ describe("update_text tool", () => {
 		expect(result).toEqual({
 			success: true,
 			updated: [
-				{ elementId: "el-1", trackId: "track-1" },
-				{ elementId: "el-2", trackId: "track-1" },
+				{ elementId: "el-1", trackId: "track-1", state: { elementId: "el-1", type: "text" } },
+				{ elementId: "el-2", trackId: "track-1", state: { elementId: "el-2", type: "text" } },
 			],
 			skipped: [],
+			results: [
+				{ target: "el-1", status: "updated", state: { elementId: "el-1", type: "text" } },
+				{ target: "el-2", status: "updated", state: { elementId: "el-2", type: "text" } },
+			],
 		});
 	});
 

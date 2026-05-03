@@ -75,7 +75,17 @@ Once identified, restructure the timeline: move the hook moment to position 0, t
 Target 30–50 seconds total (under 45 is ideal). Use the transcript to find the essential narrative thread and strip everything else. Apply silence removal with aggressive thresholds — gaps over 0.3s are candidates for removal. Fast speech, no breathing room. If the raw footage is over 90 seconds, you're making editorial choices, not just trimming — identify the core idea and cut everything peripheral.
 
 ### Step 4: Add on-screen text
-Every short needs at minimum: a hook text element in the first 3 seconds, and captions throughout the spoken content. Think about what each text element is doing for the viewer who has their sound off. Hook text should provoke curiosity or state the value proposition — use add_text with a large fontSize and bold fontWeight to make it visually prominent. For captions, use generate_captions to automatically create word-timed caption elements synced to the transcript — each caption should be 4–5 words max, positioned at the bottom, no background, high contrast. Add emphasis text for key points (not captions — a standalone add_text element that appears on a punchline or key stat, with a larger fontSize to make it stand out).
+Every short needs at minimum: a hook text element in the first 3 seconds, and captions throughout the spoken content. Think about what each text element is doing for the viewer who has their sound off. Hook text should provoke curiosity or state the value proposition — use add_text with a large fontSize and bold fontWeight to make it visually prominent. Add emphasis text for key points (not captions — a standalone add_text element that appears on a punchline or key stat, with a larger fontSize to make it stand out).
+
+#### CRITICAL: Subtitle Rules
+When generating captions/subtitles, these rules are NON-NEGOTIABLE:
+
+1. **Scale: ALWAYS 5%.** Every text element created for subtitles must use scale 5%. Not 100%, not 1% — exactly 5%. This is not optional.
+2. **Font size: 60–70 max.** Subtitle text elements must have a fontSize between 60 and 70. Never exceed 70. Lower is acceptable for stylistic reasons, but the ceiling is 70.
+3. **NO background. EVER.** Subtitles must NEVER have a background color or background fill of any kind. They must be text-only — transparent background, always. If you find yourself adding a backgroundColor or backgroundStyle to a subtitle, stop and remove it. This applies to all subtitle elements: captions, hook text, CTA text, emphasis text — none of them get backgrounds.
+4. **Max 3 words per text element.** Each subtitle/caption text element must contain no more than 3 words. Break longer phrases into multiple sequential elements if needed. This keeps text punchy and readable on mobile screens.
+
+Use generate_captions to automatically create word-timed caption elements synced to the transcript — each caption should be 3 words max, positioned at the bottom, high contrast against the footage, always with scale 5% and fontSize 60–70.
 
 ### Step 5: Control visual rhythm
 Review the cut pattern. Long clips (over 5–6 seconds without a cut or visual change) need intervention: either cut, add a text element, or add a subtle scale keyframe to create movement. Use upsert_keyframe with bezier interpolation to add slow, gentle zoom drifts on static shots — this creates the sense of camera movement without actual camera movement.
@@ -96,7 +106,7 @@ If the user has uploaded background music, add it as an audio overlay. Set volum
 
 **upsert_keyframe for zoom drift** — Static shots die on short-form. A slow 1.0 → 1.04 scale over 4–6 seconds using bezier interpolation creates life in a static frame without feeling like a zoom. Always animate both scaleX and scaleY identically.
 
-**add_text for hook and CTA** — Use large fontSize (e.g., 48–64) and bold fontWeight for emphasis text like hooks and CTAs. For captions, prefer generate_captions which handles word-timing automatically. Never put hook text without a contrasting background — it must be readable on any footage.
+**add_text for hook and CTA** — Use bold fontWeight for emphasis text like hooks and CTAs. For all subtitle-related text elements (captions, hooks, CTAs, emphasis), ALWAYS set scale to 5% and fontSize between 60–70 max. NEVER add backgrounds to subtitles — no backgroundColor, no backgroundStyle, no background fill of any kind. Subtitles are text-only with transparent background, always readable through high contrast color choice against the footage. For captions, prefer generate_captions which handles word-timing automatically.
 
 ## Common Patterns
 

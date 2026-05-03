@@ -120,6 +120,8 @@ function validateAndBuildOverrides(
 		overrides.positionX = args.positionX as number;
 	if (args.positionY !== undefined)
 		overrides.positionY = args.positionY as number;
+	if (args.scaleX !== undefined) overrides.scaleX = args.scaleX as number;
+	if (args.scaleY !== undefined) overrides.scaleY = args.scaleY as number;
 	if (args.background !== undefined)
 		overrides.background =
 			args.background as TextStyleOverrides["background"];

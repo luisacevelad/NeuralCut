@@ -323,7 +323,8 @@ describe("add_text tool", () => {
 			),
 		).toEqual({ error: "Text is required" });
 
-		expect(mockAddText).toHaveBeenCalledTimes(1);
+		// Atomic batch: earlier items must NOT be added when a later one fails.
+		expect(mockAddText).toHaveBeenCalledTimes(0);
 	});
 
 	test("batch mode: rejects non-object items", async () => {
@@ -452,5 +453,56 @@ describe("add_text tool", () => {
 			context,
 		);
 		expect(result).toEqual({ error: expect.stringContaining("fontSize must be between") });
+	});
+
+	test("batch mode: failing later item does NOT add earlier items (atomicity)", async () => {
+		const tool = toolRegistry.get("add_text");
+		const verticalContext: AgentContext = {
+			...context,
+			resolution: { width: 1080, height: 1920 },
+		};
+
+		// 3 valid captions followed by 1 that exceeds word count
+		const result = await tool.execute(
+			{
+				texts: [
+					{ text: "one", start: 0, end: 1 },
+					{ text: "two", start: 1, end: 2 },
+					{ text: "three", start: 2, end: 3 },
+					{ text: "one two three four five", start: 3, end: 4 },
+				],
+			},
+			verticalContext,
+		);
+
+		expect(result).toEqual({ error: expect.stringContaining("5 words") });
+		// Regression: NO items should be added when any item in the batch fails.
+		expect(mockAddText).toHaveBeenCalledTimes(0);
+	});
+
+	test("batch mode: valid batch adds all items after full validation passes", async () => {
+		const tool = toolRegistry.get("add_text");
+		const verticalContext: AgentContext = {
+			...context,
+			resolution: { width: 1080, height: 1920 },
+		};
+
+		const result = await tool.execute(
+			{
+				texts: [
+					{ text: "one", start: 0, end: 1 },
+					{ text: "two", start: 1, end: 2 },
+					{ text: "three", start: 2, end: 3 },
+				],
+			},
+			verticalContext,
+		);
+
+		expect(mockAddText).toHaveBeenCalledTimes(3);
+		expect(result).toEqual([
+			{ elementId: "text-1", trackId: "text-track-1" },
+			{ elementId: "text-2", trackId: "text-track-1" },
+			{ elementId: "text-3", trackId: "text-track-1" },
+		]);
 	});
 });

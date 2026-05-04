@@ -13,4 +13,4 @@ import "@/agent/skills/builtin/talking-head.skill";
 import "@/agent/skills/builtin/short-form.skill";
 import "@/agent/skills/builtin/b-roll-narrative.skill";
 import "@/agent/skills/builtin/corporate.skill";
-import "@/agent/skills/builtin/generate-captions.skill";
+import "@/agent/skills/builtin/caption-guide.skill";

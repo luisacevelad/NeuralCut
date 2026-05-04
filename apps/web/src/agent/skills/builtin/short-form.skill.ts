@@ -67,7 +67,7 @@ When the user doesn't answer creative questions or doesn't provide style details
 
 - **Rhythm**: dynamic medium-fast — cuts every 2–4 seconds, no clip over 5–6 seconds without visual change
 - **Captions**: YES if there is speech or voiceover. No captions on mute-only content
-- **Music volume**: very low (~5%) when voice is present; music is atmosphere, never competing with speech
+- **Music volume**: ~-15 dB when voice is present; music is present but never competing with speech
 - **Clip audio**: MUTED by default. Original clip audio is noise — only the primary voice matters. Only unmute if the user explicitly wants the clip's original sound
 - **Text background**: NONE. All text elements have transparent background by default
 - **Zoom drift**: subtle (1.0 → 1.04 over 4–6s) on static shots to create life
@@ -117,7 +117,7 @@ When generating captions/subtitles, these rules are NON-NEGOTIABLE:
 3. **NO background. EVER.** Subtitles must NEVER have a background color or background fill of any kind. They must be text-only — transparent background, always. If you find yourself adding a backgroundColor or backgroundStyle to ANY text element (captions, hook text, CTA text, emphasis text), stop and remove it. The ONLY exception is if the user explicitly asks for backgrounds.
 4. **Max 3 words per caption/subtitle element.** Each subtitle/caption text element must contain no more than 3 words. Break longer phrases into multiple sequential elements if needed. This keeps text punchy and readable on mobile screens.
 
-Use generate_captions to automatically create word-timed caption elements synced to the transcript — each caption should be 3 words max, positioned at the bottom, high contrast against the footage, always with scaleX/scaleY 0.5 and fontSize 6.5.
+Call transcribe_audio to get word-level timing, group words into 3-word chunks (max 3 words per element, NON-NEGOTIABLE), and insert all caption elements in a single batch add_text call (texts array). Each caption: start = first word start − 0.15s, end = last word end + 0.2s. Positioned at the bottom, high contrast against the footage, always with scaleX/scaleY 0.5 and fontSize 6.5. Captions back-to-back during continuous speech, no gaps between them.
 
 ### Step 5: Control visual rhythm
 Review the cut pattern. Long clips (over 5–6 seconds without a cut or visual change) need intervention: either cut, add a text element, or add a subtle scale keyframe to create movement. Use upsert_keyframe with bezier interpolation to add slow, gentle zoom drifts on static shots — this creates the sense of camera movement without actual camera movement.
@@ -130,7 +130,7 @@ Audio balance depends on whether there is spoken content:
 
 **When there IS speech/voiceover (most common):**
 - Voice is the priority. The viewer must hear every word clearly.
-- Background music volume: ~5% (very low). Music is ambient atmosphere, never competing.
+- Background music volume: ~-15 dB (present but not competing). Music supports the voice, never competes with it.
 - If in doubt about music level, lower it further. Too quiet music is always better than music that drowns speech.
 - If clip audio doesn't contribute (ambient noise, wind), mute it — only the primary voice matters.
 
@@ -148,7 +148,7 @@ Audio balance depends on whether there is spoken content:
 
 **upsert_keyframe for zoom drift** — Static shots die on short-form. A slow 1.0 → 1.04 scale over 4–6 seconds using bezier interpolation creates life in a static frame without feeling like a zoom. Always animate both scaleX and scaleY identically.
 
-**add_text for hook and CTA** — Use bold fontWeight for emphasis text like hooks and CTAs. For ALL text elements: ALWAYS set scaleX/scaleY to 0.5. Hook/CTA/emphasis text: fontSize max 15. Caption/subtitle text: fontSize 6.5 (range 6–9). NEVER add backgrounds to ANY text — no backgroundColor, no backgroundStyle, no background fill of any kind. Text-only with transparent background, always readable through high contrast color choice against the footage. For captions, prefer generate_captions which handles word-timing automatically.
+**add_text for hook and CTA** — Use bold fontWeight for emphasis text like hooks and CTAs. For ALL text elements: ALWAYS set scaleX/scaleY to 0.5. Hook/CTA/emphasis text: fontSize max 15. Caption/subtitle text: fontSize 6.5 (range 6–9). NEVER add backgrounds to ANY text — no backgroundColor, no backgroundStyle, no background fill of any kind. Text-only with transparent background, always readable through high contrast color choice against the footage. For captions, use transcribe_audio for word-level timing, then batch add_text (texts array) with 3-word groups — single batch call for all captions, never one-by-one.
 
 ## Common Patterns
 

@@ -15,6 +15,14 @@ Each app is a frontend that calls into Rust. Logic is never duplicated between a
 - `web/` — Next.js
 - `desktop/` — GPUI
 
+## Audio Mix Semantics
+
+These values are canonical across all skills and tools. Do not deviate without user instruction:
+
+- **Voice / primary spoken audio**: may be boosted up to **+5 dB max**. Never more.
+- **Background music under speech**: **~-15 dB**. Present but never competing.
+- **Sound effects**: adjusted contextually — NOT automatically forced to any fixed level.
+
 ## Web
 
 ### React

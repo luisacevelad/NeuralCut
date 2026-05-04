@@ -35,7 +35,7 @@ These rules override ANY other instruction in this skill. Violating them produce
 1. **NO BACKGROUNDS ON TEXT. EVER.** No backgroundColor, no backgroundStyle, no background fill of any kind on ANY text element — hooks, captions, CTA, emphasis, ALL of them. Text-only with transparent background, always. High contrast color choice against the footage makes them readable. The ONLY exception is if the user EXPLICITLY asks for backgrounds.
 2. **Max 3 words per caption/subtitle element.** Break longer phrases into sequential elements.
 3. **Scale for all text: scaleX/scaleY = 0.5.** Every text element uses this scale. No exceptions.
-4. **Voice is king.** When there is spoken content (voiceover, speech, talking head), the voice MUST be clearly audible above everything else. Music goes to ~5% volume. If unsure whether voice or music should be louder, lower the music more. Mute clip audio if it doesn't contribute.
+4. **Voice is king.** When there is spoken content (voiceover, speech, talking head), the voice MUST be clearly audible above everything else. Music goes to ~-15 dB. If unsure whether voice or music should be louder, lower the music more. Mute clip audio if it doesn't contribute.
 
 ## STRUCTURE
 
@@ -67,7 +67,9 @@ This is the meat. Keep it FAST and TIGHT.
 - Aim for average shot length of 3-5 seconds. If a clip is longer than 6 seconds without visual change, cut it
 
 **Step 2: Add retention captions**
-- Use generate_captions to automatically create word-timed captions for the spoken content. This tool handles timing and grouping automatically.
+- Call transcribe_audio to get word-level timing for the spoken content.
+- Group transcribed words into 3-word chunks (max 3 words per element, NON-NEGOTIABLE). Break at natural phrase boundaries.
+- Build all caption elements and insert them in a single batch add_text call (texts array). Each caption's timing: start = first word start − 0.15s, end = last word end + 0.2s. Captions back-to-back during continuous speech, no gaps. Do not extend captions into silence (>0.5s gap).
 - Captions must be max 3 words per element, positioned at the bottom, NO background.
 - If you need manual control, use add_text with:
   - fontSize: 6.5 (recommended; acceptable range: 6–9)
@@ -138,10 +140,10 @@ Audio balance depends entirely on whether there is spoken content:
 
 ### When there IS speech/voiceover (most common):
 - **Voice is the priority. Always.** The viewer must hear every word clearly.
-- Background music volume: ~5% (very low, barely there). Music is ambient atmosphere, never competing.
+- Background music volume: ~-15 dB (present but not competing). Music supports the voice, never competes with it.
 - If in doubt about music level, lower it further. Too quiet music is always better than music that drowns speech.
 - If clip audio doesn't contribute (ambient noise, wind, filler), MUTE it. Only the primary voice matters.
-- Mute clip audio by setting volume to 0 on that element.
+- Mute clip audio by setting muted to true on that element.
 
 ### When there is NO speech at all:
 - Music can be louder and carry the rhythm.
@@ -179,7 +181,7 @@ Before finishing, verify:
 - [ ] No gaps exist between timeline elements
 - [ ] No single caption/subtitle element exceeds 3 words
 - [ ] Effects are used sparingly (max 3 total)
-- [ ] If speech is present: music at ~5%, voice clearly primary
+- [ ] If speech is present: music at ~-15 dB, voice clearly primary
 - [ ] All text elements use scaleX/scaleY = 0.5
 - [ ] No text element has a background of any kind
 

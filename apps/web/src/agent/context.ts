@@ -13,6 +13,7 @@ import {
 	buildTextElement,
 } from "@/lib/timeline/element-utils";
 import { DEFAULTS } from "@/lib/timeline/defaults";
+import { VOLUME_DB_MIN, VOLUME_DB_MAX } from "@/lib/timeline/audio-constants";
 import type {
 	SceneTracks,
 	TextBackground,
@@ -1502,8 +1503,8 @@ export const EditorContextAdapter = {
 		}
 
 		if (volume !== undefined) {
-			if (typeof volume !== "number" || volume < 0 || volume > 100) {
-				return { error: "volume must be a number between 0 and 100" };
+			if (typeof volume !== "number" || volume < VOLUME_DB_MIN || volume > VOLUME_DB_MAX) {
+				return { error: `volume must be a number between ${VOLUME_DB_MIN} and ${VOLUME_DB_MAX} (decibels)` };
 			}
 			if (element.type !== "video" && element.type !== "audio") {
 				return {
@@ -2065,7 +2066,7 @@ function serializeElement(
 				opacity: element.opacity,
 				blendMode: element.blendMode ?? null,
 				hidden: element.hidden ?? false,
-				volume: element.volume ?? 100,
+				volume: element.volume ?? 0,
 				muted: element.muted ?? false,
 				masks: element.masks ?? [],
 				effects: element.effects ?? [],

@@ -88,7 +88,7 @@ Assemble the core structure on the timeline:
 1. If there's a branded intro clip: place it first at position 0.
 2. Place the main content footage after the intro.
 3. If there's a branded outro: place it at the end, after the main content.
-4. Add background music as an audio track at low volume (it should be present but never distracting during speech).
+4. Add background music as an audio track at ~-15 dB (present but never competing with speech).
 
 This gives you the skeleton. Everything else fills in around it.
 

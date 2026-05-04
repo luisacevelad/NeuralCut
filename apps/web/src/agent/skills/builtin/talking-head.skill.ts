@@ -81,12 +81,12 @@ After removing silences, list_project_assets with filter 'unused' to discover av
 If no relevant B-roll exists for a jump cut, consider adding a subtle zoom keyframe on the main clip around the cut point to mask the position shift visually.
 
 ### Step 6: Add captions
-Use the **generate-captions** skill workflow: group transcribed words into 3-word chunks (max 3 words per element, NON-NEGOTIABLE), create text elements in a single batch add_text call with fontSize: 6.5 (range 6–9), scaleX: 0.5, scaleY: 0.5, fontFamily: "Vend Sans", no background, positioned at bottom. Ensure captions are back-to-back in continuous speech with no gaps, but do not extend captions into silence. Each caption's timing comes from the actual word boundaries (first word start - 0.15s to last word end + 0.2s).
+Call transcribe_audio to get word-level timing. Group transcribed words into 3-word chunks (max 3 words per element, NON-NEGOTIABLE), create text elements in a single batch add_text call (texts array) with fontSize: 6.5 (range 6–9), scaleX: 0.5, scaleY: 0.5, fontFamily: "Vend Sans", no background, positioned at bottom. Ensure captions are back-to-back in continuous speech with no gaps, but do not extend captions into silence. Each caption's timing comes from the actual word boundaries (first word start - 0.15s to last word end + 0.2s).
 
 ### Step 7: Audio balance
 This skill is for talking-head content — the spoken word is the story. Audio balance reflects that:
 
-- **Voice is the priority.** Background music (if present) must be at ~5% volume — barely there, purely atmospheric.
+- **Voice is the priority.** Background music (if present) must be at ~-15 dB — present but never competing with speech.
 - **If in doubt, lower the music.** Too quiet music is always better than music that competes with speech.
 - **Mute clip audio** if it doesn't contribute (ambient noise, wind, handling sounds). Only the speaker's voice matters.
 - If there are moments with no speech (intro/outro), music can rise slightly, but should remain professional and unobtrusive.
@@ -104,7 +104,7 @@ If the content has distinct sections, consider adding a brief text label at sect
 
 **upsert_keyframe for zoom masking** — When covering a jump cut without B-roll, a very subtle scale keyframe (1.0 → 1.03 over 0.3s around the cut) makes the position shift imperceptible. Use bezier interpolation. Don't exceed 1.05 total scale — it becomes noticeable.
 
-**generate-captions skill for captions** — Follow the generate-captions skill workflow: batch add_text with word-level timing from transcription, fontSize 6.5 (range 6–9), scale 0.5, Vend Sans font, no background, max 3 words per element. Single batch call for all captions — never one-by-one.
+**Caption workflow (transcribe_audio + batch add_text)** — Call transcribe_audio for word-level timing, group words into 3-word chunks, then batch add_text (texts array) with fontSize 6.5 (range 6–9), scale 0.5, Vend Sans font, no background, max 3 words per element. Single batch call for all captions — never one-by-one.
 
 **add_text for section labels** — When adding section labels or emphasis text, use fontSize and fontWeight directly to control appearance. Never add more words than can be read in the element's duration.
 

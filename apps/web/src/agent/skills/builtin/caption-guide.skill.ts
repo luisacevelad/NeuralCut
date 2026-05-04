@@ -1,11 +1,11 @@
 import type { SkillDefinition } from "../types";
 import { skillRegistry } from "../registry";
 
-const generateCaptionsSkill: SkillDefinition = {
-	id: "generate-captions",
-	name: "Generate Captions",
+const captionGuideSkill: SkillDefinition = {
+	id: "caption-guide",
+	name: "Caption Guide",
 	description:
-		"Guide for creating clean, modern captions from transcription data. Covers styling, word grouping, timing, and gap handling.",
+		"Reference guide for creating clean, modern captions using transcribe_audio + batched add_text. Covers styling, word grouping, timing, and gap handling.",
 	keywords: [
 		"captions",
 		"subtitles",
@@ -17,7 +17,7 @@ const generateCaptionsSkill: SkillDefinition = {
 	author: "system",
 	instructions: `# Caption Guide
 
-Transcribe audio first (reuse existing transcription if available). Use the \`words\` array with word-level timing to build captions.
+Use transcribe_audio first to get word-level timing (reuse existing transcription if available). Use the \`words\` array with word-level timing to build captions, then insert them all in a single batch add_text call (\`texts\` array).
 
 ## Style
 - fontSize: 6.5 (recommended; acceptable range: 6–9), scaleX: 0.5, scaleY: 0.5, fontWeight: "bold"
@@ -40,4 +40,4 @@ Transcribe audio first (reuse existing transcription if available). Use the \`wo
 - After insertion, review: if a grouping reads awkwardly or splits an idea, adjust with update_text.`,
 };
 
-skillRegistry.register(generateCaptionsSkill.id, generateCaptionsSkill);
+skillRegistry.register(captionGuideSkill.id, captionGuideSkill);

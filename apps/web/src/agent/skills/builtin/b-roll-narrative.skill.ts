@@ -69,7 +69,7 @@ If the audio is an interview or spoken content rather than a clean voiceover, ca
 ### Step 2: Build the audio spine first
 Add the voiceover or interview audio to the timeline as the foundation. If there are multiple audio segments (interview soundbites, multiple voiceover takes), assemble them in narrative order first — this is your edit backbone.
 
-If there's background music, add it at low volume now. It will influence the emotional pacing decisions you make for the visuals.
+If there's background music, add it at ~-15 dB now. It will influence the emotional pacing decisions you make for the visuals.
 
 ### Step 3: Map the narrative structure
 Before placing any B-roll, identify the segments of the audio narrative:
@@ -101,7 +101,7 @@ Use apply_effect sparingly: vignette on emotionally heavy moments (low intensity
 If music is present, adjust its volume based on whether there is spoken content:
 
 **During voiceover/interview audio:**
-- Music at ~5% volume — barely audible, purely atmospheric. The voice MUST be clearly primary.
+- Music at ~-15 dB — present but never competing with speech. The voice MUST be clearly primary.
 - If in doubt about the level, lower the music further. Voice clarity always wins.
 
 **During visual-only segments (no voiceover):**

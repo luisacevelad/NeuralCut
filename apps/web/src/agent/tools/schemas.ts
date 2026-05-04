@@ -418,7 +418,7 @@ export const updateClipSchema: ToolSchema = {
 			enum: ["normal", "darken", "multiply", "screen", "overlay", "lighten"],
 		},
 		{ key: "hidden", type: "boolean", required: false, description: "Hide/show." },
-		{ key: "volume", type: "number", required: false, description: "0-100 (video/audio)." },
+		{ key: "volume", type: "number", required: false, description: "Volume in decibels (-60 to +20). 0 = normal level, negative = quieter, positive = louder. Voice max +5 dB. Background music under speech: ~-15 dB. Sound effects: adjust contextually." },
 		{ key: "muted", type: "boolean", required: false, description: "Mute/unmute (video/audio)." },
 	],
 };

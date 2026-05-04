@@ -286,7 +286,7 @@ Actualiza propiedades de cualquier elemento del timeline.
 | `scaleY` | `number` | No | Factor de escala Y |
 | `blendMode` | `string` | No | 'normal', 'darken', 'multiply', 'screen', 'overlay', 'lighten' |
 | `hidden` | `boolean` | No | Ocultar elemento |
-| `volume` | `number` | No | Volumen 0-100 |
+| `volume` | `number` | No | Volumen en decibeles (-60 a +20). 0 = normal. Voz: máx +5 dB. Música bajo voz: ~-15 dB. Efectos de sonido: ajustar contextualmente. |
 | `muted` | `boolean` | No | Silenciar |
 
 **Mask types:** rectangle, ellipse, heart, diamond, star, split, cinematic-bars (solo video/image/graphic)

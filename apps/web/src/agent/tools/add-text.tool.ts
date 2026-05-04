@@ -175,7 +175,10 @@ const addTextTool: ToolDefinition = {
 		_context: AgentContext,
 	): Promise<AddTextResult | AddTextResult[] | { error: string }> => {
 		if (Array.isArray(args.texts)) {
-			const results: AddTextResult[] = [];
+			// Phase 1: Validate ALL items before adding any (atomic batch).
+			// This prevents partial adds when a later item fails validation,
+			// which caused duplicate subtitles when agents retried the batch.
+			const validatedItems: AddTextArgs[] = [];
 			for (const item of args.texts) {
 				if (typeof item !== "object" || item === null) {
 					return { error: "Each item in texts must be an object" };
@@ -185,6 +188,11 @@ const addTextTool: ToolDefinition = {
 					_context.resolution,
 				);
 				if ("error" in validated) return validated;
+				validatedItems.push(validated);
+			}
+			// Phase 2: All validated — now add them.
+			const results: AddTextResult[] = [];
+			for (const validated of validatedItems) {
 				const result = EditorContextAdapter.addText(validated);
 				if ("error" in result) return result;
 				results.push(result);

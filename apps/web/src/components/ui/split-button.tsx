@@ -77,10 +77,12 @@ const SplitButtonSeparator = forwardRef<HTMLDivElement, { className?: string }>(
 	({ className, ...props }, ref) => {
 		return (
 			<Separator
-				ref={ref}
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				ref={ref as any}
 				orientation="vertical"
 				className={cn("bg-foreground/15 h-full", className)}
-				{...props}
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				{...(props as any)}
 			/>
 		);
 	},

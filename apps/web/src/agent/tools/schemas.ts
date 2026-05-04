@@ -241,6 +241,7 @@ export const addTextSchema: ToolSchema = {
 			items: {
 				key: "item",
 				type: "object",
+				required: false,
 				properties: textItemProperties,
 			},
 		},

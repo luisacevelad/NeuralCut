@@ -9,19 +9,17 @@ const updateEffectTool: ToolDefinition = {
 	execute: async (
 		args: Record<string, unknown>,
 		context: AgentContext,
-	):
-		| Promise<
-				| {
-						success: boolean;
-						updated: Array<{
-							elementId: string;
-							appliedParams: Record<string, number | string | boolean>;
-						}>;
-						skipped: string[];
-				  }
-				| { error: string }
-		  >
-		| { error: string } => {
+	): Promise<
+			| {
+					success: boolean;
+					updated: Array<{
+						elementId: string;
+						appliedParams: Record<string, number | string | boolean>;
+					}>;
+					skipped: string[];
+			  }
+			| { error: string }
+		> => {
 		const raw = args.targets ?? args.elementIds ?? args.elementId;
 		const params = args.params as
 			| Record<string, number | string | boolean>

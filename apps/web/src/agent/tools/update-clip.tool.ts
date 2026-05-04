@@ -20,21 +20,19 @@ const updateClipTool: ToolDefinition = {
 	execute: async (
 		args: Record<string, unknown>,
 		context: AgentContext,
-	):
-		| Promise<
-				| {
-						success: boolean;
-						updated: Array<{
-							elementId: string;
-							applied: Record<string, unknown>;
-							state: Record<string, unknown>;
-						}>;
-						skipped: string[];
-						results: ToolResultEntry[];
-				  }
-				| { error: string; results?: ToolResultEntry[] }
-		  >
-		| { error: string; results?: ToolResultEntry[] } => {
+	): Promise<
+		| {
+				success: boolean;
+				updated: Array<{
+					elementId: string;
+					applied: Record<string, unknown>;
+					state: Record<string, unknown>;
+				}>;
+				skipped: string[];
+				results: ToolResultEntry[];
+		  }
+		| { error: string; results?: ToolResultEntry[] }
+	> => {
 		const raw = args.targets ?? args.target ?? args.elementIds ?? args.elementId;
 		const name = args.name as string | undefined;
 		const mask = args.mask as

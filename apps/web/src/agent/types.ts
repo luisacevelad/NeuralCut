@@ -158,7 +158,7 @@ export interface ToolDefinition {
 	execute: (
 		args: Record<string, unknown>,
 		context: AgentContext,
-	) => Promise<unknown>;
+	) => Promise<unknown> | unknown;
 }
 
 /**

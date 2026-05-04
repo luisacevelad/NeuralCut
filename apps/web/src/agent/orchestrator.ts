@@ -98,7 +98,11 @@ export async function run(
 			const data: APIResponse = await response.json();
 
 			if (data.usage) {
-				agentStore.addTokenUsage(data.usage);
+				agentStore.addTokenUsage({
+					...data.usage,
+					lastPromptTokens: data.usage.promptTokens,
+					cachedTokens: data.usage.cachedTokens ?? 0,
+				});
 			}
 
 			if (!data.toolCalls || data.toolCalls.length === 0) {

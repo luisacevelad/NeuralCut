@@ -16,7 +16,8 @@ export function ReactMarkdownWrapper({
 						className={cn("text-primary hover:underline", linkClassName)}
 						target="_blank"
 						rel="noopener noreferrer"
-						{...props}
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						{...(props as any)}
 					>
 						{children}
 					</a>
@@ -30,18 +31,21 @@ export function ReactMarkdownWrapper({
 							"rounded border border-destructive/20 bg-destructive/5 px-1.5 py-0.5 font-mono text-[0.85em] text-red-700 dark:text-red-300",
 							codeClassName,
 						)}
-						{...props}
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						{...(props as any)}
 					>
 						{children}
 					</code>
 				),
 				p: ({ className: paragraphClassName, children, ...props }) =>
 					inline ? (
-						<span className={cn("m-0", paragraphClassName)} {...props}>
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						<span className={cn("m-0", paragraphClassName)} {...(props as any)}>
 							{children}
 						</span>
 					) : (
-						<p className={cn("m-0", paragraphClassName)} {...props}>
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						<p className={cn("m-0", paragraphClassName)} {...(props as any)}>
 							{children}
 						</p>
 					),

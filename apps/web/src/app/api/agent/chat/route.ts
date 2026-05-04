@@ -77,7 +77,7 @@ const chatRequestSchema = z.object({
 			.optional(),
 		playbackTimeMs: z.number(),
 		mode: z.enum(["plan", "execute"]).optional(),
-	}) satisfies z.ZodType<AgentContext>,
+	}) as unknown as z.ZodType<AgentContext>,
 });
 
 // ---------------------------------------------------------------------------

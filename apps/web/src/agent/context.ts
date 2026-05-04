@@ -39,6 +39,7 @@ import { RemoveKeyframeCommand } from "@/lib/commands/timeline/element/keyframes
 import { UpdateScalarKeyframeCurveCommand } from "@/lib/commands/timeline/element/keyframes/update-scalar-keyframe-curve";
 import {
 	type AnimationInterpolation,
+	type AnimationPath,
 	type ScalarCurveKeyframePatch,
 	ANIMATION_PROPERTY_PATHS,
 } from "@/lib/animation/types";
@@ -1040,7 +1041,7 @@ export const EditorContextAdapter = {
 			command: new UpsertKeyframeCommand({
 				trackId: resolved.track.id,
 				elementId: element.id,
-				propertyPath,
+				propertyPath: propertyPath as AnimationPath,
 				time: timeTicks,
 				value,
 				interpolation,
@@ -1059,7 +1060,7 @@ export const EditorContextAdapter = {
 
 		const resultKeyframe = getKeyframeAtTime({
 			animations: updatedElement.animations,
-			propertyPath,
+			propertyPath: propertyPath as AnimationPath,
 			time: timeTicks,
 		});
 
@@ -1137,7 +1138,7 @@ export const EditorContextAdapter = {
 			command: new UpsertKeyframeCommand({
 				trackId: resolved.track.id,
 				elementId: element.id,
-				propertyPath,
+				propertyPath: propertyPath as AnimationPath,
 				time: timeTicks,
 				value: colorValue,
 				interpolation,
@@ -1156,7 +1157,7 @@ export const EditorContextAdapter = {
 
 		const resultKeyframe = getKeyframeAtTime({
 			animations: updatedElement.animations,
-			propertyPath,
+			propertyPath: propertyPath as AnimationPath,
 			time: timeTicks,
 		});
 
@@ -1198,7 +1199,7 @@ export const EditorContextAdapter = {
 			command: new RemoveKeyframeCommand({
 				trackId: resolved.track.id,
 				elementId: resolved.element.id,
-				propertyPath,
+				propertyPath: propertyPath as AnimationPath,
 				keyframeId,
 				valueAtPlayhead: null,
 			}),
@@ -1276,7 +1277,7 @@ export const EditorContextAdapter = {
 			command: new UpdateScalarKeyframeCurveCommand({
 				trackId: resolved.track.id,
 				elementId: resolved.element.id,
-				propertyPath,
+				propertyPath: propertyPath as AnimationPath,
 				componentKey: "value",
 				keyframeId,
 				patch,

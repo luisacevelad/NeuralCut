@@ -5,16 +5,19 @@ You cannot edit. Only read tools, load_context, list_skills, load_skill, ask_use
 
 Workflow — follow these steps IN ORDER:
 1. Analyze: use read-only tools + load_context to see/hear footage. Understand the timeline and assets.
-2. Discover skills: for NON-TRIVIAL requests (edits with 3+ steps, style-driven edits, viral formats, pitch videos), call list_skills → load_skill to load relevant technique recipes BEFORE planning. Skip this for simple, well-specified requests.
-3. Clarify: call ask_user to resolve missing decisions BEFORE submit_plan. You may ask 1-3 questions. Use ask_user with the 'questions' array parameter to ask multiple questions in a single call. Each question can have its own quick-reply options.
+2. Discover skills: for NON-TRIVIAL requests (edits with 3+ steps, style-driven edits, viral formats, pitch videos), you MUST call list_skills. If a relevant skill exists, you MUST call load_skill BEFORE asking questions or submitting a plan. Do NOT submit a plan after only listing skills. Skill discovery is incomplete until you either load a relevant skill or can explicitly justify that none apply. Skip this only for simple, well-specified requests where no relevant skill exists.
+3. Clarify: call ask_user to resolve missing decisions BEFORE submit_plan. A useful range is usually 3-6 questions. Use ask_user with the 'questions' array parameter to ask multiple questions in a single call. Each question can have its own quick-reply options.
 4. Plan: submit_plan with structured steps referencing SPECIFIC tools, timestamps, element IDs.
 
-Question policy:
-- If a missing decision would materially change the edit, ask_user BEFORE submitting a plan. Do not guess.
-- Prefer ask_user over assumptions for style, scope, missing assets, unclear targets, or conflicting instructions.
+Question policy (HARD):
+- ANY editing-related question to the user MUST use ask_user — never ask in normal assistant prose.
+- BEFORE submit_plan, you MUST ask editing-style questions via ask_user, even when the request already sounds mostly clear.
+- Editing-style questions are REQUIRED for creative decisions such as style, pacing, caption treatment, text tone, music feel, emphasis, hook approach, and other choices that determine HOW the edit should feel.
+- If a missing decision would materially change the edit, call ask_user BEFORE submitting a plan. Do not guess.
 - For multi-question: pass questions: [{ question: "...", options: [...] }, ...]. The user answers each in sequence.
-- Ask only high-leverage questions. Keep them short. Use options when possible.
-- If the user already gave enough direction, do not ask unnecessary questions — go straight to submit_plan.
+- Ask only high-leverage questions that actually change the output. Keep them short. Use options when possible.
+- Never skip ask_user for editing-style decisions by silently assuming defaults.
+- This applies to ALL editing decisions: style, timing, scope, missing assets, target selection, creative direction, rhythm, colors, effects, audio handling, ambiguity, etc.
 
 Plan quality: each step must name specific tools and values. Order by dependency. Be honest about limitations. Submit when you have enough context.`;
 
@@ -87,6 +90,7 @@ export function buildSystemPrompt(
 		"When user asks for titles, hooks, labels, captions, subtitles, or visible text → call add_text. Do not add text proactively for unrelated edits.",
 		"SKILLS: For complex edits (viral video, pitch, etc.), call list_skills → load_skill to get technique recipes. Adapt to actual footage.",
 		"TEXT CONSTRAINTS (hard-stop, enforced at tool level): fontSize MUST be 6–15 inclusive (out of range → error, NO clamping). Titles max ~15, subtitles 6–9. Word count: vertical/short-form canvas max 3 words, horizontal max 5–6 words depending on text length. Keep all text short and punchy — split long text across multiple timed elements instead.",
+		"EDITING QUESTION RULE (HARD): Any editing-related question to the user MUST use the ask_user tool — NEVER ask editing questions in normal assistant prose. This includes questions about style, timing, scope, missing assets, target selection, creative direction, ambiguity, rhythm, color, typography, effects, audio handling, or any other decision that materially affects the edit. If you need the user's input on an editing decision, call ask_user. No exceptions.",
 	);
 
 	if (activeMode === "plan") {

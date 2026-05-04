@@ -279,11 +279,50 @@ describe("buildSystemPrompt", () => {
 		expect(prompt).toMatch(/before.*submit_plan|BEFORE.*plan/i);
 	});
 
+	test("plan mode requires editing-style questions before submit_plan", () => {
+		const prompt = buildSystemPrompt(BASE_CONTEXT, "plan");
+
+		expect(prompt).toContain("MUST ask editing-style questions via ask_user");
+		expect(prompt).toContain("even when the request already sounds mostly clear");
+	});
+
 	test("plan mode includes explicit step-by-step workflow", () => {
 		const prompt = buildSystemPrompt(BASE_CONTEXT, "plan");
 
 		// Should have numbered workflow steps
 		expect(prompt).toMatch(/1\.\s/);
 		expect(prompt).toMatch(/2\.\s/);
+	});
+
+	// -----------------------------------------------------------------------
+	// HARD ask_user rule — editing questions must use the tool
+	// -----------------------------------------------------------------------
+
+	test("prompt contains hard editing question rule in all modes", () => {
+		const executePrompt = buildSystemPrompt(BASE_CONTEXT, "execute");
+		const planPrompt = buildSystemPrompt(BASE_CONTEXT, "plan");
+
+		for (const prompt of [executePrompt, planPrompt]) {
+			expect(prompt).toContain("EDITING QUESTION RULE");
+			expect(prompt).toContain("ask_user");
+			expect(prompt).toMatch(/NEVER.*assistant prose/i);
+		}
+	});
+
+	test("hard rule lists editing question categories", () => {
+		const prompt = buildSystemPrompt(BASE_CONTEXT);
+
+		expect(prompt).toContain("style");
+		expect(prompt).toContain("timing");
+		expect(prompt).toContain("scope");
+		expect(prompt).toContain("missing assets");
+		expect(prompt).toContain("creative direction");
+	});
+
+	test("plan mode repeats hard ask_user requirement in question policy", () => {
+		const prompt = buildSystemPrompt(BASE_CONTEXT, "plan");
+
+		expect(prompt).toMatch(/Question policy.*HARD|HARD.*Question policy/i);
+		expect(prompt).toMatch(/MUST use ask_user/);
 	});
 });
